@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Virtualized list</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: sans-serif;
+      }
+      #list {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 600px;
+        height: 600px;
+        overflow-y: auto;
+        background: #fff;
+      }
+      #spacer {
+        position: relative;
+      }
+      .row {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 80px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 0 12px;
+        box-sizing: border-box;
+      }
+      .poster {
+        width: 56px;
+        height: 70px;
+        border-radius: 4px;
+      }
+    </style>
+    <script src="/lib/work.js"></script>
+  </head>
+  <body>
+    <div id="list" role="list" aria-label="Trending"><div id="spacer"></div></div>
+    <script src="/list.js"></script>
+  </body>
+</html>
