@@ -19,9 +19,15 @@ import {
   summarizeLongFrames,
 } from './analysis/aggregate.js';
 import { median, spread } from './analysis/stats.js';
+import { medianOf } from './analysis/aggregate.js';
+import { traceRun } from './trace/tracer.js';
+import { ANIMATION_FRAME_CATEGORIES, FRAME_CATEGORIES } from './trace/categories.js';
+import type { ParsedTrace } from './trace/parse.js';
 import type { BrowserEnvironment } from './environment.js';
 import { SCHEMA_VERSION } from './constants.js';
 import type {
+  Budget120Result,
+  FramesResult,
   InputResult,
   LongFramesResult,
   ResolvedOptions,
@@ -52,6 +58,8 @@ interface RunData {
   interactionFrames: AttributedFrame[];
   input: InputResult;
   longFrames: LongFramesResult;
+  /** Full mode only. */
+  trace: ParsedTrace | null;
 }
 
 export interface MeasureContext {
@@ -155,6 +163,21 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     );
   }
 
+  const browser = page.context().browser();
+  const categories = [
+    ...FRAME_CATEGORIES,
+    ...(options.refreshRate === 120 ? ANIMATION_FRAME_CATEGORIES : []),
+  ];
+  if (options.mode === 'full' && !browser) {
+    unavailable.push({
+      measurement: 'frames',
+      reason: 'full mode needs Browser.startTracing, which a persistent context has no Browser for',
+    });
+  }
+  if (options.mode === 'quick' && options.refreshRate === 120) {
+    notes.push('refreshRate 120 adds a prediction in full mode only; this was quick mode.');
+  }
+
   const cdp = await PageCdp.open(page);
   const runs: RunData[] = [];
   let navigatedRuns = 0;
@@ -170,13 +193,32 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
       const settle = await c.settle(SETTLE_QUIET_MS, SETTLE_TIMEOUT_MS);
       if (!settle.settled) unsettledRuns++;
 
-      const start = await c.now();
       const originBefore = await page.evaluate(() => performance.timeOrigin);
-      await action();
+      let start = 0;
+      let end = 0;
+      let flushed = true;
+      const measured = async () => {
+        start = await c.now();
+        await action();
+        try {
+          await c.flush();
+          end = await c.now();
+        } catch {
+          flushed = false; // the action navigated away; handled below
+        }
+      };
+      let trace: ParsedTrace | null = null;
+      if (options.mode === 'full' && browser) {
+        trace = await traceRun(browser, page, categories, measured, {
+          browserVersion: ctx.environment.browserVersion,
+          budget120: options.refreshRate === 120,
+        });
+      } else {
+        await measured();
+      }
       let snapshot: CollectorSnapshot;
       try {
-        await c.flush();
-        const end = await c.now();
+        if (!flushed) throw new Error('navigated');
         snapshot = await c.snapshot(start, end);
       } catch {
         // The action navigated and the collector's page is gone, or the new page has none yet.
@@ -212,6 +254,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         interactionFrames,
         input: summarizeInput(interactions),
         longFrames: summarizeLongFrames(interactionFrames),
+        trace,
       });
     }
   } finally {
@@ -291,6 +334,67 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     );
   }
 
+  // Full mode: combine each run's trace. A measurement missing from every run is unavailable
+  // (with each distinct reason); missing from some runs, it's the median of the rest, with a note.
+  let frames: FramesResult | null | undefined;
+  let budget120: Budget120Result | null | undefined;
+  if (options.mode === 'full') {
+    const traces = runs.map((r) => r.trace);
+    const reasons = (measurement: string) => [
+      ...new Set(
+        traces.flatMap(
+          (t) => t?.unavailable.filter((u) => u.measurement === measurement).map((u) => u.reason) ?? [],
+        ),
+      ),
+    ];
+    for (const n of new Set(traces.flatMap((t) => t?.notes ?? []))) notes.push(n);
+
+    const perRun = traces.map((t) => t?.frames ?? null).filter((f): f is FramesResult => f !== null);
+    if (perRun.length === 0) {
+      frames = null;
+      if (browser)
+        for (const reason of reasons('frames')) unavailable.push({ measurement: 'frames', reason });
+    } else {
+      if (perRun.length < runs.length) {
+        notes.push(
+          `Frame data was missing from ${runs.length - perRun.length} of ${runs.length} runs: ${reasons('frames').join('; ')}.`,
+        );
+      }
+      frames = {
+        total: Math.round(median(perRun.map((f) => f.total))),
+        onTime: Math.round(median(perRun.map((f) => f.onTime))),
+        dropped: Math.round(median(perRun.map((f) => f.dropped))),
+        onTimePercent: medianOf(perRun.map((f) => f.onTimePercent)),
+      };
+      addSpread(
+        'frames.onTimePercent',
+        perRun.map((f) => f.onTimePercent),
+      );
+      addSpread(
+        'frames.dropped',
+        perRun.map((f) => f.dropped),
+      );
+    }
+
+    if (options.refreshRate === 120) {
+      const b = traces.map((t) => t?.budget120 ?? null).filter((x): x is Budget120Result => x !== null);
+      if (b.length === 0) {
+        budget120 = null;
+        for (const reason of reasons('budget120')) unavailable.push({ measurement: 'budget120', reason });
+      } else {
+        budget120 = {
+          framesOverBudget: Math.round(median(b.map((x) => x.framesOverBudget))),
+          frames: Math.round(median(b.map((x) => x.frames))),
+          predicted: true,
+        };
+        addSpread(
+          'budget120.framesOverBudget',
+          b.map((x) => x.framesOverBudget),
+        );
+      }
+    }
+  }
+
   const classCount = (k: FrameClass) =>
     Math.round(median(runs.map((r) => r.classes.filter((c) => c === k).length)));
 
@@ -306,6 +410,8 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     cpuThrottling: options.cpuThrottling,
     refreshRate: options.refreshRate,
     settings: settingsOf(options),
+    ...(frames !== undefined ? { frames } : {}),
+    ...(budget120 !== undefined ? { budget120 } : {}),
     input,
     longFrames,
     spread: spreads,
