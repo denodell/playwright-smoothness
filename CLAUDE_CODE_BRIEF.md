@@ -33,7 +33,7 @@ It's a measurement layer that plugs into a team's existing Playwright setup and 
 
 ## 3. Facts established by the spike (don't re-derive; build on these)
 
-A prototype was run with Chromium 141 and Playwright 1.56 in the headless shell, new headless (`channel: 'chromium'`), and headed modes. The spike project is in `loaf-headless-spike.zip`. Copy it into `spike/` for reference, but don't ship it.
+A prototype was run with Chromium 141 and Playwright 1.56 in the headless shell, new headless (`channel: 'chromium'`), and headed modes. The spike project is in `loaf-headless-spike.zip`. ~~Copy it into `spike/` for reference, but don't ship it.~~ It was copied during M0 and then removed: the detection suite (`tests/detection/`) now reproduces these experiments, and the spike's numbers live in this section and in `docs/measurements.md`.
 
 **APIs and what they can and can't see**
 

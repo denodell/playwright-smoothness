@@ -40,7 +40,7 @@ Key design decisions (open to challenge):
 1. **The collector is plain JavaScript, not TypeScript compiled into a closure.** It's authored as a standalone TS module, bundled by tsup into a string, and injected with `addInitScript({ content })`. That keeps it testable in isolation (it runs in a real page in the integration suite) and stops bundler helpers leaking into the page. Every observer callback and every per-entry operation has its own try/catch; a caught error is counted into a `collectorErrors` field that surfaces in `unavailable`, never swallowed invisibly.
 2. **The collector records compact records only**: numbers and strings. Targets are described at callback time (`tag#id.class`, walked up to the nearest interactive ancestor, with the raw target kept too). No DOM references survive a callback.
 3. **Measurement windows are timestamp slices of one continuous collector buffer.** `measure()` reads `performance.now()` in-page before and after the callback, then waits a named settle window (enough frames for Event Timing and LoAF entries to be delivered), then pulls entries overlapping the window. That's simpler and safer than starting and stopping observers.
-4. **Classification is a pure function** over `{ loaf[], events[], scrolls[], loadEventEnd, window }`, ported from the spike's rules (`firstUIEventTimestamp > 0`, Event Timing window overlap, scroll timestamp overlap, load cutoff at `loadEventEnd + 50ms`, `invokerType` as a secondary signal). Pure means it's unit-tested with fixtures recorded from real runs, including the spike's `*--auto.json`.
+4. **Classification is a pure function** over `{ loaf[], events[], scrolls[], loadEventEnd, window }`, ported from the spike's rules (`firstUIEventTimestamp > 0`, Event Timing window overlap, scroll timestamp overlap, load cutoff at `loadEventEnd + 50ms`, `invokerType` as a secondary signal). Pure means it's unit-tested with fixtures recorded from real runs of the detection suite's classification page.
 5. **The trace parser is a pure function** over parsed trace JSON with a declared list of required event names and fields. Anything missing produces an `unavailable` entry with the Chrome version and the missing field. It never returns 0 for "didn't see it."
 6. **Warn mode passes the test.** `enforce: 'warn'` adds a `smoothness-warning` annotation, prints to stderr, and marks the JSON result `status: 'warn'`. When `GITHUB_ACTIONS=true` it also prints a `::warning file=<spec>,line=<line>,title=Smoothness::<summary>` workflow command, so the warning shows on the pull request itself. It does *not* use `expect.soft`, because Playwright marks a test with a failed soft assertion as failed, which would break principle 3.
 7. **Non-Chromium projects**: the fixture calls `test.info().annotations.push({ type: 'smoothness-skipped', description: ... })` and returns a result where every measurement is in `unavailable`. `toBeSmooth()` on such a result passes with that annotation, never silently.
@@ -52,7 +52,7 @@ Key design decisions (open to challenge):
 **Build**
 - `package.json` (ESM-first, dual export via tsup, `exports` map for `.`, `./reporter`, `./cli`; `bin: playwright-smoothness`), `tsconfig.json`, `tsup.config.ts`, `eslint.config.js` (flat config), `.prettierrc`, `.changeset/config.json`, `.gitignore`, `.nvmrc` (20).
 - Node 20+ in `engines`. `@playwright/test` as a peer dependency. **Minimum version:** I believe opt-in new headless via `channel: 'chromium'` landed in Playwright 1.49 (the release that split out `chromium-headless-shell`). I'll confirm against the release notes before setting `peerDependencies` and record the source in `docs/measurements.md`. LoAF needs Chrome 123+, which 1.49's bundled Chromium already exceeds.
-- Copy the spike into `spike/` for reference. Excluded from the npm `files` list and from lint and typecheck.
+- ~~Copy the spike into `spike/` for reference.~~ Done, then removed during M0 review: the detection suite reproduces every spike experiment that matters (exactly, on GitHub Actions), and the spike's numbers are recorded in the brief's section 3 and `docs/measurements.md`. An unmaintained second copy of the same experiments would only invite copying its older patterns. The original stays in `loaf-headless-spike.zip`.
 - `test-pages/`, served by a zero-dependency Node static server (`test-pages/server.mjs`, same shape as the spike's) through Playwright's `webServer`:
   - `raf.html`: a 200ms `requestAnimationFrame` callback
   - `click.html`: 150ms click handler (configurable via `?clickwork=`), a nested-label button, a self-removing button
@@ -169,7 +169,6 @@ Eight milestones is a long time before anyone uses the library, so it ships in t
 .github/workflows/{ci,noise,latest}.yml
 docs/{measurements,frameworks,trace-categories,ci-history,mode-detection}.md
 examples/{plain-site,react-list,github-actions}/
-spike/                          (reference only, not shipped)
 src/
   index.ts  constants.ts  types.ts  options.ts  fixture.ts  runner.ts  cdp.ts
   matcher.ts  output.ts  scroll.ts

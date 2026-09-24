@@ -1,5 +1,4 @@
 dist
-spike
 test-results
 playwright-report
 package-lock.json
