@@ -1,0 +1,16 @@
+[
+  {
+    "start": 591,
+    "duration": 153.20000000001164,
+    "blocking": 101.672,
+    "scripts": [
+      {
+        "invoker": "BUTTON#heavy.onclick",
+        "invokerType": "event-listener",
+        "source": "http://localhost:4173/app.js",
+        "fn": "onHeavyClick",
+        "duration": 150
+      }
+    ]
+  }
+]

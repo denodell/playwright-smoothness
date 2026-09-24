@@ -1,0 +1,1 @@
+{"wait":70,"totalEvents":8993,"sizeKB":1737,"counts":{"BeginFrame":64,"DrawFrame":12,"DroppedFrame":0,"Commit":28,"PipelineReporter":148,"AnimationFrame":96,"Screenshot":0,"NeedsBeginFrameChanged":1,"ActivateLayerTree":2},"pipelineStates":{"STATE_NO_UPDATE_DESIRED":52,"STATE_PRESENTED_ALL":14,"STATE_DROPPED":8}}

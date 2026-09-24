@@ -1,0 +1,16 @@
+[
+  {
+    "start": 542,
+    "duration": 201.6999999999971,
+    "blocking": 150.181,
+    "scripts": [
+      {
+        "invoker": "FrameRequestCallback",
+        "invokerType": "user-callback",
+        "source": "http://localhost:4173/app.js",
+        "fn": "heavyFrame",
+        "duration": 200
+      }
+    ]
+  }
+]

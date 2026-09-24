@@ -1,0 +1,32 @@
+[
+  {
+    "count": 9,
+    "totalBlocking": 164,
+    "worst": 75,
+    "topInvoker": "DOMWindow.onscroll"
+  },
+  {
+    "count": 10,
+    "totalBlocking": 248,
+    "worst": 119,
+    "topInvoker": "DOMWindow.onscroll"
+  },
+  {
+    "count": 9,
+    "totalBlocking": 185,
+    "worst": 80,
+    "topInvoker": "DOMWindow.onscroll"
+  },
+  {
+    "count": 10,
+    "totalBlocking": 223,
+    "worst": 104,
+    "topInvoker": "DOMWindow.onscroll"
+  },
+  {
+    "count": 10,
+    "totalBlocking": 205,
+    "worst": 79,
+    "topInvoker": "DOMWindow.onscroll"
+  }
+]

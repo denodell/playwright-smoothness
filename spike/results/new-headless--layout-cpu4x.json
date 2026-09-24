@@ -1,0 +1,32 @@
+[
+  {
+    "count": 1,
+    "worst": 440,
+    "blocking": 387,
+    "top": "FrameRequestCallback layoutFrame"
+  },
+  {
+    "count": 1,
+    "worst": 419,
+    "blocking": 363,
+    "top": "FrameRequestCallback layoutFrame"
+  },
+  {
+    "count": 1,
+    "worst": 412,
+    "blocking": 360,
+    "top": "FrameRequestCallback layoutFrame"
+  },
+  {
+    "count": 1,
+    "worst": 488,
+    "blocking": 435,
+    "top": "FrameRequestCallback layoutFrame"
+  },
+  {
+    "count": 1,
+    "worst": 422,
+    "blocking": 364,
+    "top": "FrameRequestCallback layoutFrame"
+  }
+]

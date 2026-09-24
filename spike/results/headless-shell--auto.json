@@ -1,0 +1,197 @@
+{
+ "rawEvents": [
+  "pointerout:0:88:html",
+  "pointerover:0:88:span.label",
+  "pointerenter:0:88:body",
+  "pointerenter:0:88:button#buy.primary",
+  "pointerenter:0:88:span.label",
+  "mouseout:0:88:html",
+  "mouseover:0:88:span.label",
+  "pointerdown:9305:88:span.label",
+  "mousedown:0:88:span.label",
+  "pointerup:9305:80:span.label",
+  "mouseup:0:80:span.label",
+  "click:9305:80:span.label",
+  "pointerout:0:72:span.label",
+  "pointerleave:0:72:span.label",
+  "pointerleave:0:72:button#buy.primary",
+  "pointerover:0:72:input#search",
+  "pointerenter:0:72:input#search",
+  "pointerenter:0:72:null",
+  "mouseout:0:72:span.label",
+  "mouseover:0:72:input#search",
+  "pointerdown:9312:72:input#search",
+  "mousedown:0:72:input#search",
+  "pointerup:9312:72:input#search",
+  "mouseup:0:72:input#search",
+  "click:9312:72:input#search",
+  "keydown:9319:64:input#search",
+  "keypress:9319:64:input#search",
+  "keydown:9326:64:input#search",
+  "keypress:9326:64:input#search",
+  "keydown:9333:64:input#search",
+  "keypress:9333:64:input#search",
+  "pointerout:0:72:input#search",
+  "pointerleave:0:72:null",
+  "pointerleave:0:72:input#search",
+  "pointerover:0:72:null",
+  "pointerenter:0:72:null",
+  "mouseout:0:72:input#search",
+  "mouseover:0:72:null",
+  "pointerdown:9340:72:null",
+  "mousedown:0:72:null",
+  "pointerup:9340:72:null",
+  "mouseup:0:72:null",
+  "click:9340:72:null",
+  "pointerout:0:16:body",
+  "pointerover:0:16:div",
+  "pointerenter:0:16:div#feed",
+  "pointerenter:0:16:div",
+  "mouseout:0:16:body",
+  "mouseover:0:16:div",
+  "pointerout:0:72:div",
+  "pointerleave:0:72:div",
+  "pointerover:0:72:div",
+  "pointerenter:0:72:div",
+  "mouseout:0:72:div",
+  "mouseover:0:72:div",
+  "pointerout:0:72:div",
+  "pointerleave:0:72:div",
+  "pointerover:0:72:div",
+  "pointerenter:0:72:div",
+  "mouseout:0:72:div",
+  "mouseover:0:72:div",
+  "pointerout:0:72:div",
+  "pointerleave:0:72:div",
+  "pointerover:0:72:div",
+  "pointerenter:0:72:div",
+  "mouseout:0:72:div",
+  "mouseover:0:72:div"
+ ],
+ "interactions": [
+  {
+   "event": "pointerdown",
+   "target": "span.label",
+   "ms": 88
+  },
+  {
+   "event": "pointerdown",
+   "target": "input#search",
+   "ms": 72
+  },
+  {
+   "event": "keydown",
+   "target": "input#search",
+   "ms": 64
+  },
+  {
+   "event": "keydown",
+   "target": "input#search",
+   "ms": 64
+  },
+  {
+   "event": "keydown",
+   "target": "input#search",
+   "ms": 64
+  },
+  {
+   "event": "pointerdown",
+   "target": null,
+   "ms": 72
+  }
+ ],
+ "frames": [
+  {
+   "duration": 149,
+   "firstUI": false,
+   "scripts": [
+    "classic-script: http://localhost:4173/load-work.js (load-work.js)"
+   ],
+   "guess": "load",
+   "truth": "load"
+  },
+  {
+   "duration": 90,
+   "firstUI": false,
+   "scripts": [
+    "user-callback: TimerHandler:setTimeout (backgroundJob)"
+   ],
+   "guess": "background",
+   "truth": "background"
+  },
+  {
+   "duration": 84,
+   "firstUI": true,
+   "scripts": [
+    "event-listener: BUTTON#buy.onclick (onBuy)"
+   ],
+   "guess": "interaction",
+   "truth": "interaction"
+  },
+  {
+   "duration": 69,
+   "firstUI": true,
+   "scripts": [
+    "event-listener: INPUT#search.onkeydown (onSearchKey)"
+   ],
+   "guess": "interaction",
+   "truth": "interaction"
+  },
+  {
+   "duration": 62,
+   "firstUI": true,
+   "scripts": [
+    "event-listener: INPUT#search.onkeydown (onSearchKey)"
+   ],
+   "guess": "interaction",
+   "truth": "interaction"
+  },
+  {
+   "duration": 62,
+   "firstUI": true,
+   "scripts": [
+    "event-listener: INPUT#search.onkeydown (onSearchKey)"
+   ],
+   "guess": "interaction",
+   "truth": "interaction"
+  },
+  {
+   "duration": 74,
+   "firstUI": true,
+   "scripts": [
+    "event-listener: BUTTON#vanish.onclick (onVanish)"
+   ],
+   "guess": "interaction",
+   "truth": "interaction"
+  },
+  {
+   "duration": 70,
+   "firstUI": false,
+   "scripts": [
+    "event-listener: DIV#feed.onscroll (onFeedScroll)"
+   ],
+   "guess": "interaction",
+   "truth": "interaction"
+  },
+  {
+   "duration": 70,
+   "firstUI": false,
+   "scripts": [
+    "event-listener: DIV#feed.onscroll (onFeedScroll)"
+   ],
+   "guess": "interaction",
+   "truth": "interaction"
+  },
+  {
+   "duration": 70,
+   "firstUI": false,
+   "scripts": [
+    "event-listener: DIV#feed.onscroll (onFeedScroll)"
+   ],
+   "guess": "interaction",
+   "truth": "interaction"
+  }
+ ],
+ "correct": 10,
+ "total": 10
+}

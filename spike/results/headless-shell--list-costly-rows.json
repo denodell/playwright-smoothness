@@ -1,0 +1,18 @@
+{
+ "scenario": {
+  "name": "costly-rows",
+  "cost": 4,
+  "overscan": 2
+ },
+ "frames": 410,
+ "presented": 406,
+ "dropped": 0,
+ "missingContent": 323,
+ "checkerboardRaster": 322,
+ "checkerboardRecord": 1,
+ "scrollStates": [
+  "SCROLL_NONE",
+  "SCROLL_COMPOSITOR_THREAD"
+ ],
+ "screenshots": 205
+}
