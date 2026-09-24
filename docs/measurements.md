@@ -99,10 +99,14 @@ Wall clock versus iterations, measured from the click handler's LoAF script dura
 
 **Between jobs, runner speed varies about 2x.** The same iteration-based work took:
 
-| Job                        | CPU                                          | `doWork(6,000,000)` at 1x | Throttled scroll, total blocking (4x) |
-| -------------------------- | -------------------------------------------- | ------------------------- | ------------------------------------- |
-| PR #1 CI (run 35940477326) | AMD EPYC 9V45, 4 vCPU                        | 150ms                     | 952ms                                 |
-| Noise (run 35943204024)    | _not recorded (the workflow now records it)_ | 226ms                     | 1,891ms                               |
+| Job                        | CPU                        | `doWork(6,000,000)` at 1x | Throttled scroll, total blocking (4x) |
+| -------------------------- | -------------------------- | ------------------------- | ------------------------------------- |
+| PR #1 CI (run 35940477326) | AMD EPYC 9V45, 4 vCPU      | 150ms                     | 952ms                                 |
+| Noise (run 35943204024)    | not recorded; see next row | 226ms                     | 1,891ms                               |
+| M1 CI (run 35945190946)    | AMD EPYC 9V74, 4 vCPU      | (integration job)         | (see detection artifact)              |
+| M1 noise (run 35945158558) | AMD EPYC 7763, 4 vCPU      | 226ms                     | 1,902ms                               |
+
+The M1 noise run recorded its CPU: an **AMD EPYC 7763**, with the same timings as the earlier slow run. The fast jobs ran on EPYC 9V45 and 9V74 parts. So `ubuntu-latest` is a pool of different hardware, and a job lands on one at random.
 
 Two consequences:
 
