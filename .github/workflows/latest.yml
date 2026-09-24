@@ -1,0 +1,29 @@
+# Runs the detection suite against the newest Playwright (and so the newest Chromium),
+# so changes to trace formats or performance APIs show up before users hit them.
+name: Latest Playwright and Chromium
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * *'
+
+jobs:
+  latest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save @playwright/test@latest
+      - run: npx playwright --version
+      - run: npx playwright install --with-deps chromium chromium-headless-shell
+      - run: npm run test:unit
+      - run: npm run test:detection
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: latest-detection-results
+          path: test-results/detection

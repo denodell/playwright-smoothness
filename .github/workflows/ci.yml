@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, typecheck, unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm run test:unit
+
+  detection:
+    name: Detection suite (Chromium pinned by the locked Playwright version)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium chromium-headless-shell
+      - run: npm run test:detection
+      - name: Runner details
+        if: always()
+        run: |
+          mkdir -p test-results/detection
+          node -e "const os=require('os');console.log(JSON.stringify({cpus:os.cpus().length,model:os.cpus()[0].model,memGB:Math.round(os.totalmem()/2**30),platform:process.platform,release:os.release()}))" > test-results/detection/runner.json
+          cat test-results/detection/runner.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: detection-results
+          path: |
+            test-results/detection
+            playwright-report
+          retention-days: 30
