@@ -19,6 +19,14 @@ feed.addEventListener('scroll', function onFeedScroll() {
   busyWait(70);
 });
 
+// ?bgevery=N repeats background work every N ms forever, for testing the settle timeout.
+const bgEvery = param('bgevery', 0);
+if (bgEvery) {
+  setInterval(function repeatingBackgroundJob() {
+    busyWait(70);
+  }, bgEvery);
+}
+
 // Background work unrelated to any interaction, 300ms after load.
 addEventListener('load', () =>
   setTimeout(

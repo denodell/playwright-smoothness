@@ -24,3 +24,13 @@ document.getElementById('vanish').addEventListener('click', function onVanishCli
   event.currentTarget.remove();
   status.textContent = 'dismissed';
 });
+
+// ?hostile=1: reading the heavy button's id throws, as some framework proxies and broken
+// polyfills do. The collector must survive this without losing the entry.
+if (param('hostile', 0)) {
+  Object.defineProperty(document.getElementById('heavy'), 'id', {
+    get: function hostileId() {
+      throw new Error('hostile id getter');
+    },
+  });
+}
