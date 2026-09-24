@@ -1,0 +1,15 @@
+"open filters" is less smooth than its baseline:
+  input-to-paint (p95) 176ms (+72ms, +69.2%), slowest: click on button#filters
+  long frames 3 (+3)
+
+Scripts blocking the interaction:
+  1. onFilterClick in app.js (BUTTON#filters.onclick): ran 108ms, 58ms of it blocking, during click on button#filters
+
+Checks:
+  check                 now    baseline  change          allowed  result
+  input-to-paint (p95)  176ms  104ms     +72ms (+69.2%)  +16ms    WORSE
+  long frames           3      0         +3              +1       WORSE
+
+Noise: input-to-paint (p95) varied 45.5% across 5 runs, more than the allowed 15%. A change this size can be noise. Run `npx playwright-smoothness calibrate` to choose a maxIncrease this check can meet.
+
+Baseline: tests/checkout.spec.ts-snapshots/smoothness/open-filters-quick-60hz-cpu4x-amd-epyc-7763-4cpu-chromium-linux.json (snapshot, recorded 2026-09-20, chromium 153.0.8010.12, AMD EPYC 7763 64-Core Processor)

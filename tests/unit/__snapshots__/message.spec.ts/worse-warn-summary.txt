@@ -1,0 +1,1 @@
+"open filters" got worse: input-to-paint (p95) 176ms (+72ms, +69.2%); top script onFilterClick in app.js
