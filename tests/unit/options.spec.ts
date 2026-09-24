@@ -13,6 +13,7 @@ test('defaults', () => {
     baselineDir: undefined,
     list: { background: 'auto', placeholders: [] },
     reset: 'reload',
+    gateTotalBlocking: false,
   });
 });
 
@@ -36,6 +37,7 @@ test('every option is accepted and kept', () => {
         baselineDir: 'baselines',
         list: { background: '#fff', placeholders: ['.skeleton'] },
         reset,
+        gateTotalBlocking: true,
       },
     ],
     {},
@@ -50,6 +52,7 @@ test('every option is accepted and kept', () => {
     enforce: 'fail',
     baselineDir: 'baselines',
     list: { background: '#fff', placeholders: ['.skeleton'] },
+    gateTotalBlocking: true,
   });
   expect(o.reset).toBe(reset);
 });

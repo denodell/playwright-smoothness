@@ -61,6 +61,7 @@ export function scriptBlocking(frames: AttributedFrame[]): Map<string, TopScript
       const cur = out.get(key);
       if (cur) {
         cur.blockingMs += share;
+        cur.durationMs += s.duration;
         for (const d of f.during ?? []) if (!cur.during.includes(d)) cur.during.push(d);
       } else
         out.set(key, {
@@ -69,6 +70,7 @@ export function scriptBlocking(frames: AttributedFrame[]): Map<string, TopScript
           invoker: s.invoker,
           invokerType: s.invokerType,
           blockingMs: share,
+          durationMs: s.duration,
           during: [...(f.during ?? [])],
         });
     }
@@ -84,7 +86,7 @@ export function summarizeLongFrames(frames: AttributedFrame[]): LongFramesResult
     topScripts: [...scriptBlocking(frames).values()]
       .sort((a, b) => b.blockingMs - a.blockingMs)
       .slice(0, TOP_SCRIPTS)
-      .map((s) => ({ ...s, blockingMs: round1(s.blockingMs) })),
+      .map((s) => ({ ...s, blockingMs: round1(s.blockingMs), durationMs: round1(s.durationMs) })),
   };
 }
 
@@ -125,6 +127,10 @@ export function combineLongFrames(
     topScripts: [...all.values()]
       .sort((a, b) => b.blockingMs - a.blockingMs)
       .slice(0, TOP_SCRIPTS)
-      .map((s) => ({ ...s, blockingMs: round1(s.blockingMs / runs.length) })),
+      .map((s) => ({
+        ...s,
+        blockingMs: round1(s.blockingMs / runs.length),
+        durationMs: round1(s.durationMs / runs.length),
+      })),
   };
 }

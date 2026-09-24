@@ -45,6 +45,11 @@ export interface SmoothnessOptions {
   list?: ListOptions;
   /** How to reset the page between runs. Default `'reload'`. */
   reset?: ResetStrategy;
+  /**
+   * Also gate on `longFrames.totalBlockingMs`. Off by default: it varied ±25-40% across runs in
+   * the spike's sandbox, so it's reported but not gated unless you ask. Default false.
+   */
+  gateTotalBlocking?: boolean;
 }
 
 /** Options after defaults are applied, plus where `mode` came from. */
@@ -59,6 +64,7 @@ export interface ResolvedOptions {
   baselineDir: string | undefined;
   list: Required<ListOptions>;
   reset: ResetStrategy;
+  gateTotalBlocking: boolean;
 }
 
 export type HeadlessMode = 'headless-shell' | 'new-headless' | 'headed' | 'unknown';
@@ -97,8 +103,10 @@ export interface TopScript {
   invoker: string;
   /** `event-listener`, `user-callback`, `classic-script`, and so on. */
   invokerType: string;
-  /** This script's share of blocking time, averaged per run. */
+  /** This script's share of blocking time (frame time beyond 50ms), averaged per run. */
   blockingMs: number;
+  /** How long the script ran, averaged per run. */
+  durationMs: number;
   /**
    * The interactions whose frames this script blocked, such as `click on button#checkout` or
    * `scroll on div#feed`. Frameworks put their own dispatcher between the browser and your
@@ -116,6 +124,21 @@ export interface LongFramesResult {
   /** Longest frame in ms, or null when there were none. */
   worstMs: number | null;
   topScripts: TopScript[];
+}
+
+/** Frame delivery from the Chrome trace (full mode, M3). */
+export interface FramesResult {
+  total: number;
+  onTime: number;
+  dropped: number;
+  onTimePercent: number;
+}
+
+/** Blank rows while scrolling a list, from trace screenshots (`scroll()` in full mode, M4). */
+export interface ListResult {
+  blankFrames: number;
+  blankFramePercent: number;
+  leastDrawnPercent: number;
 }
 
 export interface Spread {
@@ -140,6 +163,19 @@ export interface SmoothnessResult {
   machine: { cpuModel: string; cpus: number; platform: string };
   cpuThrottling: number;
   refreshRate: 60 | 120;
+  /** The options that decide how this result is compared, recorded for reports and CI scripts. */
+  settings: {
+    maxIncrease: number;
+    enforce: Enforce;
+    gateTotalBlocking: boolean;
+    baselineDir: string | null;
+    /** Which rule chose `mode` (docs/mode-detection.md). */
+    modeSource: string;
+  };
+  /** Full mode only. */
+  frames?: FramesResult | null;
+  /** `scroll()` in full mode only. */
+  list?: ListResult | null;
   /** Null when Event Timing couldn't be measured (see `unavailable`). */
   input: InputResult | null;
   /** Null when LoAF couldn't be measured (see `unavailable`). */
@@ -150,5 +186,62 @@ export interface SmoothnessResult {
   frameClasses: { interaction: number; load: number; background: number };
   unavailable: Unavailable[];
   /** Human-readable notes about the measurement itself (settle timeouts, headless shell, and so on). */
+  notes: string[];
+  /** Set by `toBeSmooth()`: how this result compared with its baseline. */
+  comparison?: Comparison;
+}
+
+/**
+ * - `pass`: within the allowed increase.
+ * - `worse`: past the allowed increase.
+ * - `unavailable`: measured in the baseline but not now (see the result's `unavailable`).
+ * - `not-compared`: measured now, but the baseline has no value to compare with.
+ */
+export type CheckStatus = 'pass' | 'worse' | 'unavailable' | 'not-compared';
+
+export interface Check {
+  /** Result field, such as `input.p95ToPaintMs`. */
+  metric: string;
+  /** Plain name, such as `input-to-paint (p95)`. */
+  name: string;
+  unit: 'ms' | 'count' | '%';
+  current: number | null;
+  baseline: number | null;
+  /** current − baseline, in the metric's unit. */
+  change: number | null;
+  /** Change as a percentage of the baseline, or null when the baseline is 0. */
+  changePercent: number | null;
+  /** The largest change allowed before the check is `worse`. */
+  allowed: number | null;
+  status: CheckStatus;
+  reason?: string;
+  /** True when this check varied across runs by more than maxIncrease; see `calibrate`. */
+  noisy?: boolean;
+  /** (max − min) / median across runs, as a percentage. */
+  spreadPercent?: number;
+}
+
+/**
+ * - `pass`: every gated check is within its allowance.
+ * - `warn` / `fail`: at least one check is worse; which one depends on `enforce`.
+ * - `baseline-created`: no baseline existed, so this result became it.
+ * - `baseline-updated`: `--update-snapshots` replaced the baseline.
+ * - `not-compared`: nothing could be compared (no measurement, or no baseline and updates are off).
+ */
+export type ComparisonStatus =
+  'pass' | 'warn' | 'fail' | 'baseline-created' | 'baseline-updated' | 'not-compared';
+
+export interface BaselineInfo {
+  path: string;
+  source: 'baselineDir' | 'snapshot';
+  recordedAt: string;
+  browserVersion: string;
+  machine: SmoothnessResult['machine'];
+}
+
+export interface Comparison {
+  status: ComparisonStatus;
+  checks: Check[];
+  baseline: BaselineInfo | null;
   notes: string[];
 }
