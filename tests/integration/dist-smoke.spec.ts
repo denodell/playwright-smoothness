@@ -15,4 +15,7 @@ test('the built package measures a click end to end', async ({ page, smoothness 
   expect(result.unavailable).toEqual([]);
   expect(result.longFrames!.count).toBe(1);
   expect(result.input!.byTarget[0]!.target).toBe('button#heavy');
+  // The built matcher: the first run records a baseline and passes.
+  expect(result).toBeSmooth();
+  expect(result.comparison!.status).toBe('baseline-created');
 });

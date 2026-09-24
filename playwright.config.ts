@@ -20,7 +20,12 @@ export default defineConfig({
   },
   projects: [
     // Pure logic, no browser.
-    { name: 'unit', testDir: './tests/unit' },
+    // Snapshots here are text (failure messages), identical on every platform.
+    {
+      name: 'unit',
+      testDir: './tests/unit',
+      snapshotPathTemplate: '{testDir}/__snapshots__/{testFileName}/{arg}{ext}',
+    },
 
     // Raw Playwright reproductions of the spike's findings. New headless, as the library defaults to.
     {
@@ -36,7 +41,12 @@ export default defineConfig({
       testDir: './tests/integration',
       testIgnore: /non-chromium\.spec\.ts/,
       use: { browserName: 'chromium', channel: 'chromium', headless: true },
+      // Baselines written by toBeSmooth() in these tests belong to the run, not the repository.
+      snapshotPathTemplate:
+        'test-results/integration-snapshots/{testFilePath}/{arg}{-projectName}{-snapshotSuffix}{ext}',
     },
+    // Acceptance tests that run a user project in a child Playwright process.
+    { name: 'e2e', testDir: './tests/e2e', testIgnore: /fixture-project/ },
     // Principle 7: other browsers are skipped visibly, never passed silently.
     {
       name: 'integration-firefox',

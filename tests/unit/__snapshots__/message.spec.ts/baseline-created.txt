@@ -1,0 +1,6 @@
+"open filters": baseline recorded. Nothing to compare yet.
+
+Notes:
+  No baseline existed, so this result was recorded as the baseline. Later runs compare against it.
+
+Baseline: tests/checkout.spec.ts-snapshots/smoothness/open-filters-quick-60hz-cpu4x-amd-epyc-7763-4cpu-chromium-linux.json (snapshot, recorded 2026-09-20, chromium 153.0.8010.12, AMD EPYC 7763 64-Core Processor)

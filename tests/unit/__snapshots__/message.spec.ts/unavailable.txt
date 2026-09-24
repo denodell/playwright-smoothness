@@ -1,0 +1,12 @@
+"open filters" is within 15% of its baseline.
+
+Checks:
+  check                 now    baseline  change        allowed  result
+  input-to-paint (p95)  112ms  104ms     +8ms (+7.7%)  +16ms    ok
+  long frames           n/a    0                                unavailable: Long Animation Frames are not supported in this browser
+
+Notes:
+  The page didn't go quiet within 5000ms before 2 run(s).
+  The baseline was recorded with chromium 152.0.1; this run used 153.0.8010.12.
+
+Baseline: tests/checkout.spec.ts-snapshots/smoothness/open-filters-quick-60hz-cpu4x-amd-epyc-7763-4cpu-chromium-linux.json (snapshot, recorded 2026-09-20, chromium 153.0.8010.12, AMD EPYC 7763 64-Core Processor)

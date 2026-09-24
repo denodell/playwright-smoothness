@@ -90,6 +90,17 @@ export function machine(): SmoothnessResult['machine'] {
   return { cpuModel: list[0]?.model.trim() ?? 'unknown', cpus: list.length, platform: platform() };
 }
 
+/** The options that decide how a result is compared, as recorded in the result. */
+export function settingsOf(options: ResolvedOptions): SmoothnessResult['settings'] {
+  return {
+    maxIncrease: options.maxIncrease,
+    enforce: options.enforce,
+    gateTotalBlocking: options.gateTotalBlocking,
+    baselineDir: options.baselineDir ?? null,
+    modeSource: options.modeSource,
+  };
+}
+
 /** A result with nothing measured, for browsers or pages where measurement isn't possible. */
 export function emptyResult(ctx: Omit<MeasureContext, 'page'>, reason: string): SmoothnessResult {
   return {
@@ -103,6 +114,7 @@ export function emptyResult(ctx: Omit<MeasureContext, 'page'>, reason: string): 
     machine: machine(),
     cpuThrottling: ctx.options.cpuThrottling,
     refreshRate: ctx.options.refreshRate,
+    settings: settingsOf(ctx.options),
     input: null,
     longFrames: null,
     spread: {},
@@ -293,6 +305,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     machine: machine(),
     cpuThrottling: options.cpuThrottling,
     refreshRate: options.refreshRate,
+    settings: settingsOf(options),
     input,
     longFrames,
     spread: spreads,

@@ -76,5 +76,6 @@ export function resolveOptions(
     baselineDir: o.baselineDir,
     list: { background: o.list?.background ?? 'auto', placeholders: o.list?.placeholders ?? [] },
     reset: o.reset ?? 'reload',
+    gateTotalBlocking: o.gateTotalBlocking ?? false,
   };
 }

@@ -48,10 +48,12 @@
     "typecheck": "tsc --noEmit",
     "test": "npm run test:unit && npm run test:integration && npm run test:detection",
     "test:unit": "playwright test --project=unit",
-    "test:integration": "playwright test --project=integration --project=integration-firefox",
+    "test:integration": "playwright test --project=integration --project=integration-firefox --project=e2e",
     "test:detection": "playwright test --project=detection",
     "test:headless-modes": "playwright test --project=mode-headless-shell --project=mode-new-headless --project=mode-headed",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "release:check": "npm run build && npm publish --dry-run --tag next",
+    "release:preview": "npm run build && npm publish --tag next"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.49.0"
@@ -75,5 +77,10 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",
     "zone.js": "0.16.3"
-  }
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
+  "sideEffects": false
 }
