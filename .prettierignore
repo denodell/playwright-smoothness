@@ -1,4 +1,5 @@
 dist
+test-pages/frameworks/dist
 test-results
 playwright-report
 package-lock.json
