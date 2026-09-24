@@ -16,7 +16,7 @@ Angular is bootstrapped in JIT mode (no Angular CLI). JIT and AOT builds registe
 
 ## What LoAF reports
 
-Chrome 153, measured locally (GitHub Actions results are added in the M1 pull request):
+Chrome 153. Identical locally and on GitHub Actions (PR #2, run 35945190946):
 
 | Page                    | LoAF `invoker`            | LoAF `sourceFunctionName`        | Event Timing target |
 | ----------------------- | ------------------------- | -------------------------------- | ------------------- |
