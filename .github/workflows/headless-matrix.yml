@@ -1,0 +1,59 @@
+# Records headless-mode signals across Playwright versions and checks the detection rule
+# (scripts/headless-summary.mjs) against every one. 1.57 is the first Chrome for Testing release.
+name: Headless mode matrix
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - tests/detection/headless-mode.spec.ts
+      - scripts/headless-summary.mjs
+      - src/environment.ts
+      - .github/workflows/headless-matrix.yml
+  schedule:
+    - cron: '0 6 * * 1'
+
+jobs:
+  record:
+    strategy:
+      fail-fast: false
+      matrix:
+        playwright: ['1.49.0', '1.56.0', '1.57.0', 'latest']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Use Playwright ${{ matrix.playwright }}
+        run: npm install --no-save @playwright/test@${{ matrix.playwright }}
+      - run: npx playwright --version
+      - run: npx playwright install --with-deps chromium chromium-headless-shell
+      - name: Record signals (headed under xvfb)
+        run: xvfb-run --auto-servernum npm run test:headless-modes
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headless-${{ matrix.playwright }}
+          path: test-results/detection/*headless-mode.json
+
+  summary:
+    needs: record
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: headless
+      - name: Table and rule check
+        run: |
+          node scripts/headless-summary.mjs headless | tee headless/summary.md
+          cat headless/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headless-summary
+          path: headless/summary.md

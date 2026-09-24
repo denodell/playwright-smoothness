@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>playwright-smoothness test pages</title>
+  </head>
+  <body>
+    <h1>Test pages</h1>
+    <ul>
+      <li><a href="raf.html">raf.html</a>: a long requestAnimationFrame callback (<code>?ms=200</code>)</li>
+      <li>
+        <a href="click.html">click.html</a>: slow click handler, nested-label button, self-removing button
+      </li>
+      <li><a href="search.html">search.html</a>: slow keydown handler (<code>?ms=60</code>)</li>
+      <li>
+        <a href="scroll.html">scroll.html</a>: scroll handler work (<code>?wait=</code> wall-clock ms,
+        <code>?work=</code> iterations)
+      </li>
+      <li>
+        <a href="mixed.html">mixed.html</a>: load work, background timer and every interaction type, for
+        classification
+      </li>
+      <li>
+        <a href="list.html">list.html</a>: virtualized list (<code>?cost=</code>, <code>?overscan=</code>,
+        <code>?costmode=wall|iter</code>)
+      </li>
+    </ul>
+  </body>
+</html>
