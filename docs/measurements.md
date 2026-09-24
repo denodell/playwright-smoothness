@@ -103,10 +103,10 @@ Wall clock versus iterations, measured from the click handler's LoAF script dura
 | -------------------------- | -------------------------- | ------------------------- | ------------------------------------- |
 | PR #1 CI (run 35940477326) | AMD EPYC 9V45, 4 vCPU      | 150ms                     | 952ms                                 |
 | Noise (run 35943204024)    | not recorded; see next row | 226ms                     | 1,891ms                               |
-| M1 CI (run 35945190946)    | AMD EPYC 9V74, 4 vCPU      | (integration job)         | (see detection artifact)              |
+| M1 CI (run 35945190946)    | AMD EPYC 9V74, 4 vCPU      | 197ms                     | 1,568ms                               |
 | M1 noise (run 35945158558) | AMD EPYC 7763, 4 vCPU      | 226ms                     | 1,902ms                               |
 
-The M1 noise run recorded its CPU: an **AMD EPYC 7763**, with the same timings as the earlier slow run. The fast jobs ran on EPYC 9V45 and 9V74 parts. So `ubuntu-latest` is a pool of different hardware, and a job lands on one at random.
+The M1 runs recorded their CPUs. Three models gave three speeds for the same work: **EPYC 9V45** 150ms, **EPYC 9V74** 197ms, and **EPYC 7763** 226ms (the same as the earlier unrecorded noise run). So `ubuntu-latest` is a pool of different hardware, and each job lands on one of them.
 
 Two consequences:
 
