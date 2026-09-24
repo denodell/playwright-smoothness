@@ -1,0 +1,8 @@
+dist
+spike
+test-results
+playwright-report
+package-lock.json
+.changeset/*.md
+CLAUDE_CODE_BRIEF.md
+PLAN.md
