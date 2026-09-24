@@ -2,7 +2,7 @@
 
 Fail the build when a web UI stops being smooth. `playwright-smoothness` measures scripted interactions in Chromium, compares each one with a stored baseline, and names the element and the scripts responsible when it gets worse.
 
-> **0.1 is a preview.** Quick mode (input-to-paint and long frames), baselines, and the `toBeSmooth()` matcher work. Full mode (dropped frames from a Chrome trace) and `smoothness.scroll()` (blank rows in long lists) come next. Expect breaking changes before 1.0. Reports of noise on your CI runners are especially welcome.
+> **0.1 is a preview.** Quick mode (input-to-paint and long frames), full mode (dropped frames from a Chrome trace), baselines, and the `toBeSmooth()` matcher work. `smoothness.scroll()` (blank rows in long lists) comes next. Expect breaking changes before 1.0. Reports of noise on your CI runners are especially welcome.
 
 ## Quick start
 
@@ -66,7 +66,17 @@ await smoothness.measure('add to cart', action, {
 | `longFrames.totalBlockingMs` | Frame time beyond 50ms, summed. Noisy, so only gated with `gateTotalBlocking: true`.                   | Optional |
 | `longFrames.topScripts`      | The scripts that ran in those frames, with `during`: the interactions they blocked.                    | No       |
 
-A check fails when it gets worse than its baseline by more than `maxIncrease` (15% by default), with a small floor so rounding can't fail it: 16ms for input-to-paint (Event Timing reports in 8ms steps) and 1 long frame.
+In full mode (`mode: 'full'`), each run is also traced:
+
+| Field                  | Meaning                                                                                                                                                                    | Gated |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| `frames.onTimePercent` | Frames presented on time, out of frames that had an update to show, from Chrome's frame reporter in the trace. Catches drops that are too short for Long Animation Frames. | Yes   |
+| `frames.dropped`       | Frames whose update missed its deadline.                                                                                                                                   | No    |
+| `budget120`            | With `refreshRate: 120`: main-thread frames over 8.33ms. A prediction, because headless Chrome runs at 60Hz.                                                               | Never |
+
+Full mode costs 1–4% more time per measurement and doesn't change the other numbers ([docs/trace-categories.md](docs/trace-categories.md)).
+
+A check fails when it gets worse than its baseline by more than `maxIncrease` (15% by default), with a small floor so rounding can't fail it: 16ms for input-to-paint (Event Timing reports in 8ms steps), 1 long frame, and 1 percentage point of frames. On-time frames are compared on the missed share, so 95% → 81% can't pass as "within 15%".
 
 Numbers that couldn't be measured are `null` and listed in `unavailable` with a reason. They're never reported as zero.
 
@@ -112,7 +122,7 @@ export default defineConfig<SmoothnessTestOptions>({
 | `reset`             | `'reload'` | `'reload'`, `'none'`, or an async function.                                               |
 | `baselineDir`       | none       | A directory of baselines from your main branch, checked before the ones next to the test. |
 | `gateTotalBlocking` | `false`    | Also gate total blocking time.                                                            |
-| `mode`              | see below  | `'quick'` or `'full'` (full mode arrives in a later release).                             |
+| `mode`              | see below  | `'quick'` or `'full'`. Full mode adds a Chrome trace for dropped frames.                  |
 | `refreshRate`       | `60`       | `120` adds a reported-only 120Hz prediction in full mode.                                 |
 
 The mode comes from the option, then `SMOOTHNESS_MODE`, then scheduled CI runs (`full`), then `quick`. See [docs/mode-detection.md](docs/mode-detection.md).

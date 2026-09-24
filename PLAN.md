@@ -233,3 +233,11 @@ Order: `test.use({ smoothness: { mode } })` → `SMOOTHNESS_MODE` → scheduled 
 19. **Typed config:** `defineConfig<SmoothnessTestOptions>()` is needed for `use: { smoothnessOptions }` to typecheck in `playwright.config.ts`. Covered by a compile-only test.
 20. **CI baselines** come from the main branch through `baselineDir` (`docs/ci.md`). The recipe is checked end to end before the public release (M4).
 21. **Preview publishing** uses `npm run release:preview`, which passes `--tag next` explicitly, because npm didn't show `publishConfig.tag` taking effect in a dry run. Publishing needs your go-ahead.
+
+## Decisions made during M3
+
+22. **Trace window from in-page marks**, not from input events. `performance.mark()` calls land in the trace (`blink.user_timing`) with both clocks, so frames are counted between the marks. This also explains M0's "tracing start" drop: it came from Playwright's `about:blank` compositor.
+23. **Minimal categories:** `disabled-by-default-devtools.timeline.frame` + `blink.user_timing` (240KB, against 2,148KB for the spike's set), plus `devtools.timeline` only for `refreshRate: 120`.
+24. **A frame reported both presented and dropped counts as both.** That's how a blocked main thread shows while the compositor keeps scrolling, and it's what the section 3 table measures.
+25. **`frames.onTimePercent` is null when no frame had an update**, rather than 100.
+26. **Not built: a V8 CPU profile in full mode to name the app's handler** behind a framework dispatcher (docs/frameworks.md). Waiting for your call.
