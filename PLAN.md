@@ -223,3 +223,13 @@ Order: `test.use({ smoothness: { mode } })` → `SMOOTHNESS_MODE` → scheduled 
 12. **Option fixture name: `smoothnessOptions`, not `smoothness`.** Playwright can't use one name for both the fixture that has `measure()` and an option that `test.use()` overrides: overriding an option replaces the fixture's value. Every option can also be passed per call, as in `smoothness.measure(label, fn, { runs: 3 })`.
 13. **Framework check: React and Angular (with Zone.js and zoneless).** LoAF never names the app's handler in any of them, and source maps can't fix that, because LoAF records only the entry-point script (the framework's dispatcher). No source-map resolution was added. Instead, each top script lists the interactions it blocked (`during`), taken from Event Timing, which names the real element every time. See `docs/frameworks.md`. A JavaScript profile in full mode could name the handler; that's proposed for M3.
 14. **Results record the machine** (CPU model, cores, platform). GitHub's hosted runners varied about 2x in speed between jobs, so M2 must treat a baseline from a different machine as not comparable. See `docs/measurements.md`.
+
+## Decisions made during M2
+
+15. **Baselines are also keyed by CPU model and by test title.** CPU model because hosted runners differ up to 1.5x between models (decision 14). A baseline from another model is never compared; the message lists which models have baselines. Test title because two tests in one spec file that use the same label would otherwise share a baseline without anyone noticing. Renaming a test starts a fresh baseline.
+16. **`--update-snapshots` modes:** `missing` (Playwright's default) records a baseline only when none exists; `all` replaces it; `changed` replaces it only when the check got worse; `none` never writes, and a missing baseline is reported as not compared.
+17. **Warn mode** passes the test, adds a `smoothness-warning` annotation, prints the full report to stderr, and in GitHub Actions prints a `::warning` for the test's file and line.
+18. **Percent metrics compare the bad share.** `frames.onTimePercent` is compared as 100 − value, so 95% → 81% on-time frames can't hide inside a 15% relative allowance.
+19. **Typed config:** `defineConfig<SmoothnessTestOptions>()` is needed for `use: { smoothnessOptions }` to typecheck in `playwright.config.ts`. Covered by a compile-only test.
+20. **CI baselines** come from the main branch through `baselineDir` (`docs/ci.md`). The recipe is checked end to end before the public release (M4).
+21. **Preview publishing** uses `npm run release:preview`, which passes `--tag next` explicitly, because npm didn't show `publishConfig.tag` taking effect in a dry run. Publishing needs your go-ahead.
