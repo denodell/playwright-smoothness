@@ -217,3 +217,9 @@ Order: `test.use({ smoothness: { mode } })` → `SMOOTHNESS_MODE` → scheduled 
 9. **Headless shell detection:** choose a method by comparing signals across a Playwright version matrix that includes 1.57 (Chrome for Testing builds). See M0 and M1.
 10. **Test-change detection (M6):** hash the whole spec file. Per-test hashing only if people ask for it.
 11. **Staged release:** 0.1.0 preview after M2, public launch after M4, 1.0 after M7. See "Release stages".
+
+## Decisions made during M1
+
+12. **Option fixture name: `smoothnessOptions`, not `smoothness`.** Playwright can't use one name for both the fixture that has `measure()` and an option that `test.use()` overrides: overriding an option replaces the fixture's value. Every option can also be passed per call, as in `smoothness.measure(label, fn, { runs: 3 })`.
+13. **Framework check: React and Angular (with Zone.js and zoneless).** LoAF never names the app's handler in any of them, and source maps can't fix that, because LoAF records only the entry-point script (the framework's dispatcher). No source-map resolution was added. Instead, each top script lists the interactions it blocked (`during`), taken from Event Timing, which names the real element every time. See `docs/frameworks.md`. A JavaScript profile in full mode could name the handler; that's proposed for M3.
+14. **Results record the machine** (CPU model, cores, platform). GitHub's hosted runners varied about 2x in speed between jobs, so M2 must treat a baseline from a different machine as not comparable. See `docs/measurements.md`.

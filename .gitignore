@@ -6,3 +6,4 @@ blob-report/
 *.tsbuildinfo
 .DS_Store
 loaf-headless-spike.zip
+test-pages/frameworks/dist/

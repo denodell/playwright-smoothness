@@ -2,7 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'node_modules/', 'test-results/', 'playwright-report/'] },
+  { ignores: ['dist/', 'test-pages/frameworks/', 'node_modules/', 'test-results/', 'playwright-report/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
@@ -32,6 +32,7 @@ export default tseslint.config(
         requestAnimationFrame: 'readonly',
         cancelAnimationFrame: 'readonly',
         setTimeout: 'readonly',
+        setInterval: 'readonly',
         addEventListener: 'readonly',
         URLSearchParams: 'readonly',
         URL: 'readonly',

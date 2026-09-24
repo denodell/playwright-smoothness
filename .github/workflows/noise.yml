@@ -19,6 +19,10 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium chromium-headless-shell
+      - name: Runner details
+        run: |
+          mkdir -p noise
+          node -e "const os=require('os');console.log(JSON.stringify({cpus:os.cpus().length,model:os.cpus()[0].model,memGB:Math.round(os.totalmem()/2**30)}))" | tee noise/runner.json
       - name: Five runs
         run: |
           for i in 1 2 3 4 5; do

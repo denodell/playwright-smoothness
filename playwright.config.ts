@@ -13,7 +13,7 @@ export default defineConfig({
     viewport: { width: 1280, height: 720 },
   },
   webServer: {
-    command: 'node test-pages/server.mjs',
+    command: 'node scripts/build-test-pages.mjs && node test-pages/server.mjs',
     url: `http://localhost:${PORT}`,
     env: { PORT: String(PORT) },
     reuseExistingServer: !process.env.CI,
@@ -28,6 +28,21 @@ export default defineConfig({
       testDir: './tests/detection',
       testIgnore: /headless-mode\.spec\.ts/,
       use: { browserName: 'chromium', channel: 'chromium', headless: true },
+    },
+
+    // The library, end to end, in new headless (its default).
+    {
+      name: 'integration',
+      testDir: './tests/integration',
+      testIgnore: /non-chromium\.spec\.ts/,
+      use: { browserName: 'chromium', channel: 'chromium', headless: true },
+    },
+    // Principle 7: other browsers are skipped visibly, never passed silently.
+    {
+      name: 'integration-firefox',
+      testDir: './tests/integration',
+      testMatch: /non-chromium\.spec\.ts/,
+      use: { browserName: 'firefox' },
     },
 
     // Records which signals identify each headless mode (see docs/measurements.md).

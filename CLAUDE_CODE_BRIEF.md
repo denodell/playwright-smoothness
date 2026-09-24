@@ -65,9 +65,9 @@ A prototype was run with Chromium 141 and Playwright 1.56 in the headless shell,
 
 **CPU throttling and noise**
 
-- `Emulation.setCPUThrottlingRate` through a CDP session works. Without throttling, moderate jank produced **zero** long frames on a fast machine. Throttling is on by default (rate 4).
+- `Emulation.setCPUThrottlingRate` through a CDP session works. Without throttling, moderate jank produced **zero** long frames on a fast machine (on a slower GitHub Actions runner the same work already made long frames at 1x). Throttling is on by default (rate 4).
 - Wall-clock busy-waits aren't slowed by throttling. The library's own test pages must use iteration-based work when testing throttling.
-- Noise across five runs at 4x: total blocking time varied by about ±25 to 40% around the median. The long-frame count and Event Timing durations were much steadier. The calibrate command and failure messages must make noise visible (see M5).
+- Noise across five runs at 4x: total blocking time varied by about ±25 to 40% around the median (single-CPU sandbox). On a GitHub Actions runner, within one job, it varied only ±1–2%. But runner speed varied about 2x *between* jobs (see `docs/measurements.md`), so baselines must record and match the machine they came from. The long-frame count and Event Timing durations were much steadier. The calibrate command and failure messages must make noise visible (see M5).
 
 **Interactions and classification (automatic mode groundwork)**
 

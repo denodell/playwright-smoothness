@@ -46,8 +46,9 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:unit && npm run test:detection",
+    "test": "npm run test:unit && npm run test:integration && npm run test:detection",
     "test:unit": "playwright test --project=unit",
+    "test:integration": "playwright test --project=integration --project=integration-firefox",
     "test:detection": "playwright test --project=detection",
     "test:headless-modes": "playwright test --project=mode-headless-shell --project=mode-new-headless --project=mode-headed",
     "changeset": "changeset"
@@ -56,14 +57,23 @@
     "@playwright/test": ">=1.49.0"
   },
   "devDependencies": {
+    "@angular/common": "21.2.24",
+    "@angular/compiler": "21.2.24",
+    "@angular/core": "21.2.24",
+    "@angular/platform-browser": "21.2.24",
     "@changesets/cli": "3.0.3",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.63.0",
     "@types/node": "20.19.43",
+    "esbuild": "0.28.2",
     "eslint": "10.11.0",
     "prettier": "3.9.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "rxjs": "7.8.2",
     "tsup": "8.5.1",
     "typescript": "6.0.3",
-    "typescript-eslint": "8.70.1"
+    "typescript-eslint": "8.70.1",
+    "zone.js": "0.16.3"
   }
 }
