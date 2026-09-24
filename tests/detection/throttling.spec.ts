@@ -74,7 +74,13 @@ test('iteration-based scroll work: 4x throttling produces long frames, five runs
     at4.every((r) => r.count > 0),
     'every 4x run has long frames',
   ).toBe(true);
-  expect(median(at4.map((r) => r.count))).toBeGreaterThan(median(at1.map((r) => r.count)));
+  // Throttling makes the same work take longer. The long-frame count needn't rise: on a slow
+  // runner the unthrottled work already crosses 50ms, as the noise workflow showed.
+  expect(median(at4.map((r) => r.count))).toBeGreaterThanOrEqual(median(at1.map((r) => r.count)));
+  expect(median(at4.map((r) => r.totalBlockingMs))).toBeGreaterThan(
+    2 * median(at1.map((r) => r.totalBlockingMs)),
+  );
+  expect(median(at4.map((r) => r.worstMs))).toBeGreaterThan(2 * median(at1.map((r) => r.worstMs)));
   expect(at4.every((r) => r.topInvoker === 'DOMWindow.onscroll')).toBe(true);
 });
 

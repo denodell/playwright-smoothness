@@ -91,6 +91,24 @@ Wall clock versus iterations, measured from the click handler's LoAF script dura
 | `busyWait(100)`, GHA       | 100.1ms | 100.0ms (not slowed) |
 | `doWork(6,000,000)`, GHA   | 150.3ms | 608.1ms (4.0x)       |
 
+## Noise on GitHub Actions (noise workflow)
+
+`.github/workflows/noise.yml` ran the whole detection suite five times in one job on `main` (run 35943204024).
+
+**Within one job, noise is very low.** Every scroll-table number was identical across all five runs (0 / 0 / 2 / 4 / 8 dropped; LoAF and rAF columns exact). Throttled long-frame counts didn't move (10 / 10 / 10). Throttled total blocking time varied ±1–2%. The spike's single-CPU sandbox saw ±25–40%. List fling dropped-frame counts were the least steady (cheap: 2–3; costly: 7–9).
+
+**Between jobs, runner speed varies about 2x.** The same iteration-based work took:
+
+| Job                        | CPU                                          | `doWork(6,000,000)` at 1x | Throttled scroll, total blocking (4x) |
+| -------------------------- | -------------------------------------------- | ------------------------- | ------------------------------------- |
+| PR #1 CI (run 35940477326) | AMD EPYC 9V45, 4 vCPU                        | 150ms                     | 952ms                                 |
+| Noise (run 35943204024)    | _not recorded (the workflow now records it)_ | 226ms                     | 1,891ms                               |
+
+Two consequences:
+
+1. **The unthrottled throttling check failed on the slower runner.** Without throttling, the 1,500,000-iteration scroll work already made 60ms frames there, so 4x couldn't add long frames (10 against 10). The detection test now asserts what throttling actually guarantees: total blocking time and the worst frame at least double. The spike's "moderate jank gives zero long frames at 1x" only holds on a fast machine.
+2. **Baselines are only comparable on the same kind of machine.** A baseline recorded on a fast runner would make every check on a slow runner look about 100% worse. Every result now records `machine` (CPU model, core count, platform), so M2 can detect a baseline from a different machine and say so instead of reporting a false regression. Timing-based checks (`input.p95ToPaintMs`, `longFrames.worstMs`) move with CPU speed. Counts (`longFrames.count`, dropped frames) move less, but they can still cross the 50ms threshold, as shown above.
+
 ## Refresh rate and AnimationFrame (section 3)
 
 - Frames per second with rAF, new headless: default 60, `--disable-frame-rate-limit` 57, `--disable-gpu-vsync` 60 (GitHub Actions: 60, 58, 61). As the spike found, the flags don't raise the rate.

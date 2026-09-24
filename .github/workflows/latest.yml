@@ -19,8 +19,10 @@ jobs:
       - run: npm ci
       - run: npm install --no-save @playwright/test@latest
       - run: npx playwright --version
-      - run: npx playwright install --with-deps chromium chromium-headless-shell
+      - run: npx playwright install --with-deps chromium chromium-headless-shell firefox
+      - run: npm run build
       - run: npm run test:unit
+      - run: npm run test:integration
       - run: npm run test:detection
       - uses: actions/upload-artifact@v4
         if: always()
