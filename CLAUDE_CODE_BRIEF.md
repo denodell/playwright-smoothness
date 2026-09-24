@@ -57,6 +57,7 @@ A prototype was run with Chromium 141 and Playwright 1.56 in the headless shell,
 
 **Headless and rendering**
 
+- The headless shell is identified by CDP `Browser.getVersion`: its `product` starts with `HeadlessChrome/`. New headless has `HeadlessChrome/` only in the CDP user agent. Verified on Playwright 1.49, 1.56, 1.57 (the first Chrome for Testing release) and 1.63 on GitHub Actions. `browserType().executablePath()` does not identify the running binary.
 - All three modes produced the same pass/fail results. Default to **new headless** (`channel: 'chromium'`), because Playwright's docs say it's closer to real Chrome. Warn when running in the headless shell.
 - Pages report `visibilityState: 'visible'` in headless, so LoAF works there.
 - Headless Chrome is fixed at about 60 frames per second. `--disable-frame-rate-limit` and `--disable-gpu-vsync` had no effect. 120Hz can only be *predicted*, by checking `AnimationFrame` durations against 8.33ms.
@@ -79,9 +80,9 @@ A prototype was run with Chromium 141 and Playwright 1.56 in the headless shell,
 **Long lists**
 
 - `Input.synthesizeScrollGesture` produces a real, compositor-driven fling (for example `yDistance: -20000, speed: 6000`).
-- `frame_reporter.has_missing_content` and `checkerboarded_needs_raster` **must not be used**. They fired on about 78% of frames even for a cheap list whose screenshots were fully drawn.
+- `frame_reporter.has_missing_content` and `checkerboarded_needs_raster` **must not be used**. They fired on about 78% of frames even for a cheap list whose screenshots were fully drawn (Chrome 141). On Chrome 153 they read 0 on every frame, including a blank list, locally and on GitHub Actions (see `docs/measurements.md`). Either way they carry no signal.
 - **Blank rows are the main failure in virtualized lists, and dropped frames miss them.** A list with 15ms per-row cost and no overscan dropped only 8 of 240 frames, but screenshots showed it blank in 188 of 203 frames.
-- Trace screenshots (about 200 per 3.3s fling, 500×500 JPEG) reliably separated the cases. A cheap list stayed at least 87% drawn, a moderate one dipped to 72%, and the costly one had a median of 0%.
+- Trace screenshots (about 200 per 3.3s fling, 500×500 JPEG) reliably separated the cases. With screenshots on, a trace is 12–22MB per fling (measured on GitHub Actions and locally, Chrome 153), about 10x the no-screenshot size, so traces must be discarded as soon as they're parsed. A cheap list stayed at least 87% drawn, a moderate one dipped to 72%, and the costly one had a median of 0%.
 
 ## 4. Public API (v1)
 
