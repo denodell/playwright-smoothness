@@ -45,6 +45,8 @@ Each frame can appear in more than one `PipelineReporter` event:
 - **Exact repeats** (same host, source, sequence and state) are counted once.
 - **One frame reported as both `STATE_PRESENTED_ALL` and `STATE_DROPPED`** counts as both. The compositor presented the scroll, but the blocked main thread missed its update. That's the signal the section 3 table rests on (25ms blocking: 2 dropped). Collapsing the pair into "presented" would hide it.
 
+Only frames from the page's own renderer process count, identified by the process the start mark came from. The browser process also presents frames: after a reload it presented one inside the measurement window in every run, which inflated `onTime` by one until this was found. Out-of-process iframes are other documents; their frames aren't counted, and the result notes that they were there.
+
 `frames.total` is presented plus dropped. `STATE_NO_UPDATE_DESIRED` frames had nothing to show and aren't counted. When no frame had an update, `onTimePercent` is `null`, not 100.
 
 ## Tracing overhead

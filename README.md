@@ -134,7 +134,7 @@ Baselines are keyed by label, test, project, platform, mode, refresh rate, CPU t
 
 ## Frameworks
 
-With React, Angular (with or without Zone.js), and likely other frameworks, the browser's Long Animation Frames API names the framework's event dispatcher, not your handler, because it only records the function the browser called. Event Timing does name the element, so every script in a report is linked to the interactions it blocked. In full mode, the CPU profile goes further and names the handler itself, such as `busyWait ← onCheckout ← executeDispatch`. See [docs/frameworks.md](docs/frameworks.md).
+With React, Angular (with or without Zone.js), and likely other frameworks, the browser's Long Animation Frames API names the framework's event dispatcher, not your handler, because it only records the function the browser called. Event Timing does name the element, so every script in a report is linked to the interactions it blocked. In full mode, the CPU profile goes further and names the handler itself, such as `busyWait ← onCheckout ← executeDispatch`, using your source maps to undo minification when the page publishes them. See [docs/frameworks.md](docs/frameworks.md).
 
 ## Output
 
