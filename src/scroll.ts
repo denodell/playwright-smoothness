@@ -90,6 +90,61 @@ async function waitForRest(
   return { position: last, settled: still >= SETTLE_FRAMES };
 }
 
+/** A flick drags across this share of the list, from one side towards the other. */
+export const FLICK_SPAN = 0.6;
+/** Time between touch moves: one frame at 60Hz, so every frame sees the finger move. */
+export const TOUCH_MOVE_MS = 16;
+/**
+ * Pause between flicks, so each fling coasts before the next touch stops it. A flick coasted
+ * about 1,000px in 750ms on the test list; touching again after 50ms cut that to 400px.
+ */
+export const FLICK_GAP_MS = 300;
+/** Most flicks per run; with a huge `distance`, the run stops here and says so. */
+export const MAX_FLICKS = 200;
+
+/**
+ * Touch scrolling as a user does it: press, drag across the list at the requested speed,
+ * release (the list flings on), and repeat until the distance is covered. Sent as real touch
+ * events (Input.dispatchTouchEvent). Input.synthesizeScrollGesture with a touch source does
+ * nothing on Linux, with no error (docs/measurements.md).
+ */
+async function flick(
+  page: Page,
+  cdp: CDPSession,
+  target: Locator,
+  s: ResolvedScroll,
+  box: { x0: number; y0: number; x1: number; y1: number },
+  start: number,
+  requested: number,
+): Promise<void> {
+  const vertical = s.direction === 'vertical';
+  const cx = (box.x0 + box.x1) / 2;
+  const cy = (box.y0 + box.y1) / 2;
+  const span = FLICK_SPAN * (vertical ? box.y1 - box.y0 : box.x1 - box.x0);
+  const point = (offset: number) => [
+    {
+      x: Math.round(vertical ? cx : cx + span / 2 - offset),
+      y: Math.round(vertical ? cy + span / 2 - offset : cy),
+    },
+  ];
+  for (let i = 0; i < MAX_FLICKS; i++) {
+    if (position(await listGeometry(target), s) - start >= requested) return;
+    // https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchTouchEvent
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(0) });
+    // Paced against the clock, not by fixed sleeps: each CDP round trip takes time too, and
+    // sleeping 16ms on top of it made a 6,000px/s drag move at about 2,000px/s.
+    const began = Date.now();
+    for (let moved = 0, step = 1; moved < span; step++) {
+      const wait = began + step * TOUCH_MOVE_MS - Date.now();
+      if (wait > 0) await page.waitForTimeout(wait);
+      moved = Math.min(span, ((Date.now() - began) / 1000) * s.speedPxPerSec);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: point(moved) });
+    }
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(FLICK_GAP_MS);
+  }
+}
+
 /**
  * Scrolls the target once. Returns the pixels requested and actually scrolled (a fling can
  * overshoot a pixel distance; the end of the list stops it short).
@@ -124,22 +179,28 @@ export async function performScroll(
       await page.waitForTimeout(KEY_INTERVAL_MS);
     }
   } else {
-    // Centre of the visible part of the list, in viewport coordinates.
-    const x0 = Math.max(0, g.rect.x);
-    const y0 = Math.max(0, g.rect.y);
-    const x1 = Math.min(g.viewport.width, g.rect.x + g.rect.width);
-    const y1 = Math.min(g.viewport.height, g.rect.y + g.rect.height);
-    // https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-synthesizeScrollGesture
-    // Negative distances move the content up (or left): scrolling towards the end. The call
-    // returns when the gesture has finished.
-    await cdp.send('Input.synthesizeScrollGesture', {
-      x: Math.round((x0 + x1) / 2),
-      y: Math.round((y0 + y1) / 2),
-      ...(s.direction === 'vertical' ? { yDistance: -requested } : { xDistance: -requested }),
-      speed: s.speedPxPerSec,
-      gestureSourceType: s.input === 'touch' ? 'touch' : 'mouse',
-      preventFling: false,
-    });
+    // The visible part of the list, in viewport coordinates.
+    const box = {
+      x0: Math.max(0, g.rect.x),
+      y0: Math.max(0, g.rect.y),
+      x1: Math.min(g.viewport.width, g.rect.x + g.rect.width),
+      y1: Math.min(g.viewport.height, g.rect.y + g.rect.height),
+    };
+    if (s.input === 'touch') {
+      await flick(page, cdp, target, s, box, start, requested);
+    } else {
+      // https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-synthesizeScrollGesture
+      // Negative distances move the content up (or left): scrolling towards the end. The call
+      // returns when the gesture has finished.
+      await cdp.send('Input.synthesizeScrollGesture', {
+        x: Math.round((box.x0 + box.x1) / 2),
+        y: Math.round((box.y0 + box.y1) / 2),
+        ...(s.direction === 'vertical' ? { yDistance: -requested } : { xDistance: -requested }),
+        speed: s.speedPxPerSec,
+        gestureSourceType: 'mouse',
+        preventFling: false,
+      });
+    }
   }
   const rest = await waitForRest(target, s);
   return {

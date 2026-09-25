@@ -3,6 +3,8 @@ import type { SmoothnessTestOptions } from 'playwright-smoothness';
 
 export default defineConfig<SmoothnessTestOptions>({
   testDir: 'tests',
+  // A measurement is a warm-up plus several reloaded runs; a traced list fling takes a while.
+  timeout: 120_000,
   // Timing tests shouldn't compete with each other for the CPU.
   workers: 1,
   use: {

@@ -79,7 +79,7 @@ A prototype was run with Chromium 141 and Playwright 1.56 in the headless shell,
 
 **Long lists**
 
-- `Input.synthesizeScrollGesture` produces a real, compositor-driven fling (for example `yDistance: -20000, speed: 6000`).
+- `Input.synthesizeScrollGesture` produces a real, compositor-driven fling (for example `yDistance: -20000, speed: 6000`) with a mouse source. With a touch source it does nothing on Linux runners, and reports no error; real touch events (`Input.dispatchTouchEvent`) work on both platforms (see `docs/measurements.md`).
 - `frame_reporter.has_missing_content` and `checkerboarded_needs_raster` **must not be used**. They fired on about 78% of frames even for a cheap list whose screenshots were fully drawn (Chrome 141). On Chrome 153 they read 0 on every frame, including a blank list, locally and on GitHub Actions (see `docs/measurements.md`). Either way they carry no signal.
 - **Blank rows are the main failure in virtualized lists, and dropped frames miss them.** A list with 15ms per-row cost and no overscan dropped only 8 of 240 frames, but screenshots showed it blank in 188 of 203 frames.
 - Trace screenshots (about 200 per 3.3s fling, 500×500 JPEG) reliably separated the cases. With screenshots on, a trace is 12–22MB per fling (measured on GitHub Actions and locally, Chrome 153), about 10x the no-screenshot size, so traces must be discarded as soon as they're parsed. A cheap list stayed at least 87% drawn, a moderate one dipped to 72%, and the costly one had a median of 0%.

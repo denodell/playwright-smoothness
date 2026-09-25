@@ -133,6 +133,22 @@ Two consequences:
 - **Trace size is about 10x the spike's estimate** once screenshots are on: 13–22MB per 3.3s fling, against about 1.8MB per 1.5s without screenshots. M3 and M4 need to stream or discard traces promptly, and not keep them in memory across runs.
 - Blank-frame percentages (spike: cheap ≥87% drawn, costly median 0%) aren't reproduced yet. That needs the M4 pixel analysis.
 
+## Synthetic touch scrolling (M4)
+
+`Input.synthesizeScrollGesture` with `gestureSourceType: 'touch'` **does nothing on Linux**, and the CDP call returns no error. A temporary probe on the GitHub Actions runner (PR #5), scrolling the test list 2,000px, Chrome 153:
+
+| Method                                                   | macOS   | Linux (`ubuntu-latest`) |
+| -------------------------------------------------------- | ------- | ----------------------- |
+| `synthesizeScrollGesture`, touch source, default context | 2,010px | **0px**                 |
+| … with `hasTouch: true`                                  | 1,997px | **0px**                 |
+| … with `hasTouch` and `isMobile`                         | 2,010px | **0px**                 |
+| … with CDP `Emulation.setTouchEmulationEnabled`          | 1,994px | **0px**                 |
+| `synthesizeScrollGesture`, `'default'` source            | 2,000px | 2,000px                 |
+| `synthesizeScrollGesture`, mouse source                  | 2,000px | 2,000px                 |
+| `Input.dispatchTouchEvent`: one 380px drag, then release | 544px   | 572px                   |
+
+So `input: 'touch'` is built from real touch events: repeated flicks (press, drag across 60% of the list at the requested speed, release, and the list flings on) until the distance is covered. It behaves the same on both platforms. The problem only showed up because the React example's "cheap list stays drawn" check passed on CI while scrolling nothing: 0% blank frames. So `scroll()` now also reports list data as unavailable when no run moved the list.
+
 ## Headless-mode detection
 
 `tests/detection/headless-mode.spec.ts`, run by the `mode-*` projects locally and by `.github/workflows/headless-matrix.yml` on Playwright 1.49.0, 1.56.0, 1.57.0 and latest.

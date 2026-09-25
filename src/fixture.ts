@@ -112,8 +112,8 @@ async function createSmoothness(
       const done: { requested: number; scrolled: number; presses?: number }[] = [];
       return record(label, overrides, async (ctx) => {
         if (s.input === 'touch' && (await page.evaluate(() => navigator.maxTouchPoints)) === 0) {
-          // Without touch support, Chrome ignores a synthetic touch gesture on Linux (and not on
-          // macOS), so a touch scroll would silently scroll nothing on some machines.
+          // Touch events on a page that reports no touch support aren't what a phone does:
+          // pages branch on touch support (pointer: coarse, touch handlers).
           throw new Error(
             "smoothness.scroll(): input: 'touch' needs a touch-enabled browser context. Use test.use({ hasTouch: true }) or a mobile device, such as devices['Pixel 7'].",
           );

@@ -61,6 +61,8 @@ Baselines are per machine (see [Baselines and CI machines](#baselines-and-ci-mac
 3. Reloads the page, waits until it has loaded and gone quiet (no long frames for 500ms), and runs your action again. It does this 5 times (`runs`).
 4. Reports the median of each number, and its spread across runs.
 
+A measurement takes several times as long as the interaction itself, and a traced list fling can take a minute. Raise Playwright's `timeout` (the default is 30 seconds) for these tests.
+
 Only work caused by the interaction counts. Long frames during page load or from background timers are identified and excluded.
 
 If your action can't simply be repeated after a reload, pass your own reset:
@@ -78,7 +80,8 @@ await smoothness.measure('add to cart', action, {
 
 `smoothness.scroll(locator, options)` does the same repeated, reloaded runs as `measure()`, with the scroll as the action:
 
-- `input: 'wheel'` (default) and `'touch'` send a real compositor-driven gesture (`Input.synthesizeScrollGesture`). A touch fling coasts past its distance, as on a phone. Touch needs a touch-enabled context (`hasTouch: true`, or a mobile device); without one, Chrome on Linux ignores the gesture, so `scroll()` throws instead.
+- `input: 'wheel'` (default) sends a compositor-driven wheel gesture (`Input.synthesizeScrollGesture`).
+- `input: 'touch'` flicks with real touch events: press, drag across the list at the requested speed, release (the list flings on), and repeat until the distance is covered. It needs a touch-enabled context (`hasTouch: true`, or a mobile device), and throws without one.
 - If the list never moves (for example, the locator isn't the element that scrolls), its blank-frame numbers are reported as unavailable, not as 0%.
 - `input: 'keys'` presses the arrow keys 100ms apart and measures each press as an interaction.
 - `direction: 'vertical'` (default) or `'horizontal'`. `distance: 'end'` (default) or pixels. On a long or endless list, pass pixels: the end of a 5,000-row list is minutes away.
