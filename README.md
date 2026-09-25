@@ -63,7 +63,7 @@ Baselines are per machine (see [Baselines and CI machines](#baselines-and-ci-mac
 
 A measurement takes several times as long as the interaction itself, and a traced list fling can take a minute. Raise Playwright's `timeout` (the default is 30 seconds) for these tests.
 
-Only work caused by the interaction counts. Long frames during page load or from background timers are identified and excluded.
+Only work caused by the interaction counts. Long frames during page load or from background timers are identified and excluded, and so is work the input merely interrupted. `setInterval` callbacks are never counted as an interaction's work, even when they run in the middle of one: they're periodic by construction.
 
 If your action can't simply be repeated after a reload, pass your own reset:
 
