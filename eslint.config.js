@@ -5,6 +5,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist/',
+      '.tmp-e2e/',
       'test-pages/frameworks/',
       'node_modules/',
       'test-results/',

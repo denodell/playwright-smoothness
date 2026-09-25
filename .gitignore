@@ -7,3 +7,4 @@ blob-report/
 .DS_Store
 loaf-headless-spike.zip
 test-pages/frameworks/dist/
+.tmp-e2e/

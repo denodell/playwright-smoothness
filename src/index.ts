@@ -1,4 +1,6 @@
 export { test } from './fixture.js';
+export { withSmoothness } from './auto/withSmoothness.js';
+export type { AutoOptions } from './auto/withSmoothness.js';
 export type { Smoothness, SmoothnessFixtures, SmoothnessTestOptions } from './fixture.js';
 export { expect } from './matcher.js';
 export type { MatcherOptions } from './baseline/evaluate.js';

@@ -20,6 +20,25 @@ export interface CollectorConfig {
   maxRecords: number;
   /** Selector for the nearest interactive ancestor, used to name event targets. */
   interactiveSelector: string;
+  /**
+   * Automatic mode: the name of a binding (context.exposeBinding) to stream every record to as
+   * it arrives, so data survives navigation. Unset for measure() and scroll().
+   */
+  stream?: string;
+}
+
+/** One streamed batch: records from one document, identified by its timeOrigin. */
+export interface StreamBatch {
+  doc: number;
+  url: string;
+  loaf: LoafRecord[];
+  events: EventRecord[];
+  scrolls: ScrollRecord[];
+  /** Set once the document has loaded. */
+  loadEventEnd?: number;
+  /** The latest raw input (pointerdown or keydown) in this batch, on the document's clock. */
+  lastInput?: { at: number; type: string };
+  errors: string[];
 }
 
 export interface LoafScriptRecord {
@@ -107,7 +126,22 @@ export function installCollector(config: CollectorConfig): void {
 
   const fail = (where: string, err: unknown) => {
     try {
-      if (errors.length < 50) errors.push(where + ': ' + String(err));
+      if (errors.length < 50) {
+        errors.push(where + ': ' + String(err));
+        if (where !== 'stream' && config.stream) {
+          const binding = (w as Record<string, unknown>)[config.stream];
+          if (typeof binding === 'function') {
+            (binding as (b: unknown) => unknown)({
+              doc: performance.timeOrigin,
+              url: location.href,
+              loaf: [],
+              events: [],
+              scrolls: [],
+              errors: [where + ': ' + String(err)],
+            });
+          }
+        }
+      }
     } catch {
       // nothing left to do
     }
@@ -141,9 +175,45 @@ export function installCollector(config: CollectorConfig): void {
     }
   };
 
+  // Streaming (automatic mode): records are batched per microtask and sent to the binding.
+  let outbox: StreamBatch | null = null;
+  const send = () => {
+    const batch = outbox;
+    outbox = null;
+    if (!batch || !config.stream) return;
+    try {
+      const binding = (w as Record<string, unknown>)[config.stream];
+      if (typeof binding === 'function') (binding as (b: StreamBatch) => unknown)(batch);
+    } catch (err) {
+      fail('stream', err);
+    }
+  };
+  const stream = (kind: 'loaf' | 'events' | 'scrolls' | 'load' | 'input' | 'errors', record: unknown) => {
+    if (!config.stream) return;
+    try {
+      if (!outbox) {
+        outbox = {
+          doc: performance.timeOrigin,
+          url: location.href,
+          loaf: [],
+          events: [],
+          scrolls: [],
+          errors: [],
+        };
+        queueMicrotask(send);
+      }
+      if (kind === 'load') outbox.loadEventEnd = record as number;
+      else if (kind === 'input') outbox.lastInput = record as StreamBatch['lastInput'];
+      else (outbox[kind] as unknown[]).push(record);
+    } catch (err) {
+      fail('stream', err);
+    }
+  };
+
   const push = <T>(buffer: T[], record: T, kind: 'loaf' | 'events' | 'scrolls') => {
     if (buffer.length >= config.maxRecords) overflow[kind]++;
     else buffer.push(record);
+    stream(kind, record);
   };
 
   if (supported.loaf) {
@@ -271,6 +341,43 @@ export function installCollector(config: CollectorConfig): void {
       return 0;
     }
   };
+
+  if (config.stream) {
+    // Raw inputs, streamed as they happen. The browser only measures an input once the next
+    // frame paints, so an input the test navigates away from immediately is never measured;
+    // knowing when it happened lets that be reported rather than silently missing.
+    for (const type of ['pointerdown', 'keydown']) {
+      try {
+        addEventListener(
+          type,
+          (e) => {
+            try {
+              stream('input', { at: e.timeStamp, type: e.type });
+            } catch {
+              // never throw from the page
+            }
+          },
+          { capture: true, passive: true },
+        );
+      } catch (err) {
+        fail('input listen', err);
+      }
+    }
+    try {
+      addEventListener('load', () => {
+        // loadEventEnd is set after load handlers finish.
+        setTimeout(() => {
+          try {
+            stream('load', loadEventEnd());
+          } catch (err) {
+            fail('load', err);
+          }
+        }, 0);
+      });
+    } catch (err) {
+      fail('load listen', err);
+    }
+  }
 
   const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 

@@ -13,3 +13,4 @@ examples/**/playwright-report
 examples/react-list/public/app.js*
 examples/**/smoothness-baselines
 tests/unit/__snapshots__
+.tmp-e2e
