@@ -240,4 +240,4 @@ Order: `test.use({ smoothness: { mode } })` → `SMOOTHNESS_MODE` → scheduled 
 23. **Minimal categories:** `disabled-by-default-devtools.timeline.frame` + `blink.user_timing` (240KB, against 2,148KB for the spike's set), plus `devtools.timeline` only for `refreshRate: 120`.
 24. **A frame reported both presented and dropped counts as both.** That's how a blocked main thread shows while the compositor keeps scrolling, and it's what the section 3 table measures.
 25. **`frames.onTimePercent` is null when no frame had an update**, rather than 100.
-26. **Not built: a V8 CPU profile in full mode to name the app's handler** behind a framework dispatcher (docs/frameworks.md). Waiting for your call.
+26. **Full mode records a V8 CPU profile** (your call on PR #4). It's in the same trace and windowed by the same marks, and attributed to the page's main thread only. `profile.hotFunctions` names `onCheckout` behind React's and Angular's dispatchers in readable builds. Minified React would need source maps; that's an open question.

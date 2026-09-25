@@ -72,9 +72,10 @@ In full mode (`mode: 'full'`), each run is also traced:
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
 | `frames.onTimePercent` | Frames presented on time, out of frames that had an update to show, from Chrome's frame reporter in the trace. Catches drops that are too short for Long Animation Frames. | Yes   |
 | `frames.dropped`       | Frames whose update missed its deadline.                                                                                                                                   | No    |
+| `profile.hotFunctions` | Functions that used the most CPU during the interaction, from V8's sampling profiler, with their callers. Names your handler even behind React's or Angular's dispatcher.  | Never |
 | `budget120`            | With `refreshRate: 120`: main-thread frames over 8.33ms. A prediction, because headless Chrome runs at 60Hz.                                                               | Never |
 
-Full mode costs 1–4% more time per measurement and doesn't change the other numbers ([docs/trace-categories.md](docs/trace-categories.md)).
+Full mode costs 6–13% more time per measurement and doesn't change the other numbers ([docs/trace-categories.md](docs/trace-categories.md)).
 
 A check fails when it gets worse than its baseline by more than `maxIncrease` (15% by default), with a small floor so rounding can't fail it: 16ms for input-to-paint (Event Timing reports in 8ms steps), 1 long frame, and 1 percentage point of frames. On-time frames are compared on the missed share, so 95% → 81% can't pass as "within 15%".
 
@@ -133,7 +134,7 @@ Baselines are keyed by label, test, project, platform, mode, refresh rate, CPU t
 
 ## Frameworks
 
-With React, Angular (with or without Zone.js), and likely other frameworks, the browser's Long Animation Frames API names the framework's event dispatcher, not your handler. Source maps can't change that. Event Timing does name the element, so every script in a report is linked to the interactions it blocked. See [docs/frameworks.md](docs/frameworks.md).
+With React, Angular (with or without Zone.js), and likely other frameworks, the browser's Long Animation Frames API names the framework's event dispatcher, not your handler, because it only records the function the browser called. Event Timing does name the element, so every script in a report is linked to the interactions it blocked. In full mode, the CPU profile goes further and names the handler itself, such as `busyWait ← onCheckout ← executeDispatch`. See [docs/frameworks.md](docs/frameworks.md).
 
 ## Output
 

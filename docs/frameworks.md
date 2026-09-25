@@ -58,6 +58,22 @@ Each entry in `longFrames.topScripts` has a `during` list: the interactions whos
 
 That relies only on timing, so it works the same for React, Zone.js, zoneless Angular, and frameworks not tested here. Reports (M2 and M5) lead with the element ("click on `button#checkout`: 180ms to paint") and show the script as supporting detail.
 
-## Possible follow-up: naming the handler in full mode
+## Naming the handler: the CPU profile (full mode)
 
-Naming the app's own function needs a JavaScript profile, not LoAF. Full mode already records a Chrome trace; adding V8's sampling profiler category (`disabled-by-default-v8.cpu_profiler`) to it would give self-time per function, including `onCheckout`, during the interaction's frames. That's a bigger piece of work, and traces with profiles are larger again. It's proposed as an M3 option, not built.
+Full mode records V8's sampling profiler in the same trace (`disabled-by-default-v8.cpu_profiler`, a sample about every 140µs). The library attributes the samples that fall inside the interaction's long frames and Event Timing windows to functions, and reports the top ones as `profile.hotFunctions`, each with self time, total time and its most common callers. A profile has whole stacks, not just entry points, so it can see past the dispatcher:
+
+| Page                    | Hottest function ← callers                                                          |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| React, dev              | `busyWait` ← **`onCheckout`** ← `executeDispatch` ← `run` ← `runWithFiberInDEV` ← … |
+| React, prod             | `G0` ← `n` ← `Cm` ← `(anonymous)` ← … (minified: the app's names are gone too)      |
+| Angular + Zone.js, dev  | `busyWait` ← **`onCheckout`** ← `AppComponent_Template_button_click_1_listener` ← … |
+| Angular + Zone.js, prod | `QN` ← **`onCheckout`** ← `yv_Template_button_click_1_listener` ← …                 |
+| Angular zoneless, prod  | `V1` ← **`onCheckout`** ← `Eg_Template_button_click_1_listener` ← …                 |
+
+(`busyWait` is the test pages' stand-in for slow work, and `onCheckout` is the handler that calls it.)
+
+- **Readable builds name the handler every time**, behind React's dispatcher, Zone.js and Angular's listener wrapper.
+- **Angular production builds keep method names** (`onCheckout`), because class methods aren't mangled, so the handler is still named. Free functions (`busyWait` → `QN`) are mangled.
+- **Minified React loses the app's names** as well as React's. Each hot function has an exact `line:column` in the bundle, though, and the test builds ship source maps, so source maps _could_ recover `onCheckout` here. That's different from LoAF, whose entry points only ever named the dispatcher. Source-map resolution isn't built yet; see the M3 pull request.
+- **Workers are excluded.** Each thread has its own profile, and the library reads only the one on the thread its start mark came from (the page's main thread). `test-pages/worker.html` keeps a worker busy next to a slow click handler; the worker's function never appears.
+- `(program)` is browser work outside JavaScript (style, layout, painting), and `now` is `performance.now()` itself.

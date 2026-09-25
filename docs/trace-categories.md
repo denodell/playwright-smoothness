@@ -25,11 +25,12 @@ Where each event lives:
 
 **Chosen sets** (`src/trace/categories.ts`):
 
-| Use                                            | Categories                                                         | Size for this interaction |
-| ---------------------------------------------- | ------------------------------------------------------------------ | ------------------------- |
-| Frame states (always in full mode)             | `disabled-by-default-devtools.timeline.frame`, `blink.user_timing` | 240KB                     |
-| Plus the 120Hz prediction (`refreshRate: 120`) | + `devtools.timeline`                                              | 368KB                     |
-| Plus list screenshots (`scroll()`, M4)         | + `disabled-by-default-devtools.screenshot`                        | measured in M4            |
+| Use                                            | Categories                                                         | Size for this interaction                         |
+| ---------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------- |
+| Frame states (always in full mode)             | `disabled-by-default-devtools.timeline.frame`, `blink.user_timing` | 240KB                                             |
+| Plus the 120Hz prediction (`refreshRate: 120`) | + `devtools.timeline`                                              | 368KB                                             |
+| Plus the CPU profile (always in full mode)     | + `disabled-by-default-v8.cpu_profiler`                            | a click: 147KB in total with the frame categories |
+| Plus list screenshots (`scroll()`, M4)         | + `disabled-by-default-devtools.screenshot`                        | measured in M4                                    |
 
 That's about 9x smaller than the spike's set, with the same frame states.
 
@@ -56,6 +57,8 @@ The same interactions measured in quick mode and full mode on the same page, 5 r
 | Typing, 60ms keydown | 3 / 3                      | 64.3 / 65.0ms   | 64 / 64ms          | 6.5s / 6.5s             |
 | Scroll, 70ms handler | 5 / 5                      | 87.2 / 87.7ms   | n/a / n/a          | 6.9s / 7.2s             |
 
-Tracing with the chosen categories doesn't change what's measured: identical long-frame counts, worst frames within 0.7ms, and input-to-paint within one Event Timing step (8ms), which is under the 16ms floor. Wall time rises 1–4%. The integration test asserts this on every CI run.
+**With the CPU profiler on** (the same test, re-run after it was added), the counts still matched (1 / 1, 3 / 3, 5 / 5), worst frames were within 1.8ms, p95 was identical, and wall time per `measure()` rose 6–13% instead of 1–4%. The profiler samples the main thread about every 140µs, which costs a little time around the interaction but didn't change what was measured.
+
+Before the profiler was added: tracing with the chosen categories doesn't change what's measured: identical long-frame counts, worst frames within 0.7ms, and input-to-paint within one Event Timing step (8ms), which is under the 16ms floor. Wall time rises 1–4%. The integration test asserts this on every CI run.
 
 **Per-mode baselines are enough.** Baselines are keyed by mode, so a full-mode run is never compared with a quick-mode baseline, and the numbers the two modes share agree anyway.
