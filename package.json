@@ -1,12 +1,16 @@
 {
   "name": "playwright-smoothness",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "Fail the build when a web UI stops being smooth. Frame, input and long-list checks for Playwright, compared against a baseline.",
   "license": "MIT",
   "author": "Den Odell",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/denodell/playwright-smoothness.git"
+  },
+  "homepage": "https://github.com/denodell/playwright-smoothness#readme",
+  "bugs": {
+    "url": "https://github.com/denodell/playwright-smoothness/issues"
   },
   "keywords": [
     "playwright",
@@ -46,11 +50,18 @@
     },
     "./package.json": "./package.json"
   },
+  "bin": {
+    "playwright-smoothness": "dist/cli.js"
+  },
   "files": [
     "dist",
     "README.md",
     "LICENSE"
   ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "lint": "eslint . && prettier --check .",
@@ -62,8 +73,8 @@
     "test:detection": "playwright test --project=detection",
     "test:headless-modes": "playwright test --project=mode-headless-shell --project=mode-new-headless --project=mode-headed",
     "changeset": "changeset",
-    "release:check": "npm run build && npm publish --dry-run --tag next",
-    "release:preview": "npm run build && npm publish --tag next"
+    "release:check": "npm run build && npm publish --dry-run",
+    "release": "npm run build && changeset publish"
   },
   "peerDependencies": {
     "@playwright/test": ">=1.49.0"
@@ -87,13 +98,5 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.1",
     "zone.js": "0.16.3"
-  },
-  "publishConfig": {
-    "access": "public",
-    "tag": "next"
-  },
-  "sideEffects": false,
-  "bin": {
-    "playwright-smoothness": "./dist/cli.js"
   }
 }

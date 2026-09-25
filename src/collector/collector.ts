@@ -47,6 +47,8 @@ export interface LoafScriptRecord {
   sourceURL: string;
   sourceFunctionName: string;
   sourceCharPosition: number;
+  /** When the script started (page ms), or -1 if the browser didn't say. */
+  start: number;
   duration: number;
 }
 
@@ -237,6 +239,7 @@ export function installCollector(config: CollectorConfig): void {
                   sourceURL: String(s.sourceURL ?? ''),
                   sourceFunctionName: String(s.sourceFunctionName ?? ''),
                   sourceCharPosition: Number(s.sourceCharPosition ?? -1),
+                  start: typeof s.startTime === 'number' ? s.startTime : -1,
                   duration: Number(s.duration ?? 0),
                 });
               } catch (err) {

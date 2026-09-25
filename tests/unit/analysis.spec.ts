@@ -38,6 +38,7 @@ const script = (p: Partial<LoafRecord['scripts'][number]>) => ({
   sourceURL: 'http://x/app.js',
   sourceFunctionName: 'onA',
   sourceCharPosition: 10,
+  start: -1,
   duration: 50,
   ...p,
 });
@@ -233,4 +234,90 @@ test('classify: a background frame the input arrived during is not the interacti
   expect(classifyFrame(frame({ start: 1071, duration: 80 }), base)).toBe('interaction');
   // Rounding: a frame starting 1ms "before" the input still counts.
   expect(classifyFrame(frame({ start: 1029, duration: 80 }), base)).toBe('interaction');
+});
+
+test('classify and blame: a timer the input interrupted is not the interaction', () => {
+  const base = { interactions: [], scrolls: [], loadEventEnd: 100 };
+  const timer = script({
+    invoker: 'TimerHandler:setInterval',
+    invokerType: 'user-callback',
+    sourceFunctionName: 'repeatingBackgroundJob',
+    start: 2000,
+    duration: 70,
+  });
+  const handler = script({
+    invoker: 'BUTTON#buy.onclick',
+    sourceFunctionName: 'onBuy',
+    start: 2071,
+    duration: 80,
+  });
+
+  // A frame that handles a waiting click.
+  expect(classifyFrame(frame({ start: 2000, firstUIEventTimestamp: 2000 }), base)).toBe('interaction');
+  // A timer frame that a click arrived during: LoAF sets firstUIEventTimestamp, but only the
+  // timer ran, and it started before the click.
+  expect(
+    classifyFrame(frame({ start: 2000, duration: 70, firstUIEventTimestamp: 2030, scripts: [timer] }), base),
+  ).toBe('background');
+  // The click arrived mid-frame and its handler ran later in the same frame: an interaction
+  // frame, but only the handler is blamed.
+  const both = frame({
+    start: 2000,
+    duration: 160,
+    blockingDuration: 110,
+    firstUIEventTimestamp: 2030,
+    scripts: [timer, handler],
+  });
+  expect(classifyFrame(both, base)).toBe('interaction');
+  expect(summarizeLongFrames([both]).topScripts.map((s) => s.fn)).toEqual(['onBuy']);
+  // Without script start times (older browsers), nothing is excluded.
+  const unknown = frame({
+    start: 2000,
+    firstUIEventTimestamp: 2030,
+    scripts: [{ ...timer, invoker: 'TimerHandler:setTimeout', start: -1 }],
+  });
+  expect(classifyFrame(unknown, base)).toBe('interaction');
+});
+
+test('classify and blame: setInterval callbacks are never the interaction’s', () => {
+  const click = {
+    id: 1,
+    event: 'click',
+    start: 2000,
+    duration: 300,
+    target: 'button#buy',
+    targetSource: 'event-timing' as const,
+  };
+  const base = { interactions: [click], scrolls: [], loadEventEnd: 100 };
+  const interval = script({
+    invoker: 'TimerHandler:setInterval',
+    invokerType: 'user-callback',
+    sourceFunctionName: 'repeatingBackgroundJob',
+    start: 2150,
+    duration: 70,
+  });
+  // A periodic timer firing inside the click's window (between the handler and the paint).
+  expect(classifyFrame(frame({ start: 2150, duration: 70, scripts: [interval] }), base)).toBe('background');
+  // A one-off timer there is still counted: handlers defer work with setTimeout.
+  const deferred = script({
+    invoker: 'TimerHandler:setTimeout',
+    invokerType: 'user-callback',
+    sourceFunctionName: 'afterClick',
+    start: 2150,
+  });
+  expect(classifyFrame(frame({ start: 2150, scripts: [deferred] }), base)).toBe('interaction');
+  // Sharing a frame with the handler, the interval callback isn't blamed.
+  const handler = script({
+    invoker: 'BUTTON#buy.onclick',
+    sourceFunctionName: 'onBuy',
+    start: 2002,
+    duration: 80,
+  });
+  const both = frame({
+    start: 2000,
+    duration: 160,
+    firstUIEventTimestamp: 2000,
+    scripts: [handler, interval],
+  });
+  expect(summarizeLongFrames([both]).topScripts.map((s) => s.fn)).toEqual(['onBuy']);
 });
