@@ -1,4 +1,4 @@
-// Principle 7: outside Chromium the measurement is skipped with a visible annotation.
+// Outside Chromium the measurement is skipped with a visible annotation.
 import { test, expect } from '../../src/index.js';
 
 test('Not Chromium: skipped with an annotation, nothing reported as zero', async ({ page, smoothness }) => {

@@ -1,7 +1,7 @@
 // Summarises repeated detection runs: for every numeric field in every result file, the
 // min / median / max across runs and the spread (half the range, as a % of the median).
 // Usage: node scripts/noise-summary.mjs <dir containing run-1/, run-2/, ...>
-import { readdirSync, readFileSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const root = process.argv[2] ?? 'noise';
@@ -32,7 +32,6 @@ function median(xs) {
 
 for (const run of runs) {
   const dir = join(root, run);
-  if (!existsSync(dir)) continue;
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.json'))) {
     walk(file.replace(/\.json$/, '') + ' › ', JSON.parse(readFileSync(join(dir, file), 'utf8')));
   }

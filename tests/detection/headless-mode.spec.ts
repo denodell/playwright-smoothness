@@ -1,6 +1,7 @@
 // Records every candidate signal for telling the headless shell apart from new headless
 // and headed Chrome. Run by the three mode-* projects and by the headless-matrix workflow
-// across Playwright versions. The library picks its detection method from these results.
+// across Playwright versions. detectHeadlessMode in src/environment.ts is based on these
+// results (docs/measurements.md, Headless-mode detection).
 import { test, expect } from '@playwright/test';
 import { createRequire } from 'node:module';
 import { save } from './helpers.js';

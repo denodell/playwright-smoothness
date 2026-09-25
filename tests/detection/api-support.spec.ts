@@ -1,4 +1,4 @@
-// Section 3: the APIs exist and the page is visible in headless, so LoAF fires.
+// The APIs exist and the page is visible in headless, so LoAF fires.
 import { test, expect } from '@playwright/test';
 import { save } from './helpers.js';
 

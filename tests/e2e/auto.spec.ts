@@ -1,21 +1,13 @@
-// M6 acceptance: an existing Playwright project, with nothing changed but its fixtures file,
-// produces a result and a baseline history; editing the spec file resets that history.
+// Automatic mode, end to end: an existing Playwright project, with nothing changed but its
+// fixtures file, produces a result and a baseline history; editing the spec file resets that
+// history.
 import { test, expect } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
-import {
-  appendFileSync,
-  cpSync,
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { appendFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import type { SmoothnessResult } from '../../src/types.js';
 import type { HistoryFile } from '../../src/auto/history.js';
+import { files } from './helpers.js';
 
 const repo = process.cwd();
 const project = join(repo, '.tmp-e2e', `auto-${process.pid}`);
@@ -36,14 +28,6 @@ const withSmoothness = () => {
     '',
   ].join('\n');
 };
-
-function files(dir: string, suffix: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).flatMap((f) => {
-    const p = join(dir, f);
-    return statSync(p).isDirectory() ? files(p, suffix) : p.endsWith(suffix) ? [p] : [];
-  });
-}
 
 function run(env: Record<string, string> = {}) {
   const clean = Object.fromEntries(
@@ -95,7 +79,7 @@ test('changing only the fixtures file: every page-using test gets a result, and 
   const r = run({ SMOOTHNESS_RECORD: '1' });
   expect(r.code, r.output).toBe(0);
   expect(r.results).toHaveLength(2); // 'no page at all' opens no page, so it isn't measured
-  const result = r.results.find((x) => x.label === 'buy, then search')!;
+  const result = buy(r);
   expect(result.runs).toBe(1);
   // Across a navigation: clicks on the first page, typing on the second.
   expect(result.auto!.documents).toBe(2);

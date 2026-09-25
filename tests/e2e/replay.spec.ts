@@ -2,20 +2,13 @@
 // named in the reporter's summary, once blank rows appear.
 import { test, expect } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { files } from './helpers.js';
 
 const CONFIG = 'tests/e2e/replay-project/playwright.config.ts';
 const REPORTER = join(process.cwd(), 'dist', 'reporter.js');
-
-function files(dir: string, suffix: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).flatMap((f) => {
-    const p = join(dir, f);
-    return statSync(p).isDirectory() ? files(p, suffix) : p.endsWith(suffix) ? [p] : [];
-  });
-}
 
 let work: string;
 test.beforeAll(() => {

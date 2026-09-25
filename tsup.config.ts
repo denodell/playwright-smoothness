@@ -1,10 +1,10 @@
-import { defineConfig } from 'tsup';
+import { defineConfig, type Options } from 'tsup';
 
-const shared = {
+const shared: Options = {
   sourcemap: true,
   target: 'node20',
   external: ['@playwright/test'],
-} as const;
+};
 
 export default defineConfig([
   {

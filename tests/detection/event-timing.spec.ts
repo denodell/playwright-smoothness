@@ -1,4 +1,5 @@
-// Section 3, Event Timing row and "Interactions and classification".
+// Event Timing: durations, targets and which interactions it reports
+// (docs/measurements.md, Event Timing and LoAF).
 import { test, expect } from '@playwright/test';
 import {
   installObservers,
@@ -53,7 +54,7 @@ test('a click on a nested span reports the span; the interactive ancestor is the
   const click = events.find((e) => e.name === 'click');
   save('event-nested', events);
   expect(click?.target).toBe('span.label');
-  // The library walks up to the nearest interactive ancestor (M1). Confirm that's the button.
+  // The library walks up to the nearest interactive ancestor. Confirm that's the button.
   const ancestor = await page.evaluate(
     () =>
       document
@@ -112,7 +113,7 @@ test('wheel scrolling produces no scroll or wheel Event Timing entries', async (
 });
 
 test('the first interaction on a page costs more than later ones (warm-up matters)', async ({ page }) => {
-  // Recorded, not gated on: it informs the warm-up run (M1) and single-run auto mode (M6).
+  // Recorded, not gated on: it informs the warm-up run and single-run automatic mode.
   await page.goto('/click.html?ms=25');
   await page.waitForTimeout(PAGE_SETTLE_MS);
   await clearCollected(page);

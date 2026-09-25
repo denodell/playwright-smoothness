@@ -1,5 +1,5 @@
 // Collates headless-mode signal records (one JSON per Playwright version × mode) into a
-// markdown table, and checks the candidate detection rule against every record.
+// markdown table, and checks the library's detection rule against every record.
 // Usage: node scripts/headless-summary.mjs <dir with *headless-mode.json files, any depth>
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -12,10 +12,14 @@ function* files(dir) {
   }
 }
 
-/** Candidate rule, from CDP Browser.getVersion only (not affected by page userAgent overrides). */
+/**
+ * Mirrors detectHeadlessMode in src/environment.ts, and must be kept in sync with it. Reads CDP
+ * Browser.getVersion only, which page userAgent overrides don't affect.
+ */
 function detect(r) {
-  if (!r.cdpProduct) return 'unknown';
-  if (r.cdpProduct.startsWith('HeadlessChrome/')) return 'headless-shell';
+  const product = r.cdpProduct ?? '';
+  if (product.startsWith('HeadlessChrome/')) return 'headless-shell';
+  if (!product.startsWith('Chrome/')) return 'unknown';
   if (/HeadlessChrome\//.test(r.cdpUserAgent ?? '')) return 'new-headless';
   if (/Chrome\//.test(r.cdpUserAgent ?? '')) return 'headed';
   return 'unknown';

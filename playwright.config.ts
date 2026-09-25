@@ -27,7 +27,8 @@ export default defineConfig({
       snapshotPathTemplate: '{testDir}/__snapshots__/{testFileName}/{arg}{ext}',
     },
 
-    // Raw Playwright reproductions of the spike's findings. New headless, as the library defaults to.
+    // Raw Playwright, no library code: what the browser itself reports (docs/measurements.md).
+    // New headless, as the library defaults to.
     {
       name: 'detection',
       testDir: './tests/detection',
@@ -45,9 +46,9 @@ export default defineConfig({
       snapshotPathTemplate:
         'test-results/integration-snapshots/{testFilePath}/{arg}{-projectName}{-snapshotSuffix}{ext}',
     },
-    // Acceptance tests that run a user project in a child Playwright process.
+    // End-to-end tests that run a user project in a child Playwright process.
     { name: 'e2e', testDir: './tests/e2e', testIgnore: /(fixture|auto|replay)-project/ },
-    // Principle 7: other browsers are skipped visibly, never passed silently.
+    // Other browsers are skipped visibly, never passed silently.
     {
       name: 'integration-firefox',
       testDir: './tests/integration',

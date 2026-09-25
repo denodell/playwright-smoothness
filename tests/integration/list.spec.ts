@@ -1,12 +1,15 @@
-// M4 acceptance: smoothness.scroll() on the virtualized test list. Full mode, unthrottled and
-// fast, like the spike's fling (20,000px at 6,000px/s).
+// smoothness.scroll() on the virtualized test list. Full mode, unthrottled and fast, like the
+// fling in docs/measurements.md (Long-list fling: 20,000px at 6,000px/s).
 import { test, expect } from '../../src/index.js';
 import type { Page } from '@playwright/test';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 import { save } from '../detection/helpers.js';
 import { traceRun } from '../../src/trace/tracer.js';
 import { FRAME_CATEGORIES, SCREENSHOT_CATEGORIES } from '../../src/trace/categories.js';
 import { analyzeFrames } from '../../src/list/analyze.js';
 import { blankColors, listGeometry, referenceShot } from '../../src/list/probe.js';
+import { compareMetrics, metricsOf } from '../../src/baseline/compare.js';
 
 test.use({
   viewport: { width: 600, height: 600 },
@@ -55,7 +58,6 @@ test('the blank-row gate fails a list that went from cheap to costly', async ({ 
   await page.goto('/list.html?cost=15&overscan=0');
   // Same label in a second test would be separate; compare by hand against the first result.
   const after = await smoothness.scroll(list(page), { ...FLING, label: 'catalogue costly' });
-  const { compareMetrics, metricsOf } = await import('../../src/baseline/compare.js');
   const check = compareMetrics(after, metricsOf(before), 0.15).find(
     (c) => c.metric === 'list.blankFramePercent',
   )!;
@@ -208,7 +210,6 @@ test('200 frames are analysed in under 2 seconds', async ({ page, browser }) => 
 // ---- replays ----
 
 async function playable(page: Page, file: string) {
-  const { readFileSync } = await import('node:fs');
   const bytes = readFileSync(file).toString('base64');
   await page.goto('/raf.html'); // any page on localhost (a secure context)
   return page.evaluate(async (b64) => {
@@ -228,8 +229,6 @@ async function playable(page: Page, file: string) {
 
 /** The files a test left in test-results/smoothness/, found by the start of its title. */
 async function outputOf(titleStart: string) {
-  const { existsSync, readdirSync } = await import('node:fs');
-  const { join } = await import('node:path');
   const root = join(test.info().project.outputDir, 'smoothness');
   const dir = existsSync(root) ? readdirSync(root).find((d) => d.startsWith(titleStart)) : undefined;
   return dir ? readdirSync(join(root, dir)).map((f) => join(root, dir, f)) : [];
@@ -247,7 +246,6 @@ test.describe('replays', () => {
   });
 
   test("the 'on' replay is a playable, seekable WebM, named in the result", async ({ page }) => {
-    const { readFileSync, statSync } = await import('node:fs');
     const files = await outputOf('replays-on-a-replay-even');
     const webm = files.find((f) => f.endsWith('.replay.webm'))!;
     expect(webm).toBeTruthy();

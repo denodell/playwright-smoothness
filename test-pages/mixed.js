@@ -29,10 +29,7 @@ if (bgEvery) {
 
 // Background work unrelated to any interaction, 300ms after load.
 addEventListener('load', () =>
-  setTimeout(
-    function backgroundJob() {
-      busyWait(90);
-    },
-    param('bgdelay', 300),
-  ),
+  setTimeout(function backgroundJob() {
+    busyWait(90);
+  }, 300),
 );

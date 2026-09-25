@@ -13,7 +13,3 @@ window.addEventListener('scroll', function onWindowScroll() {
   if (scrollWait) busyWait(scrollWait);
   if (scrollWork) doWork(scrollWork);
 });
-
-document.getElementById('heavy').addEventListener('click', function onHeavyClick() {
-  busyWait(param('clickms', 150));
-});

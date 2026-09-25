@@ -1,7 +1,7 @@
-// Section 3, "Measured behavior" table: a scroll handler blocks the main thread N ms per
-// scroll, 10 scrolls, no CPU throttling (the spike measured this table unthrottled).
+// docs/measurements.md, Scroll-blocking table: a scroll handler blocks the main thread N ms per
+// scroll, 10 scrolls, no CPU throttling.
 //
-// Differences from the spike, all from evidence recorded in docs/measurements.md:
+// Method details, all from evidence recorded in docs/measurements.md:
 // - One warm-up wheel before measuring: the first wheel on a page costs a 46-58ms frame.
 // - Trace drops are counted inside the input window only: tracing start adds a dropped frame.
 // - The trace column is the median of TRACE_RUNS runs: with only ~12-14 presented frames per
@@ -100,8 +100,8 @@ for (const wait of BLOCKING_MS) {
 
     expect(row.tracePresentedMedian, 'trace has presented frames').toBeGreaterThan(0);
 
-    // Tolerances. Written before the first CI run; see docs/measurements.md for why they
-    // are looser than the spike's single-run numbers.
+    // Tolerances. Written before the first CI run; docs/measurements.md (Tolerances) says why
+    // they allow for noise.
     if (wait <= 12) {
       expect(row.traceDroppedMedian, 'trace: at most noise-level drops at ≤12ms').toBeLessThanOrEqual(2);
       expect(row.loaf, 'LoAF misses ≤12ms').toBe(0);

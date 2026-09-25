@@ -1,11 +1,12 @@
-// M2 acceptance, end to end: a user project is run in a child Playwright process, so baselines
+// End to end: a user project is run in a child Playwright process, so baselines
 // go through real snapshot paths, --update-snapshots and exit codes.
 import { test, expect } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SmoothnessResult } from '../../src/types.js';
+import { files } from './helpers.js';
 
 const CONFIG = 'tests/e2e/fixture-project/playwright.config.ts';
 const PLAYWRIGHT = join('node_modules', '.bin', 'playwright');
@@ -15,14 +16,6 @@ test.beforeAll(() => {
   work = mkdtempSync(join(tmpdir(), 'smoothness-e2e-'));
 });
 test.afterAll(() => rmSync(work, { recursive: true, force: true }));
-
-function files(dir: string, name: string): string[] {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).flatMap((f) => {
-    const p = join(dir, f);
-    return statSync(p).isDirectory() ? files(p, name) : f === name || f.endsWith(name) ? [p] : [];
-  });
-}
 
 /** Runs the fixture project once and returns its exit code, output and result JSON. */
 function run(env: Record<string, string>, args: string[] = []) {

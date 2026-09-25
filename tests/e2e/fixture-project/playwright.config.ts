@@ -1,4 +1,5 @@
-// A small user project, run in a child process by tests/e2e/acceptance.spec.ts.
+// A small user project, run in a child process by tests/e2e/acceptance.spec.ts and
+// tests/e2e/reporter-calibrate.spec.ts.
 import { defineConfig } from '@playwright/test';
 
 const PORT = 4174;

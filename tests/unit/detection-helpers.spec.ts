@@ -1,4 +1,4 @@
-// The detection suite's acceptance numbers depend on these helpers, so they get unit tests.
+// The detection suite's numbers depend on these helpers, so they get unit tests.
 import { test, expect } from '@playwright/test';
 import {
   median,

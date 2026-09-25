@@ -1,5 +1,5 @@
 // requestAnimationFrame sampler, used ONLY by the detection suite to show why rAF
-// sampling is the wrong metric (section 3 of the brief). The library never uses it.
+// sampling is the wrong metric (docs/measurements.md). The library never uses it.
 //
 // mode 'timestamp' records the rAF callback's timestamp argument.
 // mode 'now' records performance.now() inside the callback.

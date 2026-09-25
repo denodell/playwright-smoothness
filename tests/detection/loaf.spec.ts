@@ -1,5 +1,5 @@
-// Section 3, LoAF row: frames over 50ms are reported with script attribution;
-// the 50ms threshold can't be lowered; an idle page reports nothing.
+// LoAF (docs/measurements.md, Event Timing and LoAF): frames over 50ms are reported with
+// script attribution; the 50ms threshold can't be lowered; an idle page reports nothing.
 import { test, expect } from '@playwright/test';
 import {
   installObservers,

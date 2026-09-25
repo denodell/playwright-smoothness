@@ -1,5 +1,6 @@
-// Section 3, "CPU throttling and noise".
-import { test, expect } from '@playwright/test';
+// CPU throttling: iteration-based work slows down under it, wall-clock work doesn't
+// (docs/measurements.md, CPU throttling).
+import { test, expect, type Page } from '@playwright/test';
 import {
   installObservers,
   collected,
@@ -15,10 +16,10 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(installObservers);
 });
 
-/** Iterations per scroll event. The spike's value: long frames at 4x, usually none at 1x on a fast machine. */
+/** Iterations per scroll event: long frames at 4x, usually none at 1x on a fast machine. */
 const SCROLL_WORK = 1_500_000;
 
-async function scrollRun(page: import('@playwright/test').Page, rate: number) {
+async function scrollRun(page: Page, rate: number) {
   await page.goto(`/scroll.html?work=${SCROLL_WORK}`);
   const cdp = await throttle(page, rate);
   await page.waitForTimeout(PAGE_SETTLE_MS);
