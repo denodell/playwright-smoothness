@@ -54,3 +54,20 @@ for (const name of PAGES) {
     expect(typing.longFrames!.topScripts[0]!.during).toEqual(['keydown on input#search']);
   });
 }
+
+// Full mode's CPU profile names the app's handler behind each framework's dispatcher, which
+// LoAF can't. Minified React mangles the app's names too, so only readable builds are asserted.
+for (const name of ['react.dev', 'angular-zone.dev', 'angular-zone.prod', 'angular-zoneless.prod'] as const) {
+  test(`CPU profile names onCheckout on ${name}`, async ({ page, smoothness }) => {
+    await page.goto(`/frameworks/dist/${name}.html`);
+    await page.locator('#checkout').waitFor();
+    const result = await smoothness.measure(`${name} profile`, () => page.click('#checkout .label'), {
+      mode: 'full',
+      runs: 2,
+    });
+    const top = result.profile!.hotFunctions[0]!;
+    save(`framework-profile-${name}`, result.profile);
+    expect(top.selfMs).toBeGreaterThan(80);
+    expect([top.fn, ...top.callers].slice(0, 3)).toContain('onCheckout');
+  });
+}

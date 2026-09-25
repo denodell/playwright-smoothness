@@ -4,7 +4,11 @@
 import { test, expect } from '../../src/index.js';
 import type { Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
-import { FRAME_CATEGORIES, ANIMATION_FRAME_CATEGORIES } from '../../src/trace/categories.js';
+import {
+  FRAME_CATEGORIES,
+  ANIMATION_FRAME_CATEGORIES,
+  PROFILE_CATEGORIES,
+} from '../../src/trace/categories.js';
 import { MARK_END, MARK_START } from '../../src/trace/parse.js';
 
 test.use({ smoothnessOptions: { mode: 'full', cpuThrottling: 1, runs: 5 } });
@@ -80,7 +84,9 @@ test('record trace fixtures', async ({ page, browser }) => {
     await page.mouse.move(400, 400);
     await page.mouse.wheel(0, 150);
     await page.waitForTimeout(300);
-    await browser.startTracing(page, { categories: [...FRAME_CATEGORIES, ...ANIMATION_FRAME_CATEGORIES] });
+    await browser.startTracing(page, {
+      categories: [...FRAME_CATEGORIES, ...ANIMATION_FRAME_CATEGORIES, ...PROFILE_CATEGORIES],
+    });
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     await page.evaluate((n) => performance.mark(n), MARK_START);
     await tenWheelScrolls(page);
@@ -90,7 +96,9 @@ test('record trace fixtures', async ({ page, browser }) => {
       JSON.parse((await browser.stopTracing()).toString()) as { traceEvents: { name: string }[] }
     ).traceEvents;
     const keep = events.filter((e) =>
-      ['PipelineReporter', 'AnimationFrame', MARK_START, MARK_END].includes(e.name),
+      ['PipelineReporter', 'AnimationFrame', 'Profile', 'ProfileChunk', MARK_START, MARK_END].includes(
+        e.name,
+      ),
     );
     writeFileSync(
       `tests/fixtures/traces/scroll-${wait}ms.json`,
