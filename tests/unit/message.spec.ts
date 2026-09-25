@@ -124,3 +124,42 @@ test('message: baseline created', () => {
   };
   expect(formatMessage(result, comparison, '/repo')).toMatchSnapshot('baseline-created.txt');
 });
+
+test('message: full mode, with the CPU profile naming the handler behind a dispatcher', () => {
+  const { result, comparison } = compared(
+    {
+      mode: 'full',
+      input: { p95ToPaintMs: 176, byTarget: [{ target: 'button#checkout', event: 'click', ms: 176 }] },
+      longFrames: {
+        count: 1,
+        topScripts: [
+          {
+            source: 'http://localhost:4173/assets/index-3f9a.js',
+            fn: 'dispatchDiscreteEvent',
+            invoker: 'DIV#root.onclick',
+            invokerType: 'event-listener',
+            blockingMs: 121.4,
+            durationMs: 171.4,
+            during: ['click on button#checkout'],
+          },
+        ],
+      },
+      profile: {
+        sampledMs: 156.7,
+        hotFunctions: [
+          {
+            fn: 'busyWait',
+            url: 'http://localhost:4173/assets/index-3f9a.js',
+            line: 23841,
+            column: 18,
+            selfMs: 117.5,
+            totalMs: 149.9,
+            callers: ['onCheckout', 'executeDispatch', 'run', 'runWithFiberInDEV', 'processDispatchQueue'],
+          },
+        ],
+      },
+    },
+    'warn',
+  );
+  expect(formatMessage(result, comparison, '/repo')).toMatchSnapshot('full-mode-profile.txt');
+});
