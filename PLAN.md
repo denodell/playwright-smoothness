@@ -243,3 +243,11 @@ Order: `test.use({ smoothness: { mode } })` → `SMOOTHNESS_MODE` → scheduled 
 26. **Full mode records a V8 CPU profile** (your call on PR #4). It's in the same trace and windowed by the same marks, and attributed to the page's main thread only. `profile.hotFunctions` names `onCheckout` behind React's and Angular's dispatchers in readable builds. Minified React would need source maps; that's an open question.
 27. **Source maps, decoded in-house** (your call on PR #4). They're used only to name functions in the CPU profile, where they work: the profile gives each function's bundle position. They weren't needed for LoAF, where only the dispatcher's entry point is known. The decoder is `src/sourcemap/`, with no new dependency.
 28. **Frames count only from the page's renderer process.** The browser's own compositor presented one frame inside the window after every reload, and was being counted. Out-of-process iframes aren't counted either, with a note.
+
+## Decisions made during M4
+
+29. **"Drawn" is measured per line**, not per pixel. Each frame is compared with a screenshot of the list at rest, and a frame drawn to less than half of it is blank. Rows are mostly background even when drawn, so pixel counts don't work, and comparing with the list's own resting state keeps sparse layouts fair. See `docs/list-detection.md`.
+30. **JPEGs are decoded in a throwaway page of the same Chromium** (`createImageBitmap`, `OffscreenCanvas`): no dependency, and 200 frames take about 0.5s.
+31. **`distance: 'end'` means the real end.** The test list's end is 399,400px away, so the docs recommend pixel distances for long lists.
+32. **`input.interactions` counts interactions of 16ms or more.** That's Event Timing's minimum threshold. `scroll.keyPresses` records the presses so the two can be compared.
+33. **The CI recipe is checked by `scripts/verify-ci-recipe.sh`** in the Examples workflow: record on "main", collect, compare as a pull request via `baselineDir`, and a regression must fail. Writing it found two bugs in the recipe: step names that weren't valid YAML, and `cp --parents`, which doesn't exist on macOS.
