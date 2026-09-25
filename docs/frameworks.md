@@ -1,6 +1,6 @@
 # Attribution with frameworks
 
-Brief M1 asks what Long Animation Frame (LoAF) attribution looks like when a framework sits between the browser and the app's event handler, and whether source maps are needed to name the app's function. This page records what `tests/integration/frameworks.spec.ts` measured.
+What does Long Animation Frame (LoAF) attribution look like when a framework sits between the browser and the app's event handler, and do source maps help name the app's function? This page records what `tests/integration/frameworks.spec.ts` measured.
 
 ## Setup
 
@@ -36,11 +36,11 @@ In every case LoAF measured the work correctly: one long frame of at least 150ms
 - **Zoneless Angular** blames an anonymous wrapper, so there's no function name at all.
 - **Event Timing names the real element every time,** including through React's delegation.
 
-## Why source maps don't fix this
+## Why source maps don't fix LoAF
 
 LoAF's `scripts[]` records only the _entry point_ of each script execution: the function the browser called. The browser calls the framework's dispatcher, and the dispatcher calls the app's handler. So `sourceURL` and `sourceCharPosition` point at the dispatcher. A source map would turn `QS` back into `dispatchDiscreteEvent` in `react-dom`, but it can't name `onCheckout`, because that function is never an entry point.
 
-So source-map resolution was **not** added. It would add a runtime dependency and network fetches for maps, and give only a nicer name for the framework's code.
+So source maps can't name the handler from LoAF data. The library uses them only for the CPU profile (below), whose stacks do contain the handler.
 
 ## What the library does instead
 
@@ -56,7 +56,7 @@ Each entry in `longFrames.topScripts` has a `during` list: the interactions whos
 }
 ```
 
-That relies only on timing, so it works the same for React, Zone.js, zoneless Angular, and frameworks not tested here. Reports (M2 and M5) lead with the element ("click on `button#checkout`: 180ms to paint") and show the script as supporting detail.
+That relies only on timing, so it works the same for React, Zone.js, zoneless Angular, and frameworks not tested here. Failure messages and the reporter summary lead with the element ("click on `button#checkout`: 180ms to paint") and show the script as supporting detail.
 
 ## Naming the handler: the CPU profile (full mode)
 

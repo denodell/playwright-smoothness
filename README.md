@@ -6,8 +6,6 @@ Fail the build when a web UI stops being smooth. `playwright-smoothness` measure
 
 Dropped frames don't show a list going blank. On the right, 97% of frames arrive on time, but the rows aren't there. `smoothness.scroll()` measures both.
 
-> **0.x.** The API may change before 1.0. Reports of noise on your CI runners are especially welcome.
-
 ## Quick start
 
 ```bash
@@ -92,7 +90,7 @@ In full mode it also finds **blank frames**. It screenshots the list at rest, th
 await smoothness.scroll(list, { mode: 'full', list: { placeholders: ['.skeleton-row', '#e5e7eb'] } });
 ```
 
-**Replays.** When a `scroll()` check gets worse, a video of the measured scroll is attached to the test in the Playwright report. It plays 4× slower than real time. Each frame shows how drawn the list was, blank frames are marked in red, and a timeline shows where they happened. `replay: 'on'` attaches one every time, and `'off'` never. The video is built from the frames the measurement already recorded, so making it doesn't change the numbers.
+**Replays.** When a full-mode `scroll()` check gets worse, a video of the measured scroll is attached to the test in the Playwright report. It plays 4× slower than real time. Each frame shows how drawn the list was, blank frames are marked in red, and a timeline shows where they happened. `replay: 'on'` attaches one every time, and `'off'` never. The video is built from the frames the measurement already recorded, so making it doesn't change the numbers.
 
 How it works, and its limits: [docs/list-detection.md](docs/list-detection.md).
 
