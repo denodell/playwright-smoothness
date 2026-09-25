@@ -9,6 +9,7 @@ export default defineConfig<SmoothnessTestOptions>({
     browserName: 'chromium',
     channel: 'chromium',
     viewport: { width: 600, height: 600 },
+    hasTouch: true, // the tests fling with touch input
     smoothnessOptions: { baselineDir: process.env.SMOOTHNESS_BASELINE_DIR },
   },
   webServer: {

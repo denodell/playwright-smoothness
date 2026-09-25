@@ -54,5 +54,7 @@ The spike's costly list was blank in 188 of 203 frames (93%). The moderate list 
 - **Full mode only.** Quick mode has no screenshots; `scroll()` in quick mode reports long frames and input, and notes that blank rows need full mode.
 - **The list must be visible**, and the reference must have some content: a list drawn in its own background colour can't be judged, and is reported as unavailable.
 - **Screenshots are of the viewport.** Parts of the list outside the viewport aren't measured.
+- **Touch needs a touch-enabled context.** On Linux, Chrome ignores a synthetic touch gesture unless the context has `hasTouch: true` (macOS doesn't), so `input: 'touch'` checks `navigator.maxTouchPoints` and throws if it's 0.
+- **A list that doesn't move isn't measured.** If no run scrolled it, `list` is null and listed in `unavailable`: 0% blank would describe a list that stood still.
 - **`distance: 'end'`** means the real end. The test list's end is 399,400px away (over a minute at 6,000px/s), so tests on long or infinite lists should pass a pixel distance.
 - **`input: 'keys'`** presses arrow keys 100ms apart, at most 100 presses per run. Presses faster than 16ms aren't reported by Event Timing (its minimum threshold), so `input.interactions` counts the slow ones; `scroll.keyPresses` says how many there were.

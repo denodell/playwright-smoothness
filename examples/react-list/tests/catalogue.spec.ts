@@ -10,6 +10,7 @@ test('the catalogue stays drawn during a fast fling', async ({ page, smoothness 
     runs: 3,
   });
   expect(result).toBeSmooth();
+  expect(result.scroll!.scrolledPx).toBeGreaterThan(19_000);
   expect(result.list!.blankFramePercent).toBeLessThan(10);
 });
 
@@ -26,6 +27,7 @@ test('expensive rows go blank, and the profile names them', async ({ page, smoot
     runs: 3,
     label: 'catalogue with slow rows',
   });
+  expect(result.scroll!.scrolledPx).toBeGreaterThan(19_000);
   expect(result.list!.blankFramePercent).toBeGreaterThan(50);
   const top = result.profile!.hotFunctions[0]!;
   expect(top.fn).toBe('Row');

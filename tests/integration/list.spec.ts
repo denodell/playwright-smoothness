@@ -101,12 +101,39 @@ test('horizontal lists', async ({ page, smoothness }) => {
   expect(costly.list!.blankFramePercent).toBeGreaterThan(50);
 });
 
-test('touch input flings, and distance end scrolls to the end', async ({ page, smoothness }) => {
+test.describe('touch', () => {
+  test.use({ hasTouch: true });
+  test('touch input flings, and distance end scrolls to the end', async ({ page, smoothness }) => {
+    await page.goto('/list.html?rows=300&cost=0');
+    const r = await smoothness.scroll(list(page), { input: 'touch', speed: 'fast', runs: 2 });
+    const max = await list(page).evaluate((el) => el.scrollHeight - el.clientHeight);
+    expect(r.scroll).toMatchObject({ input: 'touch', requestedPx: max, scrolledPx: max });
+    expect(r.label).toBe("scroll locator('#list') touch 6000px/s");
+  });
+});
+
+test("touch input without a touch-enabled context is an error, not a scroll that doesn't happen", async ({
+  page,
+  smoothness,
+}) => {
   await page.goto('/list.html?rows=300&cost=0');
-  const r = await smoothness.scroll(list(page), { input: 'touch', speed: 'fast', runs: 2 });
-  const max = await list(page).evaluate((el) => el.scrollHeight - el.clientHeight);
-  expect(r.scroll).toMatchObject({ input: 'touch', requestedPx: max, scrolledPx: max });
-  expect(r.label).toBe("scroll locator('#list') touch 6000px/s");
+  await expect(smoothness.scroll(list(page), { input: 'touch' })).rejects.toThrow(
+    /needs a touch-enabled browser context/,
+  );
+});
+
+test("a locator that doesn't scroll: list data is unavailable, never 0% blank", async ({
+  page,
+  smoothness,
+}) => {
+  await page.goto('/list.html?cost=15&overscan=0');
+  // The spacer inside the list isn't the scroller; scrolling "it" moves nothing.
+  const r = await smoothness.scroll(page.locator('#spacer'), { ...FLING, distance: 2000, runs: 2 });
+  expect(r.list).toBeNull();
+  expect(r.unavailable).toContainEqual({
+    measurement: 'list',
+    reason: expect.stringMatching(/didn't move the list in any run/),
+  });
 });
 
 test('arrow keys: presses are measured by Event Timing (those of 16ms or more)', async ({

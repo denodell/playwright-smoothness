@@ -28,15 +28,18 @@ test('filters open smoothly', async ({ page, smoothness }) => {
   expect(result).toBeSmooth();
 });
 
-test('catalogue flick stays drawn', async ({ page, smoothness }) => {
-  await page.goto('/catalogue');
-  const result = await smoothness.scroll(page.getByRole('list', { name: 'Trending' }), {
-    mode: 'full', // blank rows need the trace's screenshots
-    input: 'touch', // 'wheel' | 'touch' | 'keys'
-    speed: 'fast', // 'slow' | 'normal' | 'fast' | pixels per second
-    distance: 20_000, // or 'end'
+test.describe('lists', () => {
+  test.use({ hasTouch: true }); // input: 'touch' needs a touch-enabled context
+  test('catalogue flick stays drawn', async ({ page, smoothness }) => {
+    await page.goto('/catalogue');
+    const result = await smoothness.scroll(page.getByRole('list', { name: 'Trending' }), {
+      mode: 'full', // blank rows need the trace's screenshots
+      input: 'touch', // 'wheel' | 'touch' | 'keys'
+      speed: 'fast', // 'slow' | 'normal' | 'fast' | pixels per second
+      distance: 20_000, // or 'end'
+    });
+    expect(result).toBeSmooth();
   });
-  expect(result).toBeSmooth();
 });
 ```
 
@@ -75,7 +78,8 @@ await smoothness.measure('add to cart', action, {
 
 `smoothness.scroll(locator, options)` does the same repeated, reloaded runs as `measure()`, with the scroll as the action:
 
-- `input: 'wheel'` (default) and `'touch'` send a real compositor-driven gesture (`Input.synthesizeScrollGesture`). A touch fling coasts past its distance, as on a phone.
+- `input: 'wheel'` (default) and `'touch'` send a real compositor-driven gesture (`Input.synthesizeScrollGesture`). A touch fling coasts past its distance, as on a phone. Touch needs a touch-enabled context (`hasTouch: true`, or a mobile device); without one, Chrome on Linux ignores the gesture, so `scroll()` throws instead.
+- If the list never moves (for example, the locator isn't the element that scrolls), its blank-frame numbers are reported as unavailable, not as 0%.
 - `input: 'keys'` presses the arrow keys 100ms apart and measures each press as an interaction.
 - `direction: 'vertical'` (default) or `'horizontal'`. `distance: 'end'` (default) or pixels. On a long or endless list, pass pixels: the end of a 5,000-row list is minutes away.
 
