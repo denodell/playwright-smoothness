@@ -42,6 +42,7 @@ export async function traceRun(
       budget120: null,
       profile: null,
       screenshots: [],
+      screenshotTimes: [],
       unavailable: [{ measurement: 'frames', reason: `the trace could not be parsed: ${String(err)}` }],
       notes: [],
       bytes: buffer.length,

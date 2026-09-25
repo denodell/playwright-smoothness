@@ -7,7 +7,11 @@ import { summarizeList } from './summarize.js';
 /** What the runner needs from a list: prepare each run, then analyse its screenshots. */
 export interface ListMeasurement {
   prepare(): Promise<ListPrepared | { unavailable: string }>;
-  analyze(prepared: ListPrepared, jpegs: string[]): Promise<ListResult | { unavailable: string }>;
+  /** The run's summary, plus each frame's drawn share relative to the list at rest (for replays). */
+  analyze(
+    prepared: ListPrepared,
+    jpegs: string[],
+  ): Promise<{ result: ListResult; drawn: number[] } | { unavailable: string }>;
 }
 
 export interface ListPrepared {
@@ -55,7 +59,10 @@ export function listMeasurement(
           unavailable: `the list at rest is ${Math.round(a.reference * 100)}% drawn by this measure, too little to judge blank frames (is its content the same colour as its background?)`,
         };
       }
-      return summarizeList(a.frames, a.reference);
+      return {
+        result: summarizeList(a.frames, a.reference),
+        drawn: a.frames.map((f) => Math.min(1, f / a.reference)),
+      };
     },
   };
 }

@@ -61,6 +61,9 @@ export function resolveOptions(
   if (refreshRate !== 60 && refreshRate !== 120) {
     throw new Error(`smoothness: refreshRate must be 60 or 120, got ${refreshRate}.`);
   }
+  if (o.replay !== undefined && !['on-regression', 'on', 'off'].includes(o.replay)) {
+    throw new Error(`smoothness: replay must be 'on-regression', 'on' or 'off', got '${String(o.replay)}'.`);
+  }
   const enforce = o.enforce ?? 'warn';
   if (enforce !== 'warn' && enforce !== 'fail') {
     throw new Error(`smoothness: enforce must be 'warn' or 'fail', got '${enforce}'.`);
@@ -77,5 +80,6 @@ export function resolveOptions(
     list: { background: o.list?.background ?? 'auto', placeholders: o.list?.placeholders ?? [] },
     reset: o.reset ?? 'reload',
     gateTotalBlocking: o.gateTotalBlocking ?? false,
+    replay: o.replay ?? 'on-regression',
   };
 }
