@@ -271,6 +271,53 @@ test('classify and blame: a timer the input interrupted is not the interaction',
   expect(classifyFrame(both, base)).toBe('interaction');
   expect(summarizeLongFrames([both]).topScripts.map((s) => s.fn)).toEqual(['onBuy']);
   // Without script start times (older browsers), nothing is excluded.
-  const unknown = frame({ start: 2000, firstUIEventTimestamp: 2030, scripts: [{ ...timer, start: -1 }] });
+  const unknown = frame({
+    start: 2000,
+    firstUIEventTimestamp: 2030,
+    scripts: [{ ...timer, invoker: 'TimerHandler:setTimeout', start: -1 }],
+  });
   expect(classifyFrame(unknown, base)).toBe('interaction');
+});
+
+test('classify and blame: setInterval callbacks are never the interaction’s', () => {
+  const click = {
+    id: 1,
+    event: 'click',
+    start: 2000,
+    duration: 300,
+    target: 'button#buy',
+    targetSource: 'event-timing' as const,
+  };
+  const base = { interactions: [click], scrolls: [], loadEventEnd: 100 };
+  const interval = script({
+    invoker: 'TimerHandler:setInterval',
+    invokerType: 'user-callback',
+    sourceFunctionName: 'repeatingBackgroundJob',
+    start: 2150,
+    duration: 70,
+  });
+  // A periodic timer firing inside the click's window (between the handler and the paint).
+  expect(classifyFrame(frame({ start: 2150, duration: 70, scripts: [interval] }), base)).toBe('background');
+  // A one-off timer there is still counted: handlers defer work with setTimeout.
+  const deferred = script({
+    invoker: 'TimerHandler:setTimeout',
+    invokerType: 'user-callback',
+    sourceFunctionName: 'afterClick',
+    start: 2150,
+  });
+  expect(classifyFrame(frame({ start: 2150, scripts: [deferred] }), base)).toBe('interaction');
+  // Sharing a frame with the handler, the interval callback isn't blamed.
+  const handler = script({
+    invoker: 'BUTTON#buy.onclick',
+    sourceFunctionName: 'onBuy',
+    start: 2002,
+    duration: 80,
+  });
+  const both = frame({
+    start: 2000,
+    duration: 160,
+    firstUIEventTimestamp: 2000,
+    scripts: [handler, interval],
+  });
+  expect(summarizeLongFrames([both]).topScripts.map((s) => s.fn)).toEqual(['onBuy']);
 });

@@ -1,0 +1,15 @@
+# TEMPORARY (M7): repeat the flaky busy-page test on the runner. Removed after it reports.
+name: Race check
+on: pull_request
+jobs:
+  repeat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test --project=integration measure -g "never goes quiet" --repeat-each 20

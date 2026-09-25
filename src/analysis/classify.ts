@@ -29,6 +29,15 @@ export interface ClassifyInput {
 }
 
 /**
+ * A `setInterval` callback: periodic by construction, so never caused by one interaction, even
+ * when it happens to run inside an interaction's window. (Work a handler triggers uses
+ * setTimeout, requestAnimationFrame or promises.)
+ */
+export function isPeriodic(s: LoafScriptRecord): boolean {
+  return s.invoker.startsWith('TimerHandler:setInterval');
+}
+
+/**
  * True for a script that was already running (or ran) before the frame's input arrived, and isn't
  * an event listener: a timer or other work the input interrupted, not something it caused.
  */
@@ -54,9 +63,15 @@ export function ranBeforeInput(s: LoafScriptRecord, firstUIEventTimestamp: numbe
  * 4. It started before load finished (plus LOAD_GRACE_MS).
  * 5. An `event-listener` script ran in it (a secondary signal: input the other rules missed).
  * 6. Otherwise, background.
+ *
+ * Before all of these: a frame made only of `setInterval` callbacks is never an interaction frame.
  */
 export function classifyFrame(f: LoafRecord, input: Omit<ClassifyInput, 'loaf'>): FrameClass {
   const end = f.start + f.duration;
+  // A frame made only of setInterval callbacks is background or load work, whatever it overlaps.
+  if (f.scripts.length > 0 && f.scripts.every(isPeriodic)) {
+    return input.loadEventEnd === 0 || f.start < input.loadEventEnd + LOAD_GRACE_MS ? 'load' : 'background';
+  }
   if (f.firstUIEventTimestamp > 0) {
     const waiting = f.firstUIEventTimestamp <= f.start + INPUT_START_TOLERANCE_MS;
     const ranAfter =

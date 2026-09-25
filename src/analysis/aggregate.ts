@@ -1,5 +1,5 @@
 import type { LoafRecord, ScrollRecord } from '../collector/collector.js';
-import { ranBeforeInput } from './classify.js';
+import { isPeriodic, ranBeforeInput } from './classify.js';
 import type { InputResult, LongFramesResult, TargetTiming, TopScript } from '../types.js';
 import type { Interaction } from './interactions.js';
 import { median, percentile, round1 } from './stats.js';
@@ -59,7 +59,7 @@ export function scriptBlocking(frames: AttributedFrame[]): Map<string, TopScript
     for (const s of f.scripts) {
       // Work the input interrupted (a timer already running) isn't blamed on the interaction.
       // Its share of the frame is dropped rather than handed to the other scripts.
-      if (ranBeforeInput(s, f.firstUIEventTimestamp)) continue;
+      if (ranBeforeInput(s, f.firstUIEventTimestamp) || isPeriodic(s)) continue;
       const share = total > 0 ? (f.blockingDuration * s.duration) / total : 0;
       const key = [s.sourceURL, s.sourceFunctionName, s.invoker, s.invokerType].join('\u0000');
       const cur = out.get(key);
