@@ -75,7 +75,7 @@ In full mode (`mode: 'full'`), each run is also traced:
 | `profile.hotFunctions` | Functions that used the most CPU during the interaction, from V8's sampling profiler, with their callers. Names your handler even behind React's or Angular's dispatcher.  | Never |
 | `budget120`            | With `refreshRate: 120`: main-thread frames over 8.33ms. A prediction, because headless Chrome runs at 60Hz.                                                               | Never |
 
-Full mode costs 6–13% more time per measurement and doesn't change the other numbers ([docs/trace-categories.md](docs/trace-categories.md)).
+Full mode costs about 5–25% more time per measurement and doesn't change the other numbers ([docs/trace-categories.md](docs/trace-categories.md)).
 
 A check fails when it gets worse than its baseline by more than `maxIncrease` (15% by default), with a small floor so rounding can't fail it: 16ms for input-to-paint (Event Timing reports in 8ms steps), 1 long frame, and 1 percentage point of frames. On-time frames are compared on the missed share, so 95% → 81% can't pass as "within 15%".
 
