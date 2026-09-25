@@ -18,7 +18,10 @@ import {
   type ScrollOptions,
 } from './scroll.js';
 import type { MeasureContext } from './runner.js';
-import { relative } from 'node:path';
+import { basename, relative } from 'node:path';
+import { writeFileSync } from 'node:fs';
+import { encodeReplay } from './replay/encode.js';
+import { takeReplaySource } from './replay/source.js';
 import { installCollector } from './collector/collector.js';
 import { browserEnvironment } from './environment.js';
 import { resolveOptions } from './options.js';
@@ -74,7 +77,7 @@ async function createSmoothness(
   page: Page,
   defaults: SmoothnessOptions,
   testInfo: TestInfo,
-  outputs: Map<string, string>,
+  outputs: Map<string, { path: string; result: SmoothnessResult }>,
 ): Promise<Smoothness> {
   const environment = await browserEnvironment(page.context().browser());
   if (environment.browserName === 'chromium' && environment.headlessMode === 'headless-shell') {
@@ -104,7 +107,7 @@ async function createSmoothness(
     }
     const path = resultPath(testInfo, label);
     writeResult(result, path);
-    outputs.set(label, path);
+    outputs.set(label, { path, result });
     return result;
   };
 
@@ -183,6 +186,37 @@ async function createSmoothness(
 }
 
 /** The fixture definitions, shared by `test` and `withSmoothness()`. */
+/**
+ * Encodes and attaches a scroll() replay when the result asks for one: always with
+ * `replay: 'on'`, and when a check got worse with `'on-regression'` (the default).
+ */
+async function attachReplay(
+  page: Page,
+  testInfo: TestInfo,
+  label: string,
+  path: string,
+  result: SmoothnessResult,
+) {
+  const source = takeReplaySource(result);
+  const browser = page.context().browser();
+  if (!source || !browser) return;
+  const status = result.comparison?.status;
+  const wanted =
+    result.settings.replay === 'on' ||
+    (result.settings.replay === 'on-regression' && (status === 'warn' || status === 'fail'));
+  if (!wanted) return;
+  const video = await encodeReplay(browser, source);
+  if ('unavailable' in video) {
+    result.notes.push(`No replay: ${video.unavailable}.`);
+  } else {
+    const file = path.replace(/\.json$/, '.replay.webm');
+    writeFileSync(file, video);
+    result.replay = basename(file);
+    await testInfo.attach(`smoothness replay: ${label}`, { path: file, contentType: 'video/webm' });
+  }
+  writeResult(result, path);
+}
+
 export const smoothnessFixtures: Fixtures<
   SmoothnessFixtures,
   object,
@@ -193,10 +227,11 @@ export const smoothnessFixtures: Fixtures<
     if (page.context().browser()?.browserType().name() === 'chromium') {
       await page.addInitScript(installCollector, COLLECTOR_CONFIG);
     }
-    const outputs = new Map<string, string>();
+    const outputs = new Map<string, { path: string; result: SmoothnessResult }>();
     await use(await createSmoothness(page, smoothnessOptions, testInfo, outputs));
     // Attached after the test body, so each file includes toBeSmooth()'s comparison.
-    for (const [label, path] of outputs) {
+    for (const [label, { path, result }] of outputs) {
+      await attachReplay(page, testInfo, label, path, result);
       await testInfo.attach(`smoothness: ${label}`, { path, contentType: 'application/json' });
     }
   },

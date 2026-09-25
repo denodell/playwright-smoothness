@@ -202,3 +202,88 @@ test('200 frames are analysed in under 2 seconds', async ({ page, browser }) => 
   expect(a.failed).toBe(0);
   expect(ms).toBeLessThan(2000);
 });
+
+// ---- replays ----
+
+async function playable(page: Page, file: string) {
+  const { readFileSync } = await import('node:fs');
+  const bytes = readFileSync(file).toString('base64');
+  await page.goto('/raf.html'); // any page on localhost (a secure context)
+  return page.evaluate(async (b64) => {
+    const blob = new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))], { type: 'video/webm' });
+    const v = document.createElement('video');
+    v.muted = true;
+    v.src = URL.createObjectURL(blob);
+    await new Promise((res, rej) => {
+      v.onloadedmetadata = res;
+      v.onerror = () => rej(new Error(v.error?.message));
+    });
+    v.currentTime = v.duration / 2;
+    await new Promise((res) => (v.onseeked = res));
+    return { duration: v.duration, width: v.videoWidth, height: v.videoHeight, seekedTo: v.currentTime };
+  }, bytes);
+}
+
+/** The files a test left in test-results/smoothness/, found by the start of its title. */
+async function outputOf(titleStart: string) {
+  const { existsSync, readdirSync } = await import('node:fs');
+  const { join } = await import('node:path');
+  const root = join(test.info().project.outputDir, 'smoothness');
+  const dir = existsSync(root) ? readdirSync(root).find((d) => d.startsWith(titleStart)) : undefined;
+  return dir ? readdirSync(join(root, dir)).map((f) => join(root, dir, f)) : [];
+}
+
+// Replays are encoded and attached in fixture teardown, after the test body and its hooks, so
+// each check reads the files the previous test left behind.
+test.describe('replays', () => {
+  test.describe.configure({ mode: 'serial' });
+
+  test("'on': a replay even when nothing got worse", async ({ page, smoothness }) => {
+    await page.goto('/list.html?cost=15&overscan=0');
+    const r = await smoothness.scroll(list(page), { ...FLING, replay: 'on', runs: 2 });
+    expect(r).toBeSmooth(); // the first run creates the baseline; 'on' attaches a replay anyway
+  });
+
+  test("the 'on' replay is a playable, seekable WebM, named in the result", async ({ page }) => {
+    const { readFileSync, statSync } = await import('node:fs');
+    const files = await outputOf('replays-on-a-replay-even');
+    const webm = files.find((f) => f.endsWith('.replay.webm'))!;
+    expect(webm).toBeTruthy();
+    const json = JSON.parse(
+      readFileSync(
+        files.find((f) => f.endsWith('.json'))!,
+        'utf8',
+      ),
+    );
+    expect(webm.endsWith(json.replay)).toBe(true);
+    expect(statSync(webm).size).toBeGreaterThan(50_000);
+    const info = await playable(page, webm);
+    expect(info.width).toBe(500);
+    expect(info.duration).toBeGreaterThan(12); // a 3.3s fling, 4x slower, plus a 1s hold
+    expect(info.seekedTo).toBeGreaterThan(info.duration / 4); // seeking works
+  });
+
+  test("'on-regression' (the default): no replay when nothing got worse", async ({ page, smoothness }) => {
+    await page.goto('/list.html?cost=15&overscan=0');
+    const r = await smoothness.scroll(list(page), { ...FLING, runs: 2 });
+    expect(r).toBeSmooth(); // the first run records the baseline
+    expect(r.comparison!.status).toBe('baseline-created');
+  });
+
+  test("'on-regression' left no replay", async () => {
+    const files = await outputOf('replays-on-regression-the-default');
+    expect(files.some((f) => f.endsWith('.json'))).toBe(true);
+    expect(files.some((f) => f.endsWith('.replay.webm'))).toBe(false);
+  });
+
+  test('quick mode has no frames to replay', async ({ page, smoothness }) => {
+    await page.goto('/list.html?cost=0');
+    const r = await smoothness.scroll(list(page), { ...FLING, mode: 'quick', replay: 'on', runs: 1 });
+    expect(r).toBeSmooth();
+  });
+
+  test('quick mode left no replay', async () => {
+    const files = await outputOf('replays-quick-mode-has-no-frames');
+    expect(files.some((f) => f.endsWith('.replay.webm'))).toBe(false);
+  });
+});

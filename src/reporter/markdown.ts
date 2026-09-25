@@ -108,6 +108,12 @@ export function buildMarkdown(entries: ReportEntry[], title = 'Smoothness'): str
         lines.push('', 'Where the time went (CPU profile):', '');
         hot.forEach((f, i) => lines.push(`${i + 1}. ${cell(describeHotFunction(f))}`));
       }
+      if (r.replay) {
+        lines.push(
+          '',
+          `A replay of the scroll is attached to the test as \`smoothness replay: ${cell(r.label)}\` (${code(r.replay)}).`,
+        );
+      }
       const noisy = r.comparison!.checks.filter((c) => c.noisy);
       for (const c of noisy) {
         lines.push(
