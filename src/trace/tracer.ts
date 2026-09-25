@@ -10,9 +10,9 @@ export async function traceRun(
   page: Page,
   categories: string[],
   measured: () => Promise<void>,
-  options: { browserVersion: string; budget120: boolean; profile: boolean },
+  options: { browserVersion: string; budget120: boolean; profile: boolean; screenshots: boolean },
 ): Promise<ParsedTrace & { bytes: number }> {
-  await browser.startTracing(page, { categories, screenshots: false });
+  await browser.startTracing(page, { categories, screenshots: options.screenshots });
   let buffer: Buffer;
   try {
     // Two frames after tracing starts, so the start mark isn't inside tracing's own start-up.
@@ -41,6 +41,7 @@ export async function traceRun(
       frames: null,
       budget120: null,
       profile: null,
+      screenshots: [],
       unavailable: [{ measurement: 'frames', reason: `the trace could not be parsed: ${String(err)}` }],
       notes: [],
       bytes: buffer.length,
