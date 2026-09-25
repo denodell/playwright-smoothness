@@ -15,6 +15,12 @@ export const LOAD_GRACE_MS = 50;
  */
 export const SCROLL_LEAD_MS = 5;
 
+/**
+ * Event Timing start times and LoAF start times are both rounded, so a frame that handles an
+ * input can appear to start a moment before it.
+ */
+export const INPUT_START_TOLERANCE_MS = 2;
+
 export interface ClassifyInput {
   loaf: LoafRecord[];
   interactions: Interaction[];
@@ -25,7 +31,9 @@ export interface ClassifyInput {
 /**
  * Classifies each long frame without labels from the test, in this order:
  * 1. `firstUIEventTimestamp > 0`: the frame handled input.
- * 2. It overlaps an Event Timing interaction window.
+ * 2. It starts during an Event Timing interaction window. A frame that started before the input
+ *    arrived can't have been caused by it: it delayed the input, which the interaction's
+ *    input-to-paint time already includes.
  * 3. A scroll event fired during it.
  * 4. It started before load finished (plus LOAD_GRACE_MS).
  * 5. An `event-listener` script ran in it (a secondary signal: input the other rules missed).
@@ -34,7 +42,13 @@ export interface ClassifyInput {
 export function classifyFrame(f: LoafRecord, input: Omit<ClassifyInput, 'loaf'>): FrameClass {
   const end = f.start + f.duration;
   if (f.firstUIEventTimestamp > 0) return 'interaction';
-  if (input.interactions.some((i) => f.start < i.start + i.duration && end > i.start)) return 'interaction';
+  if (
+    input.interactions.some(
+      (i) => f.start >= i.start - INPUT_START_TOLERANCE_MS && f.start < i.start + i.duration,
+    )
+  ) {
+    return 'interaction';
+  }
   if (input.scrolls.some((s) => s.t >= f.start - SCROLL_LEAD_MS && s.t <= end)) return 'interaction';
   if (input.loadEventEnd > 0 && f.start < input.loadEventEnd + LOAD_GRACE_MS) return 'load';
   if (input.loadEventEnd === 0) return 'load'; // the page hasn't finished loading yet
