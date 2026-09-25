@@ -282,8 +282,9 @@ function parseAnimationFrames(
   };
 }
 
-export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedTrace {
-  const out: ParsedTrace = {
+/** A trace with nothing in it yet. */
+export function emptyTrace(): ParsedTrace {
+  return {
     frames: null,
     budget120: null,
     profile: null,
@@ -292,6 +293,10 @@ export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedT
     unavailable: [],
     notes: [],
   };
+}
+
+export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedTrace {
+  const out = emptyTrace();
   const marks = findMarks(events);
   if (!marks) {
     out.unavailable.push({

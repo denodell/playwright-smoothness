@@ -91,12 +91,10 @@ export interface CollectorSnapshot {
 
 export interface SettleOutcome {
   settled: boolean;
-  waitedMs: number;
 }
 
 /** The collector's in-page API, reachable at window[COLLECTOR_KEY]. */
 export interface CollectorApi {
-  version: 1;
   now(): number;
   snapshot(from: number, to: number): CollectorSnapshot;
   settle(quietMs: number, timeoutMs: number): Promise<SettleOutcome>;
@@ -190,7 +188,7 @@ export function installCollector(config: CollectorConfig): void {
       fail('stream', err);
     }
   };
-  const stream = (kind: 'loaf' | 'events' | 'scrolls' | 'load' | 'input' | 'errors', record: unknown) => {
+  const stream = (kind: 'loaf' | 'events' | 'scrolls' | 'load' | 'input', record: unknown) => {
     if (!config.stream) return;
     try {
       if (!outbox) {
@@ -385,7 +383,6 @@ export function installCollector(config: CollectorConfig): void {
   const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
   const api: CollectorApi = {
-    version: 1,
     now: () => performance.now(),
     snapshot(from, to) {
       const overlaps = (start: number, end: number) => start <= to && end >= from;
@@ -409,8 +406,8 @@ export function installCollector(config: CollectorConfig): void {
           const now = performance.now();
           const loaded = document.readyState === 'complete' && loadEventEnd() > 0;
           const quietSince = Math.max(loadEventEnd(), lastLongFrameEnd);
-          if (loaded && now - quietSince >= quietMs) resolve({ settled: true, waitedMs: now - began });
-          else if (now - began >= timeoutMs) resolve({ settled: false, waitedMs: now - began });
+          if (loaded && now - quietSince >= quietMs) resolve({ settled: true });
+          else if (now - began >= timeoutMs) resolve({ settled: false });
           else setTimeout(check, 50);
         };
         check();

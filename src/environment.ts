@@ -5,8 +5,6 @@ export interface BrowserEnvironment {
   browserName: string;
   browserVersion: string;
   headlessMode: HeadlessMode;
-  /** Why headlessMode is 'unknown', when it is. */
-  headlessModeReason?: string;
 }
 
 /**
@@ -33,7 +31,6 @@ export function browserEnvironment(browser: Browser | null): Promise<BrowserEnvi
       browserName: 'unknown',
       browserVersion: 'unknown',
       headlessMode: 'unknown',
-      headlessModeReason: 'no Browser object (persistent context?)',
     });
   }
   let env = cache.get(browser);
@@ -47,30 +44,16 @@ export function browserEnvironment(browser: Browser | null): Promise<BrowserEnvi
 async function readEnvironment(browser: Browser): Promise<BrowserEnvironment> {
   const browserName = browser.browserType().name();
   const browserVersion = browser.version();
-  if (browserName !== 'chromium')
-    return { browserName, browserVersion, headlessMode: 'unknown', headlessModeReason: 'not Chromium' };
+  if (browserName !== 'chromium') return { browserName, browserVersion, headlessMode: 'unknown' };
   try {
     const cdp = await browser.newBrowserCDPSession();
     try {
       const version = await cdp.send('Browser.getVersion');
-      const headlessMode = detectHeadlessMode(version);
-      return {
-        browserName,
-        browserVersion,
-        headlessMode,
-        ...(headlessMode === 'unknown'
-          ? { headlessModeReason: `unrecognised product '${version.product}'` }
-          : {}),
-      };
+      return { browserName, browserVersion, headlessMode: detectHeadlessMode(version) };
     } finally {
       await cdp.detach().catch(() => undefined);
     }
-  } catch (err) {
-    return {
-      browserName,
-      browserVersion,
-      headlessMode: 'unknown',
-      headlessModeReason: `Browser.getVersion failed: ${String(err)}`,
-    };
+  } catch {
+    return { browserName, browserVersion, headlessMode: 'unknown' };
   }
 }

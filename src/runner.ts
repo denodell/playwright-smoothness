@@ -70,10 +70,9 @@ export const COLLECTOR_CONFIG: CollectorConfig = {
 const SETTLE_QUIET_MS = 500;
 
 /** Longest we wait for the page to go quiet. If it never does, the run continues with a note. */
-export const SETTLE_TIMEOUT_MS = 5_000;
+const SETTLE_TIMEOUT_MS = 5_000;
 
 interface RunData {
-  snapshot: CollectorSnapshot;
   classes: FrameClass[];
   interactionFrames: AttributedFrame[];
   input: InputResult;
@@ -347,7 +346,6 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         snapshot.scrolls,
       );
       runs.push({
-        snapshot,
         classes,
         interactionFrames,
         input: summarizeInput(interactions),

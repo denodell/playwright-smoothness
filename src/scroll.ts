@@ -1,7 +1,7 @@
 import type { CDPSession, Locator, Page } from '@playwright/test';
 import { listGeometry, type ListGeometry } from './list/probe.js';
 
-/** Named speeds, in pixels per second. `fast` is the spike's fling (6,000px/s). */
+/** Named speeds, in pixels per second. */
 export const SPEEDS = { slow: 1500, normal: 3000, fast: 6000 } as const;
 
 /** Time between arrow-key presses with `input: 'keys'`: slow enough for each to paint. */
@@ -10,10 +10,12 @@ const KEY_INTERVAL_MS = 100;
 export const MAX_KEY_PRESSES = 100;
 /** Chrome scrolls about 40px per arrow key; used to turn a pixel distance into presses. */
 export const PX_PER_ARROW_KEY = 40;
-/** The scroll has ended when the position hasn't changed for this many frames (a fling coasts). */
-const SETTLE_FRAMES = 5;
+/** The scroll has ended when the position is unchanged for this many polls in a row (a fling coasts). */
+const REST_POLLS = 5;
+/** How often to check whether a fling has come to rest. About two frames at 60Hz. */
+const REST_POLL_MS = 32;
 /** Longest to wait for a fling to come to rest after the gesture. */
-export const SETTLE_TIMEOUT_MS = 3_000;
+const REST_TIMEOUT_MS = 3_000;
 
 export interface ScrollOptions {
   /** `'end'` (default) scrolls to the end of the list; a number scrolls that many pixels. */
@@ -66,28 +68,22 @@ const position = (g: ListGeometry, s: ResolvedScroll) =>
 const maximum = (g: ListGeometry, s: ResolvedScroll) =>
   s.direction === 'vertical' ? g.scroll.maxTop : g.scroll.maxLeft;
 
-/** How often to check whether a fling has come to rest. About two frames at 60Hz. */
-const SETTLE_POLL_MS = 32;
-
 /**
  * Waits until the scroll position stops changing. Polls on a timer, not requestAnimationFrame:
  * rAF callbacks can stall while a synthetic gesture is still being delivered, and this wait
- * must always end by SETTLE_TIMEOUT_MS.
+ * must always end by REST_TIMEOUT_MS.
  */
-async function waitForRest(
-  target: Locator,
-  s: ResolvedScroll,
-): Promise<{ position: number; settled: boolean }> {
+async function waitForRest(target: Locator, s: ResolvedScroll): Promise<number> {
   const began = Date.now();
   let last = position(await listGeometry(target), s);
   let still = 0;
-  while (still < SETTLE_FRAMES && Date.now() - began < SETTLE_TIMEOUT_MS) {
-    await new Promise((r) => setTimeout(r, SETTLE_POLL_MS));
+  while (still < REST_POLLS && Date.now() - began < REST_TIMEOUT_MS) {
+    await new Promise((r) => setTimeout(r, REST_POLL_MS));
     const now = position(await listGeometry(target), s);
     still = now === last ? still + 1 : 0;
     last = now;
   }
-  return { position: last, settled: still >= SETTLE_FRAMES };
+  return last;
 }
 
 /** A flick drags across this share of the list, from one side towards the other. */
@@ -154,13 +150,13 @@ export async function performScroll(
   cdp: CDPSession,
   target: Locator,
   s: ResolvedScroll,
-): Promise<{ requested: number; scrolled: number; settled?: boolean; presses?: number }> {
+): Promise<{ requested: number; scrolled: number; presses?: number }> {
   await target.scrollIntoViewIfNeeded();
   const g = await listGeometry(target);
   const start = position(g, s);
   const remaining = maximum(g, s) - start;
   const requested = s.distance === 'end' ? remaining : s.distance;
-  if (requested <= 0) return { requested: 0, scrolled: 0, settled: true };
+  if (requested <= 0) return { requested: 0, scrolled: 0 };
 
   let presses = 0;
   if (s.input === 'keys') {
@@ -202,11 +198,10 @@ export async function performScroll(
       });
     }
   }
-  const rest = await waitForRest(target, s);
+  const end = await waitForRest(target, s);
   return {
     requested,
-    scrolled: rest.position - start,
-    settled: rest.settled,
+    scrolled: end - start,
     ...(presses ? { presses } : {}),
   };
 }

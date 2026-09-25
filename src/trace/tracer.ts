@@ -1,5 +1,5 @@
 import type { Browser, Page } from '@playwright/test';
-import { MARK_END, MARK_START, parseTrace, type ParsedTrace, type TraceEvent } from './parse.js';
+import { emptyTrace, MARK_END, MARK_START, parseTrace, type ParsedTrace, type TraceEvent } from './parse.js';
 
 /**
  * Traces `measured` and returns the parsed trace. The trace buffer is parsed and dropped
@@ -11,7 +11,7 @@ export async function traceRun(
   categories: string[],
   measured: () => Promise<void>,
   options: { browserVersion: string; budget120: boolean; profile: boolean; screenshots: boolean },
-): Promise<ParsedTrace & { bytes: number }> {
+): Promise<ParsedTrace> {
   await browser.startTracing(page, { categories, screenshots: options.screenshots });
   let buffer: Buffer;
   try {
@@ -38,15 +38,9 @@ export async function traceRun(
     events = (JSON.parse(buffer.toString('utf8')) as { traceEvents?: TraceEvent[] }).traceEvents ?? [];
   } catch (err) {
     return {
-      frames: null,
-      budget120: null,
-      profile: null,
-      screenshots: [],
-      screenshotTimes: [],
+      ...emptyTrace(),
       unavailable: [{ measurement: 'frames', reason: `the trace could not be parsed: ${String(err)}` }],
-      notes: [],
-      bytes: buffer.length,
     };
   }
-  return { ...parseTrace(events, options), bytes: buffer.length };
+  return parseTrace(events, options);
 }
