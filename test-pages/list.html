@@ -36,6 +36,25 @@
         height: 70px;
         border-radius: 4px;
       }
+      .row.skeleton {
+        background: #dddddd;
+        margin: 6px 0;
+        height: 68px;
+      }
+      .horizontal {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+      }
+      .horizontal .row {
+        top: 0;
+        bottom: 0;
+        right: auto;
+        width: 80px;
+        height: auto;
+        flex-direction: column;
+        justify-content: center;
+        padding: 12px 0;
+      }
     </style>
     <script src="/lib/work.js"></script>
   </head>
