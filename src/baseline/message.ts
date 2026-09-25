@@ -1,16 +1,16 @@
 import { isAbsolute, relative } from 'node:path';
 import type { Check, Comparison, HotFunction, SmoothnessResult, TopScript } from '../types.js';
 import { PACKAGE_NAME } from '../constants.js';
+import { round1 } from '../analysis/stats.js';
 
 /** How many scripts a message names. */
 const MESSAGE_SCRIPTS = 3;
 
-const r1 = (x: number) => Math.round(x * 10) / 10;
-const signed = (x: number) => (x > 0 ? `+${r1(x)}` : x < 0 ? `−${r1(-x)}` : '±0');
+const signed = (x: number) => (x > 0 ? `+${round1(x)}` : x < 0 ? `−${round1(-x)}` : '±0');
 
 export function formatValue(v: number | null, unit: Check['unit']): string {
   if (v === null) return 'n/a';
-  return unit === 'ms' ? `${r1(v)}ms` : unit === '%' ? `${r1(v)}%` : `${r1(v)}`;
+  return unit === 'ms' ? `${round1(v)}ms` : unit === '%' ? `${round1(v)}%` : `${round1(v)}`;
 }
 
 /** The change on its own: `+20ms (+18%)`, `+2`, `−5 points`. Empty when not compared. */
@@ -52,20 +52,21 @@ const MESSAGE_CALLERS = 4;
 /** `busyWait in work.js:3: 117.5ms self (149.9ms with calls), from onCheckout ← executeDispatch`. */
 export function describeHotFunction(f: HotFunction): string {
   const where = f.url ? ` in ${shortSource(f.url)}${f.line ? `:${f.line}` : ''}` : '';
-  const total = f.totalMs > f.selfMs ? ` (${r1(f.totalMs)}ms with calls)` : '';
+  const total = f.totalMs > f.selfMs ? ` (${round1(f.totalMs)}ms with calls)` : '';
   const from = f.callers.length
     ? `, from ${f.callers.slice(0, MESSAGE_CALLERS).join(' ← ')}${f.callers.length > MESSAGE_CALLERS ? ' ← …' : ''}`
     : '';
-  return `${f.fn}${where}: ${r1(f.selfMs)}ms self${total}${from}`;
+  return `${f.fn}${where}: ${round1(f.selfMs)}ms self${total}${from}`;
 }
 
 export function describeScript(s: TopScript): string {
   const fn = s.fn || '(anonymous)';
   const during = s.during.length ? `, during ${s.during.join(', ')}` : '';
-  return `${fn} in ${shortSource(s.source)} (${s.invoker || s.invokerType}): ran ${r1(s.durationMs)}ms, ${r1(s.blockingMs)}ms of it blocking${during}`;
+  return `${fn} in ${shortSource(s.source)} (${s.invoker || s.invokerType}): ran ${round1(s.durationMs)}ms, ${round1(s.blockingMs)}ms of it blocking${during}`;
 }
 
-function table(rows: string[][]): string[] {
+/** Left-aligned columns, indented two spaces. */
+export function table(rows: string[][]): string[] {
   const widths = rows[0]!.map((_, i) => Math.max(...rows.map((r) => r[i]!.length)));
   return rows.map(
     (r) =>
@@ -79,7 +80,7 @@ function table(rows: string[][]): string[] {
 
 /**
  * The toBeSmooth() message. Leads with what got worse and which scripts were responsible,
- * then the numbers (brief principle 4).
+ * then the numbers.
  */
 export function formatMessage(result: SmoothnessResult, comparison: Comparison, cwd = process.cwd()): string {
   const lines: string[] = [];
@@ -100,7 +101,7 @@ export function formatMessage(result: SmoothnessResult, comparison: Comparison, 
       lines.push(`  ${c.name} ${formatChange(c)}${where}`);
     }
   } else {
-    lines.push(`"${result.label}" is within ${r1(result.settings.maxIncrease * 100)}% of its baseline.`);
+    lines.push(`"${result.label}" is within ${round1(result.settings.maxIncrease * 100)}% of its baseline.`);
   }
 
   const scripts = result.longFrames?.topScripts.slice(0, MESSAGE_SCRIPTS) ?? [];
@@ -124,8 +125,8 @@ export function formatMessage(result: SmoothnessResult, comparison: Comparison, 
         c.allowed === null
           ? ''
           : c.unit === '%'
-            ? `${r1(c.allowed)} points`
-            : formatValue(c.allowed, c.unit === 'count' ? 'count' : c.unit);
+            ? `${round1(c.allowed)} points`
+            : formatValue(c.allowed, c.unit);
       const status =
         c.status === 'worse'
           ? 'WORSE'
@@ -149,7 +150,7 @@ export function formatMessage(result: SmoothnessResult, comparison: Comparison, 
     lines.push('');
     for (const c of noisy) {
       lines.push(
-        `Noise: ${c.name} varied ${c.spreadPercent}% across ${result.runs} runs, more than the allowed ${r1(result.settings.maxIncrease * 100)}%. ` +
+        `Noise: ${c.name} varied ${c.spreadPercent}% across ${result.runs} runs, more than the allowed ${round1(result.settings.maxIncrease * 100)}%. ` +
           `A change this size can be noise. Run \`npx ${PACKAGE_NAME} calibrate\` to choose a maxIncrease this check can meet.`,
       );
     }

@@ -18,8 +18,7 @@ import {
   summarizeInput,
   summarizeLongFrames,
 } from './analysis/aggregate.js';
-import { median, spread } from './analysis/stats.js';
-import { medianOf } from './analysis/aggregate.js';
+import { median, medianOf, spread } from './analysis/stats.js';
 import { traceRun } from './trace/tracer.js';
 import {
   ANIMATION_FRAME_CATEGORIES,
@@ -499,9 +498,9 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     }
 
     if (ctx.list) {
-      const perRun = runs.map((r) => r.list);
-      const ok = perRun.filter((l): l is ListResult => l !== null && !('unavailable' in l));
-      const why = [...new Set(perRun.flatMap((l) => (l && 'unavailable' in l ? [l.unavailable] : [])))];
+      const lists = runs.map((r) => r.list);
+      const ok = lists.filter((l): l is ListResult => l !== null && !('unavailable' in l));
+      const why = [...new Set(lists.flatMap((l) => (l && 'unavailable' in l ? [l.unavailable] : [])))];
       if (ok.length === 0) {
         list = null;
         for (const reason of why.length ? why : ['no run produced list data'])

@@ -25,11 +25,16 @@ export function resultPath(info: OutputInfo, label: string): string {
   return join(info.project.outputDir, 'smoothness', `${title}-${id}${retry}`, `${labelSlug(label)}.json`);
 }
 
-export function writeResult(result: SmoothnessResult, path: string): void {
+/** Writes JSON to a temporary file, then renames it, so a reader never sees half a file. */
+export function writeJsonAtomic(path: string, data: unknown): void {
   mkdirSync(dirname(path), { recursive: true });
   const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(result, null, 2) + '\n');
+  writeFileSync(tmp, JSON.stringify(data, null, 2) + '\n');
   renameSync(tmp, path);
+}
+
+export function writeResult(result: SmoothnessResult, path: string): void {
+  writeJsonAtomic(path, result);
   written.set(result, path);
 }
 

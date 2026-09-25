@@ -23,3 +23,9 @@ export function spread(values: number[]): Spread {
 export function round1(x: number): number {
   return Math.round(x * 10) / 10;
 }
+
+/** Median of the non-null values, rounded to one decimal; null when there are none. */
+export function medianOf(values: (number | null)[]): number | null {
+  const nums = values.filter((v): v is number => v !== null);
+  return nums.length ? round1(median(nums)) : null;
+}

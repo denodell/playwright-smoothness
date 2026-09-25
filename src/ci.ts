@@ -1,3 +1,5 @@
+import { relative } from 'node:path';
+
 /** True when running inside GitHub Actions. */
 export function inGitHubActions(env: Record<string, string | undefined> = process.env): boolean {
   return env.GITHUB_ACTIONS === 'true';
@@ -25,6 +27,13 @@ export function githubWarning(
     `title=${escapeProperty(where.title ?? 'Smoothness')}`,
   ].filter(Boolean);
   return `::warning ${props.join(',')}::${escapeData(message)}`;
+}
+
+/** In GitHub Actions, prints `message` as a `::warning` on the test's file and line. */
+export function warnInGitHubActions(message: string, at: { file: string; line: number }): void {
+  if (inGitHubActions()) {
+    console.log(githubWarning(message, { file: relative(process.cwd(), at.file), line: at.line }));
+  }
 }
 
 /**

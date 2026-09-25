@@ -102,6 +102,7 @@ export interface CollectorApi {
 }
 
 export function installCollector(config: CollectorConfig): void {
+  // Same as COLLECTOR_KEY: this function is serialized, so it can't reference module scope.
   const KEY = '__playwrightSmoothness';
   const w = window as unknown as Record<string, unknown>;
   if (w[KEY]) return;
@@ -129,7 +130,7 @@ export function installCollector(config: CollectorConfig): void {
       if (errors.length < 50) {
         errors.push(where + ': ' + String(err));
         if (where !== 'stream' && config.stream) {
-          const binding = (w as Record<string, unknown>)[config.stream];
+          const binding = w[config.stream];
           if (typeof binding === 'function') {
             (binding as (b: unknown) => unknown)({
               doc: performance.timeOrigin,
@@ -182,7 +183,7 @@ export function installCollector(config: CollectorConfig): void {
     outbox = null;
     if (!batch || !config.stream) return;
     try {
-      const binding = (w as Record<string, unknown>)[config.stream];
+      const binding = w[config.stream];
       if (typeof binding === 'function') (binding as (b: StreamBatch) => unknown)(batch);
     } catch (err) {
       fail('stream', err);

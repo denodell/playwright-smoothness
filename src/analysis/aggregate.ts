@@ -1,8 +1,8 @@
 import type { LoafRecord, ScrollRecord } from '../collector/collector.js';
-import { isPeriodic, ranBeforeInput } from './classify.js';
+import { isPeriodic, ranBeforeInput, SCROLL_LEAD_MS } from './classify.js';
 import type { InputResult, LongFramesResult, TargetTiming, TopScript } from '../types.js';
 import type { Interaction } from './interactions.js';
-import { median, percentile, round1 } from './stats.js';
+import { median, medianOf, percentile, round1 } from './stats.js';
 
 /** How many scripts to name in results and failure messages. */
 const TOP_SCRIPTS = 5;
@@ -42,7 +42,7 @@ export function attributeFrames(
       if (f.start < i.start + i.duration && end > i.start) during.add(`${i.event} on ${i.target}`);
     }
     for (const s of scrolls) {
-      if (s.t >= f.start - 5 && s.t <= end) during.add(`scroll on ${s.target ?? 'unknown'}`);
+      if (s.t >= f.start - SCROLL_LEAD_MS && s.t <= end) during.add(`scroll on ${s.target ?? 'unknown'}`);
     }
     return { ...f, during: [...during] };
   });
@@ -82,22 +82,21 @@ export function scriptBlocking(frames: AttributedFrame[]): Map<string, TopScript
   return out;
 }
 
+/** The scripts that blocked longest, averaged over `runs`. */
+function topScripts(scripts: Map<string, TopScript>, runs = 1): TopScript[] {
+  return [...scripts.values()]
+    .sort((a, b) => b.blockingMs - a.blockingMs)
+    .slice(0, TOP_SCRIPTS)
+    .map((s) => ({ ...s, blockingMs: round1(s.blockingMs / runs), durationMs: round1(s.durationMs / runs) }));
+}
+
 export function summarizeLongFrames(frames: AttributedFrame[]): LongFramesResult {
   return {
     count: frames.length,
     totalBlockingMs: round1(frames.reduce((a, f) => a + f.blockingDuration, 0)),
     worstMs: frames.length ? round1(Math.max(...frames.map((f) => f.duration))) : null,
-    topScripts: [...scriptBlocking(frames).values()]
-      .sort((a, b) => b.blockingMs - a.blockingMs)
-      .slice(0, TOP_SCRIPTS)
-      .map((s) => ({ ...s, blockingMs: round1(s.blockingMs), durationMs: round1(s.durationMs) })),
+    topScripts: topScripts(scriptBlocking(frames)),
   };
-}
-
-/** Median of each number across runs; nulls (nothing measured in that run) are skipped. */
-export function medianOf(values: (number | null)[]): number | null {
-  const nums = values.filter((v): v is number => v !== null);
-  return nums.length ? round1(median(nums)) : null;
 }
 
 export function combineInput(runs: InputResult[]): InputResult {
@@ -123,18 +122,10 @@ export function combineLongFrames(
   runs: LongFramesResult[],
   perRunFrames: AttributedFrame[][],
 ): LongFramesResult {
-  const all = scriptBlocking(perRunFrames.flat());
   return {
     count: Math.round(median(runs.map((r) => r.count))),
     totalBlockingMs: round1(median(runs.map((r) => r.totalBlockingMs))),
     worstMs: medianOf(runs.map((r) => r.worstMs)),
-    topScripts: [...all.values()]
-      .sort((a, b) => b.blockingMs - a.blockingMs)
-      .slice(0, TOP_SCRIPTS)
-      .map((s) => ({
-        ...s,
-        blockingMs: round1(s.blockingMs / runs.length),
-        durationMs: round1(s.durationMs / runs.length),
-      })),
+    topScripts: topScripts(scriptBlocking(perRunFrames.flat()), runs.length),
   };
 }

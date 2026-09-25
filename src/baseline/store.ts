@@ -1,9 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
 import type { BaselineInfo, SmoothnessResult, Spread } from '../types.js';
 import { PACKAGE_NAME } from '../constants.js';
 import { baselineFileName, baselinePrefix, sameKey, slug, type BaselineKey } from './key.js';
 import { metricsOf, type BaselineMetrics } from './compare.js';
+import { writeJsonAtomic } from '../output.js';
 
 const BASELINE_KIND = `${PACKAGE_NAME}-baseline`;
 
@@ -141,10 +142,7 @@ export function writeBaseline(path: string, key: BaselineKey, result: Smoothness
     metrics: metricsOf(result),
     spread: result.spread,
   };
-  mkdirSync(dirname(path), { recursive: true });
-  const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(file, null, 2) + '\n');
-  renameSync(tmp, path);
+  writeJsonAtomic(path, file);
   return {
     path,
     source: 'snapshot',

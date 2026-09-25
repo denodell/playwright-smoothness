@@ -3,7 +3,7 @@ import { lineCoverage, type CoverageOptions } from './coverage.js';
 import type { ListGeometry } from './probe.js';
 
 /** Largest per-channel difference that still matches a blank colour (trace JPEGs are lossy). */
-const COLOUR_TOLERANCE = 24;
+const COLOR_TOLERANCE = 24;
 /** A line has content when at least 1% of its pixels (and at least 2) aren't blank. */
 const MIN_CONTENT_SHARE = 0.01;
 
@@ -80,7 +80,7 @@ export async function analyzeFrames(
         options: {
           direction: input.direction,
           blank: input.blank,
-          tolerance: COLOUR_TOLERANCE,
+          tolerance: COLOR_TOLERANCE,
           minContentShare: MIN_CONTENT_SHARE,
         },
         source: lineCoverage.toString(),

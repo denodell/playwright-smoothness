@@ -1,4 +1,5 @@
 import type { ListResult } from '../types.js';
+import { round1 } from '../analysis/stats.js';
 
 /**
  * A frame is blank when it's drawn to less than this share of the list at rest. The list at
@@ -10,7 +11,6 @@ export const BLANK_FRAME_SHARE = 0.5;
 export function summarizeList(frames: number[], reference: number): ListResult {
   const relative = frames.map((f) => Math.min(1, f / reference));
   const blankFrames = relative.filter((r) => r < BLANK_FRAME_SHARE).length;
-  const round1 = (x: number) => Math.round(x * 10) / 10;
   return {
     frames: frames.length,
     blankFrames,

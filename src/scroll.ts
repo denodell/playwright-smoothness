@@ -22,7 +22,7 @@ export interface ScrollOptions {
   distance?: 'end' | number;
   /** Default `'vertical'`. */
   direction?: 'vertical' | 'horizontal';
-  /** `'wheel'` (default) and `'touch'` use a compositor-driven gesture; `'keys'` presses arrow keys. */
+  /** `'wheel'` (default) sends a compositor-driven gesture; `'touch'` flicks with touch events and needs `hasTouch`; `'keys'` presses arrow keys. */
   input?: 'wheel' | 'touch' | 'keys';
   /** `'slow'` (1,500px/s), `'normal'` (3,000px/s, default), `'fast'` (6,000px/s), or pixels per second. Ignored for keys. */
   speed?: keyof typeof SPEEDS | number;
@@ -127,8 +127,8 @@ async function flick(
     if (position(await listGeometry(target), s) - start >= requested) return;
     // https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchTouchEvent
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(0) });
-    // Paced against the clock, not by fixed sleeps: each CDP round trip takes time too, and
-    // sleeping 16ms on top of it made a 6,000px/s drag move at about 2,000px/s.
+    // Paced against the clock, not by fixed sleeps: each CDP round trip takes time too, so
+    // fixed 16ms sleeps would drag at about a third of the requested speed.
     const began = Date.now();
     for (let moved = 0, step = 1; moved < span; step++) {
       const wait = began + step * TOUCH_MOVE_MS - Date.now();

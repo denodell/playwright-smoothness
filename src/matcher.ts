@@ -1,11 +1,10 @@
 import { expect as baseExpect, test } from '@playwright/test';
-import { relative } from 'node:path';
 import type { SmoothnessResult } from './types.js';
-import { SCHEMA_VERSION } from './constants.js';
+import { CALIBRATE_ENV, SCHEMA_VERSION } from './constants.js';
 import { evaluate, type MatcherOptions } from './baseline/evaluate.js';
 import { formatMessage, formatSummary } from './baseline/message.js';
 import { resultPath, writeResult, writtenPath } from './output.js';
-import { githubWarning, inGitHubActions } from './ci.js';
+import { warnInGitHubActions } from './ci.js';
 
 function isResult(v: unknown): v is SmoothnessResult {
   return (
@@ -32,7 +31,7 @@ export const expect = baseExpect.extend({
       };
     }
     const testInfo = test.info();
-    const comparison = process.env.SMOOTHNESS_CALIBRATE
+    const comparison = process.env[CALIBRATE_ENV]
       ? {
           status: 'not-compared' as const,
           checks: [],
@@ -53,11 +52,7 @@ export const expect = baseExpect.extend({
       case 'warn':
         annotate('smoothness-warning', summary);
         console.warn(message);
-        if (inGitHubActions()) {
-          console.log(
-            githubWarning(summary, { file: relative(process.cwd(), testInfo.file), line: testInfo.line }),
-          );
-        }
+        warnInGitHubActions(summary, testInfo);
         break;
       case 'baseline-created':
         annotate(
@@ -72,7 +67,7 @@ export const expect = baseExpect.extend({
         );
         break;
       case 'not-compared':
-        if (process.env.SMOOTHNESS_CALIBRATE) break;
+        if (process.env[CALIBRATE_ENV]) break;
         annotate('smoothness-not-compared', `"${received.label}": ${comparison.notes.join(' ')}`);
         break;
       case 'pass':

@@ -1,7 +1,11 @@
 // Public types: options and the versioned result (schemaVersion 1).
+import type { Page } from '@playwright/test';
 
 /** How much to measure. */
 export type SmoothnessMode = 'quick' | 'full';
+
+/** When `scroll()` attaches a video replay. */
+export type ReplayMode = 'on-regression' | 'on' | 'off';
 
 /** What happens when a check gets worse than its baseline. */
 export type Enforce = 'warn' | 'fail';
@@ -12,8 +16,7 @@ export type Enforce = 'warn' | 'fail';
  * - `'none'`: run again from wherever the last run left the page.
  * - a function: your own reset, followed by the same settle wait as `'reload'`.
  */
-export type ResetStrategy =
-  'reload' | 'none' | ((ctx: { page: import('@playwright/test').Page }) => Promise<void>);
+export type ResetStrategy = 'reload' | 'none' | ((ctx: { page: Page }) => Promise<void>);
 
 export interface ListOptions {
   /** Colour treated as "blank" in list screenshots. `'auto'` samples the list's computed background. */
@@ -50,7 +53,7 @@ export interface SmoothnessOptions {
    * drawn the list was and a timeline of blank frames, 4x slower than real time.
    * `'on-regression'` (default) attaches it when a check got worse; `'on'` always; `'off'` never.
    */
-  replay?: 'on-regression' | 'on' | 'off';
+  replay?: ReplayMode;
   /**
    * Also gate on `longFrames.totalBlockingMs`. Off by default: it can vary ±25–40% between runs on
    * a slow single-CPU machine (docs/measurements.md), so it's reported but not gated unless you ask. Default false.
@@ -71,7 +74,7 @@ export interface ResolvedOptions {
   list: Required<ListOptions>;
   reset: ResetStrategy;
   gateTotalBlocking: boolean;
-  replay: 'on-regression' | 'on' | 'off';
+  replay: ReplayMode;
 }
 
 export type HeadlessMode = 'headless-shell' | 'new-headless' | 'headed' | 'unknown';
@@ -229,7 +232,7 @@ export interface SmoothnessResult {
     baselineDir: string | null;
     /** Which rule chose `mode` (docs/mode-detection.md). */
     modeSource: string;
-    replay: 'on-regression' | 'on' | 'off';
+    replay: ReplayMode;
   };
   /** Full mode only. */
   frames?: FramesResult | null;

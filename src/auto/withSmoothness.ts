@@ -15,15 +15,15 @@ import type {
   TestType,
 } from '@playwright/test';
 import { dirname, relative, resolve as resolvePath } from 'node:path';
-import { cpus, platform } from 'node:os';
 import {
+  COLLECTOR_KEY,
   installCollector,
   type EventRecord,
   type LoafRecord,
   type ScrollRecord,
   type StreamBatch,
 } from '../collector/collector.js';
-import { COLLECTOR_CONFIG, settingsOf } from '../runner.js';
+import { COLLECTOR_CONFIG, machine, settingsOf } from '../runner.js';
 import { groupInteractions, type Interaction } from '../analysis/interactions.js';
 import { classifyFrames, type FrameClass } from '../analysis/classify.js';
 import {
@@ -36,9 +36,9 @@ import { compareMetrics } from '../baseline/compare.js';
 import { formatMessage, formatSummary } from '../baseline/message.js';
 import { resolveOptions } from '../options.js';
 import { browserEnvironment } from '../environment.js';
-import { githubWarning, inGitHubActions, onMainBranch } from '../ci.js';
+import { onMainBranch, warnInGitHubActions } from '../ci.js';
 import { resultPath, writeResult } from '../output.js';
-import { SCHEMA_VERSION } from '../constants.js';
+import { CALIBRATE_ENV, SCHEMA_VERSION } from '../constants.js';
 import { smoothnessFixtures, type SmoothnessFixtures } from '../fixture.js';
 import {
   appendHistory,
@@ -116,7 +116,7 @@ async function drain(context: BrowserContext): Promise<void> {
         .evaluate(async (key) => {
           const api = (window as unknown as Record<string, { flush(): Promise<void> } | undefined>)[key];
           if (api) await api.flush();
-        }, '__playwrightSmoothness')
+        }, COLLECTOR_KEY)
         .catch(() => undefined),
     ),
   );
@@ -124,7 +124,7 @@ async function drain(context: BrowserContext): Promise<void> {
 }
 
 /** Analyses streamed documents: interactions, classified frames, and inputs never measured. */
-export function analyse(docs: Map<number, DocData>) {
+export function analyzeDocs(docs: Map<number, DocData>) {
   const interactions: (Interaction & { url: string })[] = [];
   const frames: AttributedFrame[] = [];
   const classes: FrameClass[] = [];
@@ -259,9 +259,8 @@ export function withSmoothness<T extends object, W extends object>(
         await drain(context);
         if (docs.size === 0) return; // the test never loaded a page: nothing to measure
 
-        const { interactions, frames, classes, errors, unmeasured } = analyse(docs);
+        const { interactions, frames, classes, errors, unmeasured } = analyzeDocs(docs);
         const count = (k: FrameClass) => classes.filter((c) => c === k).length;
-        const list = cpus();
         const result: SmoothnessResult = {
           schemaVersion: SCHEMA_VERSION,
           label,
@@ -270,7 +269,7 @@ export function withSmoothness<T extends object, W extends object>(
           browserName: environment.browserName,
           browserVersion: environment.browserVersion,
           headlessMode: environment.headlessMode,
-          machine: { cpuModel: list[0]?.model.trim() ?? 'unknown', cpus: list.length, platform: platform() },
+          machine: machine(),
           cpuThrottling: resolved.cpuThrottling,
           refreshRate: resolved.refreshRate,
           settings: settingsOf(resolved),
@@ -338,7 +337,8 @@ export function withSmoothness<T extends object, W extends object>(
         }
 
         let comparison: Comparison;
-        if (process.env.SMOOTHNESS_CALIBRATE) {
+        const calibrating = !!process.env[CALIBRATE_ENV];
+        if (calibrating) {
           comparison = {
             status: 'not-compared',
             checks: [],
@@ -374,11 +374,7 @@ export function withSmoothness<T extends object, W extends object>(
         }
 
         const shouldRecord = record ?? (process.env.SMOOTHNESS_RECORD === '1' || onMainBranch());
-        if (
-          shouldRecord &&
-          testInfo.status === testInfo.expectedStatus &&
-          !process.env.SMOOTHNESS_CALIBRATE
-        ) {
+        if (shouldRecord && testInfo.status === testInfo.expectedStatus && !calibrating) {
           appendHistory(
             path,
             {
@@ -407,11 +403,7 @@ export function withSmoothness<T extends object, W extends object>(
             throw new Error(message);
           annotate(testInfo, 'smoothness-warning', summary);
           console.warn(message);
-          if (inGitHubActions()) {
-            console.log(
-              githubWarning(summary, { file: relative(process.cwd(), testInfo.file), line: testInfo.line }),
-            );
-          }
+          warnInGitHubActions(summary, testInfo);
         } else if (comparison.status === 'not-compared') {
           annotate(testInfo, 'smoothness-not-compared', `${label}: ${comparison.notes.join(' ')}`);
         }
