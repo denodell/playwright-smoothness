@@ -12,6 +12,8 @@ export interface TraceEvent {
   name: string;
   ph: string;
   ts: number;
+  pid?: number;
+  tid?: number;
   dur?: number;
   cat?: string;
   id?: string;
@@ -29,11 +31,30 @@ export interface ParseOptions {
   browserVersion: string;
   /** Also read AnimationFrame durations for the 120Hz prediction. */
   budget120: boolean;
+  /** Also read the V8 CPU profile. */
+  profile?: boolean;
+}
+
+export interface ProfileNode {
+  fn: string;
+  url: string;
+  /** 1-based; 0 when unknown. */
+  line: number;
+  column: number;
+  parent?: number;
+}
+
+/** The page main thread's CPU profile, with sample times on the page's performance.now() clock. */
+export interface CpuProfile {
+  nodes: Map<number, ProfileNode>;
+  /** `t` is when the sample was taken (page ms); `ms` is the time it stands for. */
+  samples: { t: number; ms: number; node: number }[];
 }
 
 export interface ParsedTrace {
   frames: FramesResult | null;
   budget120: Budget120Result | null;
+  profile: CpuProfile | null;
   unavailable: Unavailable[];
   notes: string[];
 }
@@ -45,14 +66,93 @@ type FrameReporter = {
   layer_tree_host_id?: unknown;
 };
 
-function markWindow(events: TraceEvent[]): [number, number] | null {
-  let start: number | undefined;
-  let end: number | undefined;
+interface Marks {
+  window: [number, number];
+  /** The start mark event: its pid/tid is the page's main thread, and it carries both clocks. */
+  start: TraceEvent;
+}
+
+function findMarks(events: TraceEvent[]): Marks | null {
+  let start: TraceEvent | undefined;
+  let end: TraceEvent | undefined;
   for (const e of events) {
-    if (e.name === MARK_START && start === undefined) start = e.ts;
-    else if (e.name === MARK_END) end = e.ts;
+    if (e.name === MARK_START && !start) start = e;
+    else if (e.name === MARK_END) end = e;
   }
-  return start !== undefined && end !== undefined && end >= start ? [start, end] : null;
+  return start && end && end.ts >= start.ts ? { window: [start.ts, end.ts], start } : null;
+}
+
+type RawNode = {
+  id?: number;
+  parent?: number;
+  callFrame?: { functionName?: string; url?: string; lineNumber?: number; columnNumber?: number };
+};
+
+/**
+ * Reads the V8 CPU profile of the thread the marks came from (the page's main thread; workers
+ * have their own profiles and are ignored). Sample times are converted to the page's clock
+ * using the start mark, which records both its trace timestamp and its performance.now().
+ */
+function parseProfile(events: TraceEvent[], marks: Marks, chrome: string, out: ParsedTrace): void {
+  const unavailable = (reason: string): void => {
+    out.unavailable.push({ measurement: 'profile', reason: `${reason} (Chrome ${chrome})` });
+  };
+  const head = events.find(
+    (e) =>
+      e.name === 'Profile' && e.pid === marks.start.pid && e.tid === marks.start.tid && e.id !== undefined,
+  );
+  if (!head) return unavailable("the trace has no CPU profile for the page's main thread");
+  const startUs = Number((head.args?.data as { startTime?: unknown } | undefined)?.startTime);
+  const markPageMs = Number((marks.start.args?.data as { startTime?: unknown } | undefined)?.startTime);
+  if (!Number.isFinite(startUs) || !Number.isFinite(markPageMs)) {
+    return unavailable('the profile or start mark has no startTime to align clocks with');
+  }
+  // page ms = (trace µs − offset) / 1000, where the offset maps the mark's trace time to its page time.
+  const offsetUs = marks.start.ts - markPageMs * 1000;
+
+  const nodes = new Map<number, ProfileNode>();
+  const raw: { t: number; node: number }[] = [];
+  let t = startUs;
+  for (const e of events) {
+    if (e.name !== 'ProfileChunk' || e.pid !== head.pid || e.id !== head.id) continue;
+    const data = e.args?.data as
+      { cpuProfile?: { nodes?: RawNode[]; samples?: number[] }; timeDeltas?: number[] } | undefined;
+    for (const n of data?.cpuProfile?.nodes ?? []) {
+      if (typeof n.id !== 'number') continue;
+      const cf = n.callFrame ?? {};
+      nodes.set(n.id, {
+        fn: cf.functionName || '(anonymous)',
+        url: cf.url ?? '',
+        line: typeof cf.lineNumber === 'number' && cf.lineNumber >= 0 ? cf.lineNumber + 1 : 0,
+        column: typeof cf.columnNumber === 'number' && cf.columnNumber >= 0 ? cf.columnNumber + 1 : 0,
+        ...(typeof n.parent === 'number' ? { parent: n.parent } : {}),
+      });
+    }
+    const samples = data?.cpuProfile?.samples ?? [];
+    const deltas = data?.timeDeltas ?? [];
+    if (samples.length !== deltas.length) {
+      return unavailable('a ProfileChunk has different numbers of samples and timeDeltas');
+    }
+    samples.forEach((node, i) => {
+      t += deltas[i]!;
+      raw.push({ t, node });
+    });
+  }
+  if (raw.length === 0) return unavailable('the CPU profile has no samples');
+  // Each sample stands for the time until the next one; the last gets the median interval.
+  const gaps = raw
+    .slice(1)
+    .map((s, i) => s.t - raw[i]!.t)
+    .sort((a, b) => a - b);
+  const typical = gaps.length ? gaps[Math.floor(gaps.length / 2)]! : 0;
+  out.profile = {
+    nodes,
+    samples: raw.map((s, i) => ({
+      t: (s.t - offsetUs) / 1000,
+      ms: ((i + 1 < raw.length ? raw[i + 1]!.t - s.t : typical) || 0) / 1000,
+      node: s.node,
+    })),
+  };
 }
 
 function parseFrames(events: TraceEvent[], window: [number, number], chrome: string, out: ParsedTrace): void {
@@ -148,18 +248,22 @@ function parseAnimationFrames(
 }
 
 export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedTrace {
-  const out: ParsedTrace = { frames: null, budget120: null, unavailable: [], notes: [] };
-  const window = markWindow(events);
-  if (!window) {
+  const out: ParsedTrace = { frames: null, budget120: null, profile: null, unavailable: [], notes: [] };
+  const marks = findMarks(events);
+  if (!marks) {
     out.unavailable.push({
       measurement: 'frames',
       reason: `the trace has no ${MARK_START} / ${MARK_END} marks to window it (Chrome ${options.browserVersion})`,
     });
     if (options.budget120)
       out.unavailable.push({ measurement: 'budget120', reason: 'the trace could not be windowed' });
+    if (options.profile)
+      out.unavailable.push({ measurement: 'profile', reason: 'the trace could not be windowed' });
     return out;
   }
+  const window = marks.window;
   parseFrames(events, window, options.browserVersion, out);
   if (options.budget120) parseAnimationFrames(events, window, options.browserVersion, out);
+  if (options.profile) parseProfile(events, marks, options.browserVersion, out);
   return out;
 }

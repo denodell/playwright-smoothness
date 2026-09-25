@@ -35,6 +35,21 @@ test('recorded trace, 12ms blocking: frames and a 120Hz prediction', () => {
   expect(out.budget120!.framesOverBudget).toBeGreaterThanOrEqual(8); // 12ms > 8.33ms, ten scrolls
 });
 
+test('recorded trace, 12ms blocking: the CPU profile names the scroll handler', () => {
+  const t = load('scroll-12ms');
+  const out = parseTrace(t.traceEvents, {
+    browserVersion: t.browserVersion,
+    budget120: false,
+    profile: true,
+  });
+  expect(out.unavailable).toEqual([]);
+  const p = out.profile!;
+  expect(p.samples.length).toBeGreaterThan(100);
+  const fns = new Set(p.samples.map((s) => p.nodes.get(s.node)?.fn));
+  expect(fns).toContain('busyWait');
+  expect([...p.nodes.values()].map((n) => n.fn)).toContain('onWindowScroll');
+});
+
 test('recorded trace, 25ms blocking: dropped frames', () => {
   const t = load('scroll-25ms');
   const out = parseTrace(t.traceEvents, { browserVersion: t.browserVersion, budget120: false });
@@ -163,4 +178,95 @@ test('120Hz: missing or unpairable AnimationFrame events are unavailable', () =>
     { ...opts, budget120: true },
   );
   expect(ok.budget120).toEqual({ framesOverBudget: 1, frames: 2, predicted: true });
+});
+
+// ---- CPU profile ----
+
+const MAIN = { pid: 10, tid: 1 };
+const startMark = (ts: number, pageMs: number): TraceEvent => ({
+  ...mark(MARK_START, ts),
+  ...MAIN,
+  args: { data: { startTime: pageMs } },
+});
+const node = (id: number, fn: string, parent?: number, url = 'http://x/app.js') => ({
+  id,
+  ...(parent ? { parent } : {}),
+  callFrame: { functionName: fn, url, lineNumber: id * 10 - 1, columnNumber: 4 },
+});
+const profileHead = (id: string, where: { pid: number; tid: number }, startUs: number): TraceEvent => ({
+  name: 'Profile',
+  ph: 'P',
+  ts: startUs,
+  id,
+  ...where,
+  args: { data: { startTime: startUs } },
+});
+const chunk = (
+  id: string,
+  pid: number,
+  nodes: object[],
+  samples: number[],
+  deltas: number[],
+): TraceEvent => ({
+  name: 'ProfileChunk',
+  ph: 'P',
+  ts: 0,
+  id,
+  pid,
+  tid: 99, // chunks come from the sampler thread, not the sampled one
+  args: { data: { cpuProfile: { nodes, samples }, timeDeltas: deltas } },
+});
+
+test('profile: the main thread is chosen by the start mark, and times convert to page ms', () => {
+  // Trace clock 1,000,000µs is page time 500ms, so page ms = (µs − 500,000) / 1000.
+  const out = parseTrace(
+    [
+      startMark(1_000_000, 500),
+      profileHead('0x1', { pid: 10, tid: 2 }, 900_000), // a worker in the same process
+      profileHead('0x2', MAIN, 900_000),
+      chunk('0x1', 10, [node(1, '(root)'), node(2, 'workerSpin', 1)], [2], [150_000]),
+      chunk(
+        '0x2',
+        10,
+        [node(1, '(root)'), node(2, 'onClick', 1), node(3, 'busyWait', 2)],
+        [3, 3, 2],
+        [110_000, 1_000, 1_000],
+      ),
+      { ...mark(MARK_END, 1_200_000), ...MAIN },
+    ],
+    { ...opts, profile: true },
+  );
+  expect(out.unavailable.filter((u) => u.measurement === 'profile')).toEqual([]);
+  const p = out.profile!;
+  expect([...p.nodes.values()].map((n) => n.fn)).toEqual(['(root)', 'onClick', 'busyWait']);
+  expect(p.nodes.get(3)).toMatchObject({ fn: 'busyWait', line: 30, column: 5, parent: 2 });
+  // First sample at 900,000 + 110,000 = 1,010,000µs → page 510ms; it stands for the 1ms to the next.
+  expect(p.samples.map((s) => [s.t, s.ms, s.node])).toEqual([
+    [510, 1, 3],
+    [511, 1, 3],
+    [512, 1, 2], // the last sample gets the typical interval
+  ]);
+});
+
+test('profile: missing, misaligned or malformed profiles are unavailable', () => {
+  const base = [startMark(1_000, 1), { ...mark(MARK_END, 2_000), ...MAIN }];
+  const none = parseTrace(base, { ...opts, profile: true });
+  expect(none.unavailable).toContainEqual({
+    measurement: 'profile',
+    reason: expect.stringMatching(/no CPU profile for the page's main thread.*Chrome 153/),
+  });
+  const onlyWorker = parseTrace([...base, profileHead('0x1', { pid: 10, tid: 2 }, 0)], {
+    ...opts,
+    profile: true,
+  });
+  expect(onlyWorker.profile).toBeNull();
+  const mismatched = parseTrace(
+    [...base, profileHead('0x2', MAIN, 0), chunk('0x2', 10, [node(1, '(root)')], [1, 1], [5])],
+    { ...opts, profile: true },
+  );
+  expect(mismatched.unavailable.find((u) => u.measurement === 'profile')!.reason).toMatch(
+    /different numbers of samples/,
+  );
+  const empty = parseTrace([...base, profileHead('0x2', MAIN, 0)], { ...opts, profile: true });
+  expect(empty.unavailable.find((u) => u.measurement === 'profile')!.reason).toMatch(/no samples/);
 });

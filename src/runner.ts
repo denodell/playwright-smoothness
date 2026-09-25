@@ -21,13 +21,15 @@ import {
 import { median, spread } from './analysis/stats.js';
 import { medianOf } from './analysis/aggregate.js';
 import { traceRun } from './trace/tracer.js';
-import { ANIMATION_FRAME_CATEGORIES, FRAME_CATEGORIES } from './trace/categories.js';
+import { ANIMATION_FRAME_CATEGORIES, FRAME_CATEGORIES, PROFILE_CATEGORIES } from './trace/categories.js';
+import { attributeProfile, combineProfiles, type ProfileRun } from './analysis/profile.js';
 import type { ParsedTrace } from './trace/parse.js';
 import type { BrowserEnvironment } from './environment.js';
 import { SCHEMA_VERSION } from './constants.js';
 import type {
   Budget120Result,
   FramesResult,
+  ProfileResult,
   InputResult,
   LongFramesResult,
   ResolvedOptions,
@@ -60,6 +62,8 @@ interface RunData {
   longFrames: LongFramesResult;
   /** Full mode only. */
   trace: ParsedTrace | null;
+  /** Full mode only: CPU time inside this run's interaction windows. */
+  profile: ProfileRun | null;
 }
 
 export interface MeasureContext {
@@ -166,6 +170,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
   const browser = page.context().browser();
   const categories = [
     ...FRAME_CATEGORIES,
+    ...PROFILE_CATEGORIES,
     ...(options.refreshRate === 120 ? ANIMATION_FRAME_CATEGORIES : []),
   ];
   if (options.mode === 'full' && !browser) {
@@ -212,6 +217,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         trace = await traceRun(browser, page, categories, measured, {
           browserVersion: ctx.environment.browserVersion,
           budget120: options.refreshRate === 120,
+          profile: true,
         });
       } else {
         await measured();
@@ -255,6 +261,14 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         input: summarizeInput(interactions),
         longFrames: summarizeLongFrames(interactionFrames),
         trace,
+        // The interaction's windows: its long frames, and each Event Timing interaction (which
+        // covers work under LoAF's 50ms threshold too).
+        profile: trace?.profile
+          ? attributeProfile(trace.profile, [
+              ...interactionFrames.map((f) => [f.start, f.start + f.duration] as [number, number]),
+              ...interactions.map((i) => [i.start, i.start + i.duration] as [number, number]),
+            ])
+          : null,
       });
     }
   } finally {
@@ -338,6 +352,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
   // (with each distinct reason); missing from some runs, it's the median of the rest, with a note.
   let frames: FramesResult | null | undefined;
   let budget120: Budget120Result | null | undefined;
+  let profile: ProfileResult | null | undefined;
   if (options.mode === 'full') {
     const traces = runs.map((r) => r.trace);
     const reasons = (measurement: string) => [
@@ -376,6 +391,20 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
       );
     }
 
+    const profiles = runs.map((r) => r.profile).filter((p): p is ProfileRun => p !== null);
+    if (profiles.length === 0) {
+      profile = null;
+      if (browser)
+        for (const reason of reasons('profile')) unavailable.push({ measurement: 'profile', reason });
+    } else {
+      if (profiles.length < runs.length) {
+        notes.push(
+          `The CPU profile was missing from ${runs.length - profiles.length} of ${runs.length} runs.`,
+        );
+      }
+      profile = combineProfiles(profiles);
+    }
+
     if (options.refreshRate === 120) {
       const b = traces.map((t) => t?.budget120 ?? null).filter((x): x is Budget120Result => x !== null);
       if (b.length === 0) {
@@ -412,6 +441,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     settings: settingsOf(options),
     ...(frames !== undefined ? { frames } : {}),
     ...(budget120 !== undefined ? { budget120 } : {}),
+    ...(profile !== undefined ? { profile } : {}),
     input,
     longFrames,
     spread: spreads,

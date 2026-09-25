@@ -9,6 +9,13 @@
  */
 export const FRAME_CATEGORIES = ['disabled-by-default-devtools.timeline.frame', 'blink.user_timing'];
 
+/**
+ * V8's sampling profiler, recorded into the trace (Profile and ProfileChunk events). It samples
+ * about every 140µs by default, names functions behind framework dispatchers, and added about
+ * 100KB to a click's trace (docs/trace-categories.md).
+ */
+export const PROFILE_CATEGORIES = ['disabled-by-default-v8.cpu_profiler'];
+
 /** AnimationFrame events (every main-thread frame's duration), for the 120Hz prediction only. */
 export const ANIMATION_FRAME_CATEGORIES = ['devtools.timeline'];
 

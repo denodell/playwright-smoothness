@@ -10,7 +10,7 @@ export async function traceRun(
   page: Page,
   categories: string[],
   measured: () => Promise<void>,
-  options: { browserVersion: string; budget120: boolean },
+  options: { browserVersion: string; budget120: boolean; profile: boolean },
 ): Promise<ParsedTrace & { bytes: number }> {
   await browser.startTracing(page, { categories, screenshots: false });
   let buffer: Buffer;
@@ -40,6 +40,7 @@ export async function traceRun(
     return {
       frames: null,
       budget120: null,
+      profile: null,
       unavailable: [{ measurement: 'frames', reason: `the trace could not be parsed: ${String(err)}` }],
       notes: [],
       bytes: buffer.length,

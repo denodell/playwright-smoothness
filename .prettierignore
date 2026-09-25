@@ -6,3 +6,4 @@ package-lock.json
 .changeset/*.md
 CLAUDE_CODE_BRIEF.md
 PLAN.md
+tests/fixtures
