@@ -6,7 +6,7 @@ Fail the build when a web UI stops being smooth. `playwright-smoothness` measure
 
 Dropped frames don't show a list going blank. On the right, 97% of frames arrive on time, but the rows aren't there. `smoothness.scroll()` measures both.
 
-> **0.x.** The API may change before 1.0. Automatic measurement of existing tests, without code changes, is planned. Reports of noise on your CI runners are especially welcome.
+> **0.x.** The API may change before 1.0. Reports of noise on your CI runners are especially welcome.
 
 ## Quick start
 
@@ -168,6 +168,17 @@ export default defineConfig<SmoothnessTestOptions>({
 | `refreshRate`       | `60`                                       | `120` adds a reported-only 120Hz prediction in full mode.                                                           |
 
 The mode comes from the option, then `SMOOTHNESS_MODE`, then scheduled CI runs (`full`), then `quick`. See [docs/mode-detection.md](docs/mode-detection.md).
+
+## Automatic mode: every test, no code changes
+
+```ts
+// tests/fixtures.ts
+import { test as base } from '@playwright/test';
+import { withSmoothness } from 'playwright-smoothness';
+export const test = withSmoothness(base, { auto: true });
+```
+
+Every test that imports `test` from your fixtures file is measured once for its whole run, across navigations, and compared with the median of its recent passing runs on your main branch. Each interaction is listed with its element (`click on button#checkout: 180ms`). Editing a spec file starts its history again instead of failing. How it works, and how to keep the history in CI: [docs/automatic-mode.md](docs/automatic-mode.md).
 
 ## Summary for pull requests
 

@@ -259,3 +259,11 @@ Order: `test.use({ smoothness: { mode } })` → `SMOOTHNESS_MODE` → scheduled 
 36. **Calibrate measures run-to-run variation of the medians**, the variation a baseline comparison actually meets, and suggests the smallest 0.05 step above the worst case (min → max). Changes within a metric's floor are reported as such, because they can't fail the check. "Stable" means two calibrations agree within one step; an end-to-end test checks this.
 37. **While calibrating, `toBeSmooth()` doesn't compare or write baselines** (`SMOOTHNESS_CALIBRATE=1`, set by the CLI).
 38. **A long frame belongs to an interaction only if it starts during it** (2ms tolerance for rounding). CI caught a background timer frame that was already running when a click arrived being counted and blamed. It delayed the input, and input-to-paint already includes that delay; counting it in `longFrames` made the check depend on the timer's phase.
+
+## Decisions made during M6
+
+39. **Automatic mode streams records to Node** through a context binding as they arrive, so data survives navigation. Each document is analysed on its own (its own load time and classification).
+40. **An input the test navigates away from before it paints can't be measured.** The browser records nothing for it, and binding calls made during `pagehide` don't reach Playwright, so there's nothing to rescue. It's reported instead: raw inputs are streamed live, and an input with no Event Timing entry followed by the page's next document within 250ms gets a note.
+41. **No CPU throttling by default in automatic mode**, so existing suites don't slow down or time out; it's opt-in.
+42. **History lives in `historyDir`** (default `baselineDir`, else `smoothness-history` next to the config), keyed like baselines (test, project, platform, CPU model, throttling). Recording happens on main-branch push builds (four CI providers detected), or when forced with `record` or `SMOOTHNESS_RECORD=1`. It compares against the median of the last 10 runs once there are 3.
+43. **First-interaction inflation (M1 follow-up):** measured on the Mac only. GitHub's runners showed none (four identical 24ms clicks), so single-run CI histories aren't skewed by it. It's documented as a limitation.
