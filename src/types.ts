@@ -153,6 +153,11 @@ export interface HotFunction {
   totalMs: number;
   /** The most common callers, nearest first: `['onCheckout', 'executeDispatch', …]`. */
   callers: string[];
+  /**
+   * Set when a source map resolved this function: its minified name and bundle position.
+   * `fn`, `url`, `line` and `column` are then the original ones.
+   */
+  generated?: { fn: string; url: string; line: number; column: number };
 }
 
 export interface ProfileResult {

@@ -56,8 +56,8 @@ for (const name of PAGES) {
 }
 
 // Full mode's CPU profile names the app's handler behind each framework's dispatcher, which
-// LoAF can't. Minified React mangles the app's names too, so only readable builds are asserted.
-for (const name of ['react.dev', 'angular-zone.dev', 'angular-zone.prod', 'angular-zoneless.prod'] as const) {
+// LoAF can't. In minified builds the names come back through the page's source maps.
+for (const name of PAGES) {
   test(`CPU profile names onCheckout on ${name}`, async ({ page, smoothness }) => {
     await page.goto(`/frameworks/dist/${name}.html`);
     await page.locator('#checkout').waitFor();
@@ -66,8 +66,15 @@ for (const name of ['react.dev', 'angular-zone.dev', 'angular-zone.prod', 'angul
       runs: 2,
     });
     const top = result.profile!.hotFunctions[0]!;
-    save(`framework-profile-${name}`, result.profile);
+    save(`framework-profile-${name}`, { profile: result.profile, notes: result.notes });
     expect(top.selfMs).toBeGreaterThan(80);
-    expect([top.fn, ...top.callers].slice(0, 3)).toContain('onCheckout');
+    expect(top.fn).toBe('busyWait');
+    expect(top.callers[0]).toBe('onCheckout');
+    expect(top.url).toMatch(/\/frameworks\/src\/work\.js$/);
+    // Every build here ships a source map, so the bundle position is kept alongside.
+    expect(top.generated!.url).toMatch(new RegExp(`/frameworks/dist/${name.replace('.', '\\.')}\\.js$`));
+    if (name.endsWith('.prod')) expect(top.generated!.fn).not.toBe('busyWait');
+    // Only the page's own compositor is counted, so there's nothing to note.
+    expect(result.notes).toEqual([]);
   });
 }

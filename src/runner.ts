@@ -22,7 +22,15 @@ import { median, spread } from './analysis/stats.js';
 import { medianOf } from './analysis/aggregate.js';
 import { traceRun } from './trace/tracer.js';
 import { ANIMATION_FRAME_CATEGORIES, FRAME_CATEGORIES, PROFILE_CATEGORIES } from './trace/categories.js';
-import { attributeProfile, combineProfiles, type ProfileRun } from './analysis/profile.js';
+import {
+  attributeProfile,
+  combineProfiles,
+  frameKey,
+  namedFrames,
+  type ProfileRun,
+} from './analysis/profile.js';
+import { NameResolver, type ResolvedFrame } from './sourcemap/resolve.js';
+import { pageFetcher } from './sourcemap/fetch.js';
 import type { ParsedTrace } from './trace/parse.js';
 import type { BrowserEnvironment } from './environment.js';
 import { SCHEMA_VERSION } from './constants.js';
@@ -94,6 +102,28 @@ function collector(page: Page) {
         [key, from, to] as const,
       ),
   };
+}
+
+/**
+ * Maps minified names in the profile back to source names with the page's source maps. Pages
+ * without source maps are left as they are (their names are already the real ones); a map
+ * that's referenced but can't be used gets a note.
+ */
+async function resolveNames(
+  page: Page,
+  profiles: ProfileRun[],
+  notes: string[],
+): Promise<Map<string, ResolvedFrame>> {
+  const resolver = new NameResolver(pageFetcher(page));
+  const resolved = new Map<string, ResolvedFrame>();
+  for (const frame of namedFrames(profiles)) {
+    const r = await resolver.resolve(frame).catch(() => null);
+    if (r) resolved.set(frameKey(frame), r);
+  }
+  const failures = (await resolver.failures()).filter((f) => !f.endsWith('it has no sourceMappingURL'));
+  if (failures.length)
+    notes.push(`Source maps couldn't be used, so some names may be minified: ${failures.join('; ')}.`);
+  return resolved;
 }
 
 /** Describes this machine. Playwright runs the browser locally, so it's the browser's machine too. */
@@ -402,7 +432,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
           `The CPU profile was missing from ${runs.length - profiles.length} of ${runs.length} runs.`,
         );
       }
-      profile = combineProfiles(profiles);
+      profile = combineProfiles(profiles, await resolveNames(page, profiles, notes));
     }
 
     if (options.refreshRate === 120) {
