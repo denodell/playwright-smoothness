@@ -15,5 +15,5 @@
     "noEmit": true
   },
   "include": ["src", "tests", "playwright.config.ts", "tsup.config.ts"],
-  "exclude": ["node_modules", "dist", "test-pages"]
+  "exclude": ["node_modules", "dist", "test-pages", "tests/e2e/auto-project", ".tmp-e2e"]
 }

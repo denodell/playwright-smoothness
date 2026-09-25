@@ -46,7 +46,7 @@ export default defineConfig({
         'test-results/integration-snapshots/{testFilePath}/{arg}{-projectName}{-snapshotSuffix}{ext}',
     },
     // Acceptance tests that run a user project in a child Playwright process.
-    { name: 'e2e', testDir: './tests/e2e', testIgnore: /fixture-project/ },
+    { name: 'e2e', testDir: './tests/e2e', testIgnore: /(fixture|auto)-project/ },
     // Principle 7: other browsers are skipped visibly, never passed silently.
     {
       name: 'integration-firefox',
