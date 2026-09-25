@@ -270,3 +270,28 @@ test('profile: missing, misaligned or malformed profiles are unavailable', () =>
   const empty = parseTrace([...base, profileHead('0x2', MAIN, 0)], { ...opts, profile: true });
   expect(empty.unavailable.find((u) => u.measurement === 'profile')!.reason).toMatch(/no samples/);
 });
+
+test('frames from other processes are not counted: the browser silently, other renderers with a note', () => {
+  const inProcess = (pid: number, ts: number, state: string, seq: number): TraceEvent => ({
+    ...reporter(ts, state, seq),
+    pid,
+  });
+  const out = parseTrace(
+    [
+      { name: 'process_name', ph: 'M', ts: 0, pid: 1, args: { name: 'Browser' } },
+      { name: 'process_name', ph: 'M', ts: 0, pid: 10, args: { name: 'Renderer' } },
+      { name: 'process_name', ph: 'M', ts: 0, pid: 20, args: { name: 'Renderer' } },
+      startMark(100, 1),
+      inProcess(10, 110, 'STATE_PRESENTED_ALL', 1),
+      inProcess(10, 120, 'STATE_DROPPED', 2),
+      inProcess(1, 130, 'STATE_PRESENTED_ALL', 1), // the browser's own compositor, after a reload
+      inProcess(20, 140, 'STATE_DROPPED', 1), // an out-of-process iframe
+      { ...mark(MARK_END, 200), ...MAIN },
+    ],
+    opts,
+  );
+  expect(out.frames).toEqual({ total: 2, onTime: 1, dropped: 1, onTimePercent: 50 });
+  expect(out.notes).toEqual([
+    expect.stringContaining("1 other renderer process(es), such as out-of-process iframes, weren't counted"),
+  ]);
+});

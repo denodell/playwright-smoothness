@@ -155,7 +155,25 @@ function parseProfile(events: TraceEvent[], marks: Marks, chrome: string, out: P
   };
 }
 
-function parseFrames(events: TraceEvent[], window: [number, number], chrome: string, out: ParsedTrace): void {
+/** Process names from trace metadata (`process_name` events), by pid. */
+function processNames(events: TraceEvent[]): Map<number, string> {
+  const names = new Map<number, string>();
+  for (const e of events) {
+    if (e.name === 'process_name' && e.ph === 'M' && e.pid !== undefined) {
+      names.set(e.pid, String((e.args as { name?: unknown } | undefined)?.name ?? ''));
+    }
+  }
+  return names;
+}
+
+/**
+ * Counts the page's frames. Only the renderer process the start mark came from counts: the
+ * browser's own compositor also presents frames (after a reload it presents one inside the
+ * window every time), and out-of-process iframes are other documents.
+ */
+function parseFrames(events: TraceEvent[], marks: Marks, chrome: string, out: ParsedTrace): void {
+  const window = marks.window;
+  const pagePid = marks.start.pid;
   const unavailable = (reason: string): void => {
     out.unavailable.push({ measurement: 'frames', reason: `${reason} (Chrome ${chrome})` });
   };
@@ -174,8 +192,14 @@ function parseFrames(events: TraceEvent[], window: [number, number], chrome: str
   const unknown = new Map<string, number>();
   let onTime = 0;
   let dropped = 0;
+  const otherRenderers = new Set<number>();
+  const names = processNames(events);
   for (const e of withState) {
     if (e.ts < window[0] || e.ts > window[1]) continue;
+    if (pagePid !== undefined && e.pid !== undefined && e.pid !== pagePid) {
+      if (/renderer/i.test(names.get(e.pid) ?? '')) otherRenderers.add(e.pid);
+      continue;
+    }
     const f = e.args!.frame_reporter as FrameReporter;
     const state = f.state as string;
     const key = [f.layer_tree_host_id, f.frame_source, f.frame_sequence, state].join('/');
@@ -193,7 +217,12 @@ function parseFrames(events: TraceEvent[], window: [number, number], chrome: str
   }
   if (hosts.size > 1) {
     out.notes.push(
-      `Frames came from ${hosts.size} compositors (for example iframes in other processes); they're counted together.`,
+      `Frames came from ${hosts.size} compositors in the page's process; they're counted together.`,
+    );
+  }
+  if (otherRenderers.size) {
+    out.notes.push(
+      `Frames from ${otherRenderers.size} other renderer process(es), such as out-of-process iframes, weren't counted.`,
     );
   }
   const total = onTime + dropped;
@@ -262,7 +291,7 @@ export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedT
     return out;
   }
   const window = marks.window;
-  parseFrames(events, window, options.browserVersion, out);
+  parseFrames(events, marks, options.browserVersion, out);
   if (options.budget120) parseAnimationFrames(events, window, options.browserVersion, out);
   if (options.profile) parseProfile(events, marks, options.browserVersion, out);
   return out;
