@@ -44,6 +44,9 @@ if SLOW=80 SMOOTHNESS_ENFORCE=fail SMOOTHNESS_BASELINE_DIR=smoothness-baselines 
 fi
 grep -q 'is less smooth than its baseline' regression.log
 grep -q 'toggleFilters' regression.log
+# The reporter (loaded by package name in the example's config) names it in the summary.
+grep -q '\*\*1 got worse\*\*' test-results/smoothness/summary.md
+grep -q 'toggleFilters' test-results/smoothness/summary.md
 echo "regression failed as expected:"; grep -A4 'is less smooth' regression.log | head -6
 rm -f regression.log
 echo "CI recipe verified"

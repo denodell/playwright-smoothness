@@ -252,3 +252,10 @@ Order: `test.use({ smoothness: { mode } })` → `SMOOTHNESS_MODE` → scheduled 
 32. **`input.interactions` counts interactions of 16ms or more.** That's Event Timing's minimum threshold. `scroll.keyPresses` records the presses so the two can be compared.
 33. **The CI recipe is checked by `scripts/verify-ci-recipe.sh`** in the Examples workflow: record on "main", collect, compare as a pull request via `baselineDir`, and a regression must fail. Writing it found two bugs in the recipe: step names that weren't valid YAML, and `cp --parents`, which doesn't exist on macOS.
 34. **Touch scrolling uses real touch events** (`Input.dispatchTouchEvent`) as repeated flicks, not `Input.synthesizeScrollGesture`, whose touch source does nothing on Linux without an error. `input: 'touch'` needs a touch-enabled context. `scroll()` withholds list data when nothing moved, which is how the problem hid: a check passed on CI while scrolling 0px.
+
+## Decisions made during M5
+
+35. **The reporter reads each test's result attachments** (which include the comparison) and writes markdown to `test-results/smoothness/summary.md` and, in GitHub Actions, the job summary. Posting a pull-request comment is left to the workflow (`gh pr comment --edit-last`), so the library needs no token and no network access.
+36. **Calibrate measures run-to-run variation of the medians**, the variation a baseline comparison actually meets, and suggests the smallest 0.05 step above the worst case (min → max). Changes within a metric's floor are reported as such, because they can't fail the check. "Stable" means two calibrations agree within one step; an end-to-end test checks this.
+37. **While calibrating, `toBeSmooth()` doesn't compare or write baselines** (`SMOOTHNESS_CALIBRATE=1`, set by the CLI).
+38. **A long frame belongs to an interaction only if it starts during it** (2ms tolerance for rounding). CI caught a background timer frame that was already running when a click arrived being counted and blamed. It delayed the input, and input-to-paint already includes that delay; counting it in `longFrames` made the check depend on the timer's phase.

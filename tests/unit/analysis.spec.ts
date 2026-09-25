@@ -216,3 +216,21 @@ test('attributeFrames links frames to the interactions and scrolls they served',
   ]).topScripts[0]!;
   expect(top).toMatchObject({ invoker: 'DIV#root.onclick', fn: 'QS', during: ['click on button#checkout'] });
 });
+
+test('classify: a background frame the input arrived during is not the interaction’s', () => {
+  const click = {
+    id: 1,
+    event: 'click',
+    start: 1030,
+    duration: 120,
+    target: 'button#buy',
+    targetSource: 'event-timing' as const,
+  };
+  const base = { interactions: [click], scrolls: [], loadEventEnd: 100 };
+  // A 70ms timer frame from 1000 to 1070: the click arrives at 1030, during it.
+  expect(classifyFrame(frame({ start: 1000, duration: 70 }), base)).toBe('background');
+  // The frame that handles the click starts after the input.
+  expect(classifyFrame(frame({ start: 1071, duration: 80 }), base)).toBe('interaction');
+  // Rounding: a frame starting 1ms "before" the input still counts.
+  expect(classifyFrame(frame({ start: 1029, duration: 80 }), base)).toBe('interaction');
+});

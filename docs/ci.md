@@ -87,6 +87,20 @@ export default defineConfig<SmoothnessTestOptions>({
 
 This example assumes `snapshotDir` is `tests` (the default when `testDir` is `tests`). `dawidd6/action-download-artifact` is a third-party action; GitHub's own `actions/download-artifact` can only read artifacts from the same workflow run.
 
+## The summary, on the pull request
+
+With the reporter in your config (`reporter: [['list'], ['playwright-smoothness/reporter']]`), each run adds the smoothness summary to the GitHub Actions job summary. To post it as a comment on the pull request as well:
+
+```yaml
+- name: 'Pull request: comment with the summary'
+  if: github.event_name == 'pull_request' && always()
+  env:
+    GH_TOKEN: ${{ github.token }}
+  run: gh pr comment ${{ github.event.pull_request.number }} --body-file test-results/smoothness/summary.md --edit-last --create-if-none
+```
+
+The job needs `permissions: pull-requests: write`. `--edit-last` updates the previous comment, so each push doesn't add a new one.
+
 ## How this recipe is tested
 
 `scripts/verify-ci-recipe.sh` runs these steps against `examples/plain-site` on every pull request to this project (the Examples workflow). It records on "main", collects the baselines as above, runs as a fresh pull request with `baselineDir`, checks that every result was compared against the collected baseline, and checks that a deliberate regression fails. The one step it can't exercise is downloading an artifact from a different workflow run.

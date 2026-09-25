@@ -28,7 +28,14 @@ export const expect = baseExpect.extend({
       };
     }
     const testInfo = test.info();
-    const comparison = evaluate(received, testInfo, options);
+    const comparison = process.env.SMOOTHNESS_CALIBRATE
+      ? {
+          status: 'not-compared' as const,
+          checks: [],
+          baseline: null,
+          notes: ['Calibrating: not compared, and no baseline written.'],
+        }
+      : evaluate(received, testInfo, options);
     received.comparison = comparison;
     writeResult(received, writtenPath(received) ?? resultPath(testInfo, received.label));
 
@@ -61,6 +68,7 @@ export const expect = baseExpect.extend({
         );
         break;
       case 'not-compared':
+        if (process.env.SMOOTHNESS_CALIBRATE) break;
         annotate('smoothness-not-compared', `"${received.label}": ${comparison.notes.join(' ')}`);
         break;
       case 'pass':

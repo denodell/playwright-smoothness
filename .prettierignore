@@ -12,3 +12,4 @@ examples/**/test-results
 examples/**/playwright-report
 examples/react-list/public/app.js*
 examples/**/smoothness-baselines
+tests/unit/__snapshots__
