@@ -30,7 +30,8 @@ export interface ClassifyInput {
 
 /**
  * Classifies each long frame without labels from the test, in this order:
- * 1. `firstUIEventTimestamp > 0`: the frame handled input.
+ * 1. `firstUIEventTimestamp` at the frame's start: the frame handled input that was waiting for it.
+ *    (An input that arrives mid-frame also sets it, but on a frame that only delayed the input.)
  * 2. It starts during an Event Timing interaction window. A frame that started before the input
  *    arrived can't have been caused by it: it delayed the input, which the interaction's
  *    input-to-paint time already includes.
@@ -41,7 +42,8 @@ export interface ClassifyInput {
  */
 export function classifyFrame(f: LoafRecord, input: Omit<ClassifyInput, 'loaf'>): FrameClass {
   const end = f.start + f.duration;
-  if (f.firstUIEventTimestamp > 0) return 'interaction';
+  if (f.firstUIEventTimestamp > 0 && f.firstUIEventTimestamp <= f.start + INPUT_START_TOLERANCE_MS)
+    return 'interaction';
   if (
     input.interactions.some(
       (i) => f.start >= i.start - INPUT_START_TOLERANCE_MS && f.start < i.start + i.duration,

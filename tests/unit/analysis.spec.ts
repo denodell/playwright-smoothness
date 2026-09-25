@@ -234,3 +234,23 @@ test('classify: a background frame the input arrived during is not the interacti
   // Rounding: a frame starting 1ms "before" the input still counts.
   expect(classifyFrame(frame({ start: 1029, duration: 80 }), base)).toBe('interaction');
 });
+
+test('classify: firstUIEventTimestamp only marks input handling when the input was waiting at the frame’s start', () => {
+  const base = { interactions: [], scrolls: [], loadEventEnd: 100 };
+  // A frame that handles a queued click: the input was there when the frame started.
+  expect(classifyFrame(frame({ start: 2000, firstUIEventTimestamp: 2000 }), base)).toBe('interaction');
+  // A 70ms timer frame during which a click arrived: LoAF sets firstUIEventTimestamp too.
+  const timer = frame({
+    start: 2000,
+    duration: 70,
+    firstUIEventTimestamp: 2030,
+    scripts: [
+      script({
+        invoker: 'TimerHandler:setInterval',
+        invokerType: 'user-callback',
+        sourceFunctionName: 'repeatingBackgroundJob',
+      }),
+    ],
+  });
+  expect(classifyFrame(timer, base)).toBe('background');
+});
