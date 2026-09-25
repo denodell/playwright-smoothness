@@ -148,7 +148,9 @@ test('arrow keys: presses are measured by Event Timing (those of 16ms or more)',
   expect(r.scroll!.scrolledPx).toBeGreaterThan(0);
   expect(r.input!.interactions).toBeGreaterThanOrEqual(3);
   expect(r.input!.interactions).toBeLessThanOrEqual(10);
-  expect(r.input!.byTarget[0]!.event).toBe('keydown');
+  // A key press is one interaction (keydown, keypress, keyup), but Event Timing only reports the
+  // entries that took 16ms or more, so the slowest press may be known only by its keyup.
+  expect(['keydown', 'keyup']).toContain(r.input!.byTarget[0]!.event);
   expect(r.input!.p95ToPaintMs!).toBeGreaterThanOrEqual(16);
 });
 
