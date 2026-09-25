@@ -61,7 +61,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium chromium-headless-shell
+      - run: npx playwright install --with-deps chromium
       - run: npm run test:detection
       - name: Runner details
         if: always()
