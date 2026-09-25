@@ -108,3 +108,70 @@ test('summary: pipes in labels do not break the table', () => {
   const md = buildMarkdown([entry('a | b', compared(makeResult({ label: 'x | y' }), before, 'pass'))]);
   expect(md).toContain('a \\| b › "x \\| y"');
 });
+
+// ---- the reporter's options ----
+import SmoothnessReporter from '../../src/reporter/index.js';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+function runReporter(
+  options: ConstructorParameters<typeof SmoothnessReporter>[0],
+  dir: string,
+  env: Record<string, string> = {},
+) {
+  const saved = { ...process.env };
+  Object.assign(process.env, env);
+  try {
+    const reporter = new SmoothnessReporter(options);
+    const config = { rootDir: dir, projects: [{ outputDir: join(dir, 'test-results') }] } as never;
+    reporter.onBegin(config);
+    const resultFile = join(dir, 'r.json');
+    writeFileSync(resultFile, JSON.stringify(makeResult({ label: 'x' })));
+    const testCase = {
+      title: 'a test',
+      titlePath: () => ['', 'chromium', 'a.spec.ts', 'a test'],
+      location: { file: join(dir, 'a.spec.ts') },
+      parent: { project: () => ({ name: 'chromium' }) },
+    } as never;
+    reporter.onTestEnd(testCase, {
+      attachments: [{ name: 'smoothness: x', path: resultFile, contentType: 'application/json' }],
+    } as never);
+    reporter.onEnd();
+  } finally {
+    process.env = saved;
+  }
+}
+
+test('reporter: default output file, title and job summary', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'smoothness-reporter-'));
+  try {
+    const step = join(dir, 'step.md');
+    runReporter({}, dir, { GITHUB_STEP_SUMMARY: step });
+    const md = readFileSync(join(dir, 'test-results', 'smoothness', 'summary.md'), 'utf8');
+    expect(md.startsWith('## Smoothness\n')).toBe(true);
+    expect(md).toContain('a test › "x"');
+    expect(readFileSync(step, 'utf8')).toBe(md + '\n');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('reporter: outputFile, title, and githubSummary: false', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'smoothness-reporter-'));
+  try {
+    const step = join(dir, 'step.md');
+    mkdirSync(join(dir, 'out'));
+    runReporter(
+      { outputFile: join(dir, 'out', 'perf.md'), title: 'Performance', githubSummary: false },
+      dir,
+      {
+        GITHUB_STEP_SUMMARY: step,
+      },
+    );
+    expect(readFileSync(join(dir, 'out', 'perf.md'), 'utf8').startsWith('## Performance\n')).toBe(true);
+    expect(existsSync(step)).toBe(false);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

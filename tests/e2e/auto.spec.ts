@@ -29,6 +29,8 @@ const withSmoothness = () => {
     `  auto: true,`,
     `  minHistory: 2,`,
     `  enforce: process.env.SMOOTHNESS_ENFORCE === 'fail' ? 'fail' : 'warn',`,
+    `  historyDir: process.env.HISTORY_DIR,`,
+    `  record: process.env.RECORD === 'yes' ? true : process.env.RECORD === 'no' ? false : undefined,`,
     `});`,
     `export { expect } from '@playwright/test';`,
     '',
@@ -147,4 +149,17 @@ test('editing the spec file resets its history instead of failing', () => {
   expect(buy(r).comparison!.status).toBe('not-compared');
   expect(buy(r).comparison!.notes.join(' ')).toMatch(/spec file changed/);
   expect(buyHistory(r).entries).toHaveLength(1);
+});
+
+test('historyDir and record: an explicit folder, and an explicit decision to record or not', () => {
+  const custom = join(project, 'custom-history');
+  // record: false wins over SMOOTHNESS_RECORD=1
+  run({ HISTORY_DIR: 'custom-history', RECORD: 'no', SMOOTHNESS_RECORD: '1' });
+  expect(files(custom, '.json')).toEqual([]);
+  // record: true records without any main-branch or environment signal
+  const r = run({ HISTORY_DIR: 'custom-history', RECORD: 'yes' });
+  expect(r.code, r.output).toBe(0);
+  const written = files(custom, '.json');
+  expect(written.length).toBe(2);
+  expect(written.every((f) => f.startsWith(custom))).toBe(true);
 });
