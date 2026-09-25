@@ -1,0 +1,7 @@
+node_modules/
+test-results/
+playwright-report/
+# Baselines are per machine and come from CI (see ../../docs/ci.md), not from a laptop.
+tests/**/*-snapshots/
+smoothness-baselines/
+baselines-out/

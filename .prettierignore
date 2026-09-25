@@ -7,3 +7,8 @@ package-lock.json
 CLAUDE_CODE_BRIEF.md
 PLAN.md
 tests/fixtures
+examples/**/node_modules
+examples/**/test-results
+examples/**/playwright-report
+examples/react-list/public/app.js*
+examples/**/smoothness-baselines

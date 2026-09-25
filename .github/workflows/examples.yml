@@ -1,0 +1,48 @@
+# Checks docs/ci.md end to end on one runner (scripts/verify-ci-recipe.sh), and that the
+# React example passes, both against the package as built from this commit.
+name: Examples
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  ci-recipe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-audit --no-fund
+        working-directory: examples/plain-site
+      - run: npx playwright install --with-deps chromium
+        working-directory: examples/plain-site
+      - run: scripts/verify-ci-recipe.sh
+
+  react-list:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-audit --no-fund
+        working-directory: examples/react-list
+      - run: npx playwright install --with-deps chromium
+        working-directory: examples/react-list
+      - run: npx playwright test
+        working-directory: examples/react-list
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: react-list-results
+          path: examples/react-list/test-results

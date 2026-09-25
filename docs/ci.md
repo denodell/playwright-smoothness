@@ -37,13 +37,13 @@ jobs:
           name: smoothness-baselines
           path: smoothness-baselines
 
-      - name: Pull request: compare with main
+      - name: 'Pull request: compare with main'
         if: github.event_name == 'pull_request'
         run: npx playwright test
         env:
           SMOOTHNESS_BASELINE_DIR: smoothness-baselines
 
-      - name: Main: re-record baselines
+      - name: 'Main: re-record baselines'
         if: github.ref == 'refs/heads/main'
         run: |
           # Keep baselines for other CPU models, then re-record this machine's.
@@ -53,12 +53,16 @@ jobs:
       # upload-artifact trims paths to the files' common directory, which would lose the
       # <spec>-snapshots/ part. Copy the baselines into a staging directory with their paths
       # relative to the snapshot directory intact.
-      - name: Main: collect baselines
+      - name: 'Main: collect baselines'
         if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p baselines-out
-          (cd tests && find . -path '*-snapshots/smoothness/*' -type f -exec cp --parents {} ../baselines-out/ \;)
-      - name: Main: publish baselines
+          # Portable: GNU cp --parents doesn't exist on macOS runners.
+          (cd tests && find . -path '*-snapshots/smoothness/*' -type f | while read -r f; do
+            mkdir -p "../baselines-out/$(dirname "$f")" && cp "$f" "../baselines-out/$f"
+          done)
+          test -n "$(find baselines-out -type f)" || { echo 'no baselines were collected'; exit 1; }
+      - name: 'Main: publish baselines'
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
@@ -83,4 +87,20 @@ export default defineConfig<SmoothnessTestOptions>({
 
 This example assumes `snapshotDir` is `tests` (the default when `testDir` is `tests`). `dawidd6/action-download-artifact` is a third-party action; GitHub's own `actions/download-artifact` can only read artifacts from the same workflow run.
 
-This recipe will be checked end to end, and extended with full mode on a schedule, before the public release (plan M4).
+## How this recipe is tested
+
+`scripts/verify-ci-recipe.sh` runs these steps against `examples/plain-site` on every pull request to this project (the Examples workflow). It records on "main", collects the baselines as above, runs as a fresh pull request with `baselineDir`, checks that every result was compared against the collected baseline, and checks that a deliberate regression fails. The one step it can't exercise is downloading an artifact from a different workflow run.
+
+## Full mode on a schedule
+
+Scheduled runs use full mode automatically (see [mode-detection.md](mode-detection.md)), and full-mode baselines are kept separately from quick-mode ones. To gate them, add `schedule:` to `on:` and a step that compares before the main-branch step re-records:
+
+```yaml
+- name: 'Scheduled: compare with the last scheduled run'
+  if: github.event_name == 'schedule'
+  run: npx playwright test
+  env:
+    SMOOTHNESS_BASELINE_DIR: smoothness-baselines
+```
+
+Put it before the "Main" steps. Those already run on scheduled runs, because a scheduled run on the default branch has `github.ref` set to `refs/heads/main`, so they re-record afterwards and the artifact carries both quick-mode and full-mode baselines.
