@@ -5,13 +5,13 @@ import { listGeometry, type ListGeometry } from './list/probe.js';
 export const SPEEDS = { slow: 1500, normal: 3000, fast: 6000 } as const;
 
 /** Time between arrow-key presses with `input: 'keys'`: slow enough for each to paint. */
-export const KEY_INTERVAL_MS = 100;
+const KEY_INTERVAL_MS = 100;
 /** Most arrow-key presses one run makes; `distance: 'end'` with keys can otherwise take minutes. */
 export const MAX_KEY_PRESSES = 100;
 /** Chrome scrolls about 40px per arrow key; used to turn a pixel distance into presses. */
 export const PX_PER_ARROW_KEY = 40;
 /** The scroll has ended when the position hasn't changed for this many frames (a fling coasts). */
-export const SETTLE_FRAMES = 5;
+const SETTLE_FRAMES = 5;
 /** Longest to wait for a fling to come to rest after the gesture. */
 export const SETTLE_TIMEOUT_MS = 3_000;
 
@@ -67,7 +67,7 @@ const maximum = (g: ListGeometry, s: ResolvedScroll) =>
   s.direction === 'vertical' ? g.scroll.maxTop : g.scroll.maxLeft;
 
 /** How often to check whether a fling has come to rest. About two frames at 60Hz. */
-export const SETTLE_POLL_MS = 32;
+const SETTLE_POLL_MS = 32;
 
 /**
  * Waits until the scroll position stops changing. Polls on a timer, not requestAnimationFrame:
@@ -91,16 +91,16 @@ async function waitForRest(
 }
 
 /** A flick drags across this share of the list, from one side towards the other. */
-export const FLICK_SPAN = 0.6;
+const FLICK_SPAN = 0.6;
 /** Time between touch moves: one frame at 60Hz, so every frame sees the finger move. */
-export const TOUCH_MOVE_MS = 16;
+const TOUCH_MOVE_MS = 16;
 /**
  * Pause between flicks, so each fling coasts before the next touch stops it. A flick coasted
  * about 1,000px in 750ms on the test list; touching again after 50ms cut that to 400px.
  */
-export const FLICK_GAP_MS = 300;
+const FLICK_GAP_MS = 300;
 /** Most flicks per run; with a huge `distance`, the run stops here and says so. */
-export const MAX_FLICKS = 200;
+const MAX_FLICKS = 200;
 
 /**
  * Touch scrolling as a user does it: press, drag across the list at the requested speed,

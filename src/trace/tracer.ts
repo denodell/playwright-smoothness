@@ -2,7 +2,7 @@ import type { Browser, Page } from '@playwright/test';
 import { MARK_END, MARK_START, parseTrace, type ParsedTrace, type TraceEvent } from './parse.js';
 
 /**
- * Traces `measured` and returns the parsed frame data. The trace buffer is parsed and dropped
+ * Traces `measured` and returns the parsed trace. The trace buffer is parsed and dropped
  * here, never kept: with screenshots a trace is 12-22MB (docs/measurements.md).
  */
 export async function traceRun(

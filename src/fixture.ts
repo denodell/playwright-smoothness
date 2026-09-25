@@ -185,7 +185,6 @@ async function createSmoothness(
   };
 }
 
-/** The fixture definitions, shared by `test` and `withSmoothness()`. */
 /**
  * Encodes and attaches a scroll() replay when the result asks for one: always with
  * `replay: 'on'`, and when a check got worse with `'on-regression'` (the default).
@@ -217,6 +216,7 @@ async function attachReplay(
   writeResult(result, path);
 }
 
+/** The fixture definitions, shared by `test` and `withSmoothness()`. */
 export const smoothnessFixtures: Fixtures<
   SmoothnessFixtures,
   object,

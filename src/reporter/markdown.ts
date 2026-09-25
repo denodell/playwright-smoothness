@@ -12,7 +12,7 @@ export interface ReportEntry {
 }
 
 /** How many scripts and profile functions to name for each check that got worse. */
-export const REPORT_SCRIPTS = 3;
+const REPORT_SCRIPTS = 3;
 
 const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 const code = (s: string) => '`' + s.replace(/`/g, "'") + '`';

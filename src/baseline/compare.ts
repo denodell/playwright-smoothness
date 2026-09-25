@@ -28,10 +28,10 @@ interface MetricDef {
  * steps, so an 8ms floor would trip on a single rounding step.
  */
 export const INPUT_FLOOR_MS = 16;
-export const LONG_FRAME_FLOOR = 1;
-export const PERCENT_FLOOR_POINTS = 1;
+const LONG_FRAME_FLOOR = 1;
+const PERCENT_FLOOR_POINTS = 1;
 /** Total blocking time floor: one LoAF's worth of blocking beyond the 50ms budget. */
-export const BLOCKING_FLOOR_MS = 50;
+const BLOCKING_FLOOR_MS = 50;
 
 export const METRICS: MetricDef[] = [
   {

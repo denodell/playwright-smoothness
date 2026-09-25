@@ -5,7 +5,7 @@ import type { Interaction } from './interactions.js';
 import { median, percentile, round1 } from './stats.js';
 
 /** How many scripts to name in results and failure messages. */
-export const TOP_SCRIPTS = 5;
+const TOP_SCRIPTS = 5;
 
 export function summarizeInput(interactions: Interaction[]): InputResult {
   const durations = interactions.map((i) => i.duration);

@@ -25,7 +25,7 @@ const PRESENTED = new Set(['STATE_PRESENTED_ALL', 'STATE_PRESENTED_PARTIAL']);
 const DROPPED = 'STATE_DROPPED';
 const NO_UPDATE = 'STATE_NO_UPDATE_DESIRED';
 /** The 120Hz frame budget, ms. */
-export const BUDGET_120_MS = 1000 / 120;
+const BUDGET_120_MS = 1000 / 120;
 
 export interface ParseOptions {
   browserVersion: string;

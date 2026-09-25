@@ -5,7 +5,7 @@ import { PACKAGE_NAME } from '../constants.js';
 import { baselineFileName, baselinePrefix, sameKey, slug, type BaselineKey } from './key.js';
 import { metricsOf, type BaselineMetrics } from './compare.js';
 
-export const BASELINE_KIND = `${PACKAGE_NAME}-baseline`;
+const BASELINE_KIND = `${PACKAGE_NAME}-baseline`;
 
 /** What a baseline file holds. Versioned like results. */
 export interface BaselineFile {

@@ -64,10 +64,10 @@ export const COLLECTOR_CONFIG: CollectorConfig = {
 
 /**
  * Quiet period required after load before a run starts: no long animation frame may end
- * within it. Long enough to cover a timer fired shortly after load (the mixed test page's
- * background job fires 300ms after load) and the delay before its LoAF entry is delivered.
+ * within it. Long enough to cover a timer fired a few hundred ms after load, and the delay before
+ * its LoAF entry is delivered.
  */
-export const SETTLE_QUIET_MS = 500;
+const SETTLE_QUIET_MS = 500;
 
 /** Longest we wait for the page to go quiet. If it never does, the run continues with a note. */
 export const SETTLE_TIMEOUT_MS = 5_000;
@@ -561,7 +561,6 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
       }
     }
   }
-  for (const r of runs) r.replay = null;
 
   const result: SmoothnessResult = {
     schemaVersion: SCHEMA_VERSION,

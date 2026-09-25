@@ -16,9 +16,9 @@ export type ResetStrategy =
   'reload' | 'none' | ((ctx: { page: import('@playwright/test').Page }) => Promise<void>);
 
 export interface ListOptions {
-  /** Colour treated as "blank" in list screenshots. `'auto'` samples the list's computed background. Used in M4. */
+  /** Colour treated as "blank" in list screenshots. `'auto'` samples the list's computed background. */
   background?: 'auto' | string;
-  /** Colours or selectors whose appearance counts as blank (skeleton rows, placeholders). Used in M4. */
+  /** Colours or selectors whose appearance counts as blank (skeleton rows, placeholders). */
   placeholders?: string[];
 }
 
@@ -33,15 +33,15 @@ export interface SmoothnessOptions {
   runs?: number;
   /** CPU slowdown applied with `Emulation.setCPUThrottlingRate`. 1 disables it. Default 4. */
   cpuThrottling?: number;
-  /** Allowed increase over the baseline before a check fails, as a fraction (0.15 = 15%). Default 0.15. Used in M2. */
+  /** Allowed increase over the baseline before a check counts as worse, as a fraction (0.15 = 15%). Default 0.15. */
   maxIncrease?: number;
   /** 60, or 120 to add a reported-only 120Hz frame-budget prediction (full mode). Default 60. */
   refreshRate?: 60 | 120;
-  /** `'warn'` annotates the test and lets it pass; `'fail'` fails it. Default `'warn'`. Used in M2. */
+  /** `'warn'` annotates the test and lets it pass; `'fail'` fails it. Default `'warn'`. */
   enforce?: Enforce;
-  /** Directory of baselines downloaded from the main branch, checked before the snapshot path. Used in M2. */
+  /** Directory of baselines downloaded from the main branch, checked before the snapshot path. */
   baselineDir?: string;
-  /** Options for `smoothness.scroll()` blank-row detection. Used in M4. */
+  /** Options for `smoothness.scroll()` blank-row detection. */
   list?: ListOptions;
   /** How to reset the page between runs. Default `'reload'`. */
   reset?: ResetStrategy;
@@ -52,8 +52,8 @@ export interface SmoothnessOptions {
    */
   replay?: 'on-regression' | 'on' | 'off';
   /**
-   * Also gate on `longFrames.totalBlockingMs`. Off by default: it varied ±25-40% across runs in
-   * the spike's sandbox, so it's reported but not gated unless you ask. Default false.
+   * Also gate on `longFrames.totalBlockingMs`. Off by default: it can vary ±25–40% between runs on
+   * a slow single-CPU machine (docs/measurements.md), so it's reported but not gated unless you ask. Default false.
    */
   gateTotalBlocking?: boolean;
 }

@@ -3,7 +3,7 @@
 // imports, no references to anything outside its own body, and only syntax the target
 // browser runs natively.
 //
-// Rules (brief principles 5 and 6):
+// Rules:
 // - Every observer callback and every per-entry operation has its own try/catch, because an
 //   exception inside a callback silently drops the rest of that batch.
 // - Records are plain numbers and strings. No DOM node survives a callback; targets are

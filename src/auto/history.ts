@@ -9,7 +9,7 @@ import { metricsOf } from '../baseline/compare.js';
 import { machineSlug, slug } from '../baseline/key.js';
 import { PACKAGE_NAME } from '../constants.js';
 
-export const HISTORY_KIND = `${PACKAGE_NAME}-history`;
+const HISTORY_KIND = `${PACKAGE_NAME}-history`;
 
 export interface HistoryEntry {
   recordedAt: string;
@@ -83,7 +83,7 @@ export function medianMetrics(entries: HistoryEntry[]): BaselineMetrics {
   return out;
 }
 
-export function commitFromEnv(env: Record<string, string | undefined> = process.env): string | undefined {
+function commitFromEnv(env: Record<string, string | undefined> = process.env): string | undefined {
   return env.GITHUB_SHA ?? env.CI_COMMIT_SHA ?? env.BUILD_SOURCEVERSION ?? env.CIRCLE_SHA1 ?? undefined;
 }
 

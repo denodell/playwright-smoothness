@@ -3,10 +3,7 @@ import type { Interaction } from './interactions.js';
 
 export type FrameClass = 'interaction' | 'load' | 'background';
 
-/**
- * Frames starting before loadEventEnd plus this grace period are load frames. From the spike,
- * where this rule classified load frames correctly in every run.
- */
+/** Frames starting before loadEventEnd plus this grace period are load frames. */
 export const LOAD_GRACE_MS = 50;
 
 /**
@@ -19,7 +16,7 @@ export const SCROLL_LEAD_MS = 5;
  * Event Timing start times and LoAF start times are both rounded, so a frame that handles an
  * input can appear to start a moment before it.
  */
-export const INPUT_START_TOLERANCE_MS = 2;
+const INPUT_START_TOLERANCE_MS = 2;
 
 export interface ClassifyInput {
   loaf: LoafRecord[];
@@ -68,7 +65,6 @@ export function ranBeforeInput(s: LoafScriptRecord, firstUIEventTimestamp: numbe
  */
 export function classifyFrame(f: LoafRecord, input: Omit<ClassifyInput, 'loaf'>): FrameClass {
   const end = f.start + f.duration;
-  // A frame made only of setInterval callbacks is background or load work, whatever it overlaps.
   if (f.scripts.length > 0 && f.scripts.every(isPeriodic)) {
     return input.loadEventEnd === 0 || f.start < input.loadEventEnd + LOAD_GRACE_MS ? 'load' : 'background';
   }
@@ -86,8 +82,8 @@ export function classifyFrame(f: LoafRecord, input: Omit<ClassifyInput, 'loaf'>)
     return 'interaction';
   }
   if (input.scrolls.some((s) => s.t >= f.start - SCROLL_LEAD_MS && s.t <= end)) return 'interaction';
-  if (input.loadEventEnd > 0 && f.start < input.loadEventEnd + LOAD_GRACE_MS) return 'load';
-  if (input.loadEventEnd === 0) return 'load'; // the page hasn't finished loading yet
+  // loadEventEnd is 0 until the page has finished loading.
+  if (input.loadEventEnd === 0 || f.start < input.loadEventEnd + LOAD_GRACE_MS) return 'load';
   if (
     f.scripts.some(
       (s) =>

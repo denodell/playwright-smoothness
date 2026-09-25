@@ -4,7 +4,7 @@ import type { SmoothnessResult } from '../types.js';
 import { METRICS } from '../baseline/compare.js';
 
 /** Suggestions are multiples of this, so small wobbles don't change the advice. */
-export const SUGGESTION_STEP = 0.05;
+const SUGGESTION_STEP = 0.05;
 /** Never suggest less than one step. */
 export const MIN_SUGGESTION = SUGGESTION_STEP;
 /** The default maxIncrease; suggestions above it get a warning. */

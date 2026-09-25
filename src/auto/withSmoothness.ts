@@ -67,19 +67,19 @@ export interface AutoOptions extends SmoothnessOptions {
 }
 
 /** Binding the in-page collector streams records to, so they survive navigation. */
-export const STREAM_BINDING = '__playwrightSmoothnessStream';
+const STREAM_BINDING = '__playwrightSmoothnessStream';
 /** After the test body, how long to wait for the last streamed batches to arrive. */
-export const STREAM_DRAIN_MS = 100;
-export const DEFAULT_HISTORY = 10;
-export const DEFAULT_MIN_HISTORY = 3;
+const STREAM_DRAIN_MS = 100;
+const DEFAULT_HISTORY = 10;
+const DEFAULT_MIN_HISTORY = 3;
 /** Automatic mode doesn't throttle by default: it would slow every test and could break timeouts. */
-export const AUTO_CPU_THROTTLING = 1;
+const AUTO_CPU_THROTTLING = 1;
 /**
  * An input this close before the page's next navigation started, with no Event Timing entry,
  * was probably never painted: Event Timing and LoAF only record an input once the next frame
  * paints. Measured from the input to the next document's timeOrigin.
  */
-export const UNPAINTED_INPUT_MS = 250;
+const UNPAINTED_INPUT_MS = 250;
 
 export interface DocData {
   url: string;

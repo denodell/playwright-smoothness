@@ -4,9 +4,9 @@ import type { HotFunction, ProfileResult } from '../types.js';
 import { round1 } from './stats.js';
 
 /** How many functions a result names. */
-export const HOT_FUNCTIONS = 5;
+const HOT_FUNCTIONS = 5;
 /** How many callers are kept for each hot function. */
-export const MAX_CALLERS = 8;
+const MAX_CALLERS = 8;
 
 /** V8 pseudo-nodes that aren't work: the tree root and time the thread spent waiting. */
 const NOT_WORK = new Set(['(root)', '(idle)']);

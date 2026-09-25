@@ -3,7 +3,7 @@ import type { Check, Comparison, HotFunction, SmoothnessResult, TopScript } from
 import { PACKAGE_NAME } from '../constants.js';
 
 /** How many scripts a message names. */
-export const MESSAGE_SCRIPTS = 3;
+const MESSAGE_SCRIPTS = 3;
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
 const signed = (x: number) => (x > 0 ? `+${r1(x)}` : x < 0 ? `−${r1(-x)}` : '±0');
@@ -47,7 +47,7 @@ function displayPath(path: string, cwd: string): string {
 }
 
 /** How many callers a message shows for a hot function. */
-export const MESSAGE_CALLERS = 4;
+const MESSAGE_CALLERS = 4;
 
 /** `busyWait in work.js:3: 117.5ms self (149.9ms with calls), from onCheckout ← executeDispatch`. */
 export function describeHotFunction(f: HotFunction): string {

@@ -22,7 +22,7 @@ export interface ListPrepared {
 }
 
 /** Below this, the list at rest has too little content to judge blank frames against. */
-export const MIN_REFERENCE_COVERAGE = 0.05;
+const MIN_REFERENCE_COVERAGE = 0.05;
 
 export function listMeasurement(
   page: Page,

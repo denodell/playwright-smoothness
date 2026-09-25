@@ -3,9 +3,9 @@ import { lineCoverage, type CoverageOptions } from './coverage.js';
 import type { ListGeometry } from './probe.js';
 
 /** Largest per-channel difference that still matches a blank colour (trace JPEGs are lossy). */
-export const COLOUR_TOLERANCE = 24;
+const COLOUR_TOLERANCE = 24;
 /** A line has content when at least 1% of its pixels (and at least 2) aren't blank. */
-export const MIN_CONTENT_SHARE = 0.01;
+const MIN_CONTENT_SHARE = 0.01;
 
 export interface ListAnalysis {
   /** Drawn share of each frame, 0..1. */

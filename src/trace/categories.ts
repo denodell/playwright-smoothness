@@ -1,5 +1,5 @@
 // Trace categories, chosen by measuring what each contributes (docs/trace-categories.md).
-// Tracing the same ten-scroll interaction: the spike's set 2,148KB; FRAME_CATEGORIES 240KB;
+// Tracing the same ten-scroll interaction: a broad DevTools set 2,148KB; FRAME_CATEGORIES 240KB;
 // with ANIMATION_FRAME_CATEGORIES 368KB.
 
 /**
@@ -19,5 +19,5 @@ export const PROFILE_CATEGORIES = ['disabled-by-default-v8.cpu_profiler'];
 /** AnimationFrame events (every main-thread frame's duration), for the 120Hz prediction only. */
 export const ANIMATION_FRAME_CATEGORIES = ['devtools.timeline'];
 
-/** Screenshot events, for blank-row detection in lists (M4). */
+/** Screenshot events, for blank-row detection in lists. */
 export const SCREENSHOT_CATEGORIES = ['disabled-by-default-devtools.screenshot'];

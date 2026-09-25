@@ -29,8 +29,8 @@ export interface FetchedText {
 export type FetchText = (url: string) => Promise<FetchedText>;
 
 /** Scripts and maps bigger than this aren't fetched (a large app's map is a few MB). */
-export const MAX_SCRIPT_BYTES = 30 * 1024 * 1024;
-export const MAX_MAP_BYTES = 60 * 1024 * 1024;
+const MAX_SCRIPT_BYTES = 30 * 1024 * 1024;
+const MAX_MAP_BYTES = 60 * 1024 * 1024;
 
 interface Script {
   lines: string[];
