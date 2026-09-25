@@ -1,4 +1,12 @@
-import { test as base, type Locator, type Page, type TestInfo } from '@playwright/test';
+import {
+  test as base,
+  type Fixtures,
+  type Locator,
+  type Page,
+  type PlaywrightTestArgs,
+  type PlaywrightTestOptions,
+  type TestInfo,
+} from '@playwright/test';
 import { median } from './analysis/stats.js';
 import { listMeasurement } from './list/measure.js';
 import {
@@ -174,7 +182,12 @@ async function createSmoothness(
   };
 }
 
-export const test = base.extend<SmoothnessFixtures>({
+/** The fixture definitions, shared by `test` and `withSmoothness()`. */
+export const smoothnessFixtures: Fixtures<
+  SmoothnessFixtures,
+  object,
+  PlaywrightTestArgs & PlaywrightTestOptions
+> = {
   smoothnessOptions: [{}, { option: true }],
   smoothness: async ({ page, smoothnessOptions }, use, testInfo) => {
     if (page.context().browser()?.browserType().name() === 'chromium') {
@@ -187,4 +200,6 @@ export const test = base.extend<SmoothnessFixtures>({
       await testInfo.attach(`smoothness: ${label}`, { path, contentType: 'application/json' });
     }
   },
-});
+};
+
+export const test = base.extend<SmoothnessFixtures>(smoothnessFixtures);

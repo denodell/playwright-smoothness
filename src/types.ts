@@ -231,6 +231,12 @@ export interface SmoothnessResult {
   budget120?: Budget120Result | null;
   /** Full mode only: where CPU time went during the interaction. Reported, never gated. */
   profile?: ProfileResult | null;
+  /** Automatic mode only: every interaction in the test, in order. */
+  auto?: {
+    /** Documents the test loaded (each navigation is a new one). */
+    documents: number;
+    interactions: { event: string; target: string; ms: number; url: string }[];
+  };
   /** `scroll()` only: what was scrolled, and how. */
   scroll?: {
     input: 'wheel' | 'touch' | 'keys';
@@ -304,7 +310,8 @@ export type ComparisonStatus =
 
 export interface BaselineInfo {
   path: string;
-  source: 'baselineDir' | 'snapshot';
+  /** `history` is automatic mode's rolling median of recent main-branch runs. */
+  source: 'baselineDir' | 'snapshot' | 'history';
   recordedAt: string;
   browserVersion: string;
   machine: SmoothnessResult['machine'];
