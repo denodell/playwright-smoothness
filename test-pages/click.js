@@ -25,6 +25,13 @@ document.getElementById('vanish').addEventListener('click', function onVanishCli
   status.textContent = 'dismissed';
 });
 
+// Navigates away from inside its own handler: the page unloads before the click can paint, so
+// the browser never measures it (automatic mode reports that).
+document.getElementById('leave').addEventListener('click', function onLeave() {
+  busyWait(clickMs);
+  location.href = '/search.html';
+});
+
 // ?hostile=1: reading the heavy button's id throws, as some framework proxies and broken
 // polyfills do. The collector must survive this without losing the entry.
 if (param('hostile', 0)) {
