@@ -38,6 +38,7 @@ const script = (p: Partial<LoafRecord['scripts'][number]>) => ({
   sourceURL: 'http://x/app.js',
   sourceFunctionName: 'onA',
   sourceCharPosition: 10,
+  start: -1,
   duration: 50,
   ...p,
 });
@@ -235,22 +236,41 @@ test('classify: a background frame the input arrived during is not the interacti
   expect(classifyFrame(frame({ start: 1029, duration: 80 }), base)).toBe('interaction');
 });
 
-test('classify: firstUIEventTimestamp only marks input handling when the input was waiting at the frame’s start', () => {
+test('classify and blame: a timer the input interrupted is not the interaction', () => {
   const base = { interactions: [], scrolls: [], loadEventEnd: 100 };
-  // A frame that handles a queued click: the input was there when the frame started.
-  expect(classifyFrame(frame({ start: 2000, firstUIEventTimestamp: 2000 }), base)).toBe('interaction');
-  // A 70ms timer frame during which a click arrived: LoAF sets firstUIEventTimestamp too.
-  const timer = frame({
+  const timer = script({
+    invoker: 'TimerHandler:setInterval',
+    invokerType: 'user-callback',
+    sourceFunctionName: 'repeatingBackgroundJob',
     start: 2000,
     duration: 70,
-    firstUIEventTimestamp: 2030,
-    scripts: [
-      script({
-        invoker: 'TimerHandler:setInterval',
-        invokerType: 'user-callback',
-        sourceFunctionName: 'repeatingBackgroundJob',
-      }),
-    ],
   });
-  expect(classifyFrame(timer, base)).toBe('background');
+  const handler = script({
+    invoker: 'BUTTON#buy.onclick',
+    sourceFunctionName: 'onBuy',
+    start: 2071,
+    duration: 80,
+  });
+
+  // A frame that handles a waiting click.
+  expect(classifyFrame(frame({ start: 2000, firstUIEventTimestamp: 2000 }), base)).toBe('interaction');
+  // A timer frame that a click arrived during: LoAF sets firstUIEventTimestamp, but only the
+  // timer ran, and it started before the click.
+  expect(
+    classifyFrame(frame({ start: 2000, duration: 70, firstUIEventTimestamp: 2030, scripts: [timer] }), base),
+  ).toBe('background');
+  // The click arrived mid-frame and its handler ran later in the same frame: an interaction
+  // frame, but only the handler is blamed.
+  const both = frame({
+    start: 2000,
+    duration: 160,
+    blockingDuration: 110,
+    firstUIEventTimestamp: 2030,
+    scripts: [timer, handler],
+  });
+  expect(classifyFrame(both, base)).toBe('interaction');
+  expect(summarizeLongFrames([both]).topScripts.map((s) => s.fn)).toEqual(['onBuy']);
+  // Without script start times (older browsers), nothing is excluded.
+  const unknown = frame({ start: 2000, firstUIEventTimestamp: 2030, scripts: [{ ...timer, start: -1 }] });
+  expect(classifyFrame(unknown, base)).toBe('interaction');
 });

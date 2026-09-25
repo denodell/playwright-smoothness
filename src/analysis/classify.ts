@@ -1,4 +1,4 @@
-import type { LoafRecord, ScrollRecord } from '../collector/collector.js';
+import type { LoafRecord, LoafScriptRecord, ScrollRecord } from '../collector/collector.js';
 import type { Interaction } from './interactions.js';
 
 export type FrameClass = 'interaction' | 'load' | 'background';
@@ -29,9 +29,24 @@ export interface ClassifyInput {
 }
 
 /**
+ * True for a script that was already running (or ran) before the frame's input arrived, and isn't
+ * an event listener: a timer or other work the input interrupted, not something it caused.
+ */
+export function ranBeforeInput(s: LoafScriptRecord, firstUIEventTimestamp: number): boolean {
+  return (
+    firstUIEventTimestamp > 0 &&
+    s.start >= 0 &&
+    s.start + INPUT_START_TOLERANCE_MS < firstUIEventTimestamp &&
+    s.invokerType !== 'event-listener'
+  );
+}
+
+/**
  * Classifies each long frame without labels from the test, in this order:
- * 1. `firstUIEventTimestamp` at the frame's start: the frame handled input that was waiting for it.
- *    (An input that arrives mid-frame also sets it, but on a frame that only delayed the input.)
+ * 1. `firstUIEventTimestamp > 0` (an input arrived for this frame), and either the input was
+ *    already waiting when the frame started, or some script ran after it arrived. A timer frame
+ *    that a click merely interrupted also gets a firstUIEventTimestamp, but nothing in it ran
+ *    because of the click.
  * 2. It starts during an Event Timing interaction window. A frame that started before the input
  *    arrived can't have been caused by it: it delayed the input, which the interaction's
  *    input-to-paint time already includes.
@@ -42,8 +57,12 @@ export interface ClassifyInput {
  */
 export function classifyFrame(f: LoafRecord, input: Omit<ClassifyInput, 'loaf'>): FrameClass {
   const end = f.start + f.duration;
-  if (f.firstUIEventTimestamp > 0 && f.firstUIEventTimestamp <= f.start + INPUT_START_TOLERANCE_MS)
-    return 'interaction';
+  if (f.firstUIEventTimestamp > 0) {
+    const waiting = f.firstUIEventTimestamp <= f.start + INPUT_START_TOLERANCE_MS;
+    const ranAfter =
+      f.scripts.length === 0 || f.scripts.some((s) => !ranBeforeInput(s, f.firstUIEventTimestamp));
+    if (waiting || ranAfter) return 'interaction';
+  }
   if (
     input.interactions.some(
       (i) => f.start >= i.start - INPUT_START_TOLERANCE_MS && f.start < i.start + i.duration,
