@@ -6,7 +6,7 @@ Fail the build when a web UI stops being smooth. `playwright-smoothness` measure
 
 Dropped frames don't show a list going blank. On the right, 97% of frames arrive on time, but the rows aren't there. `smoothness.scroll()` measures both.
 
-> **0.x.** The API may change before 1.0. A reporter for pull-request comments, a `calibrate` command, and automatic measurement of existing tests are planned. Reports of noise on your CI runners are especially welcome.
+> **0.x.** The API may change before 1.0. Automatic measurement of existing tests, without code changes, is planned. Reports of noise on your CI runners are especially welcome.
 
 ## Quick start
 
@@ -168,6 +168,25 @@ export default defineConfig<SmoothnessTestOptions>({
 | `refreshRate`       | `60`                                       | `120` adds a reported-only 120Hz prediction in full mode.                                                           |
 
 The mode comes from the option, then `SMOOTHNESS_MODE`, then scheduled CI runs (`full`), then `quick`. See [docs/mode-detection.md](docs/mode-detection.md).
+
+## Summary for pull requests
+
+Add the reporter next to your usual one:
+
+```ts
+// playwright.config.ts
+reporter: [['list'], ['playwright-smoothness/reporter']],
+```
+
+It writes `test-results/smoothness/summary.md`: every check's change against its baseline (`129ms (+20ms, +18%)`), the scripts and functions behind anything that got worse, and everything that couldn't be measured or compared. In GitHub Actions it's also added to the job summary. Options: `outputFile`, `title`, and `githubSummary` (default: on when `$GITHUB_STEP_SUMMARY` is set). [docs/ci.md](docs/ci.md) shows how to post it as a pull-request comment.
+
+## Choosing `maxIncrease`: calibrate
+
+```bash
+npx playwright-smoothness calibrate --runs 5 -- --project=chromium
+```
+
+This runs your suite 5 times on unchanged code, with `toBeSmooth()` neither comparing nor recording, and prints how much each check's numbers moved between runs, with the smallest `maxIncrease` (in steps of 0.05) that would have absorbed it. It warns when a check needs more than the default 0.15 and names the noisy metric. Changes within a check's floors (16ms, 1 long frame, 1 point) can't fail it, and calibrate says so. Everything after `--` goes to `playwright test`. Results are also written to `smoothness-calibration.json`. Run it on the machine that gates, such as your CI runner.
 
 ## Baselines and CI machines
 
