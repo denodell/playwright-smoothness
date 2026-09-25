@@ -21,7 +21,13 @@ import {
 import { median, spread } from './analysis/stats.js';
 import { medianOf } from './analysis/aggregate.js';
 import { traceRun } from './trace/tracer.js';
-import { ANIMATION_FRAME_CATEGORIES, FRAME_CATEGORIES, PROFILE_CATEGORIES } from './trace/categories.js';
+import {
+  ANIMATION_FRAME_CATEGORIES,
+  FRAME_CATEGORIES,
+  PROFILE_CATEGORIES,
+  SCREENSHOT_CATEGORIES,
+} from './trace/categories.js';
+import type { ListMeasurement, ListPrepared } from './list/measure.js';
 import {
   attributeProfile,
   combineProfiles,
@@ -37,6 +43,7 @@ import { SCHEMA_VERSION } from './constants.js';
 import type {
   Budget120Result,
   FramesResult,
+  ListResult,
   ProfileResult,
   InputResult,
   LongFramesResult,
@@ -72,6 +79,8 @@ interface RunData {
   trace: ParsedTrace | null;
   /** Full mode only: CPU time inside this run's interaction windows. */
   profile: ProfileRun | null;
+  /** scroll() in full mode only. */
+  list: ListResult | { unavailable: string } | null;
 }
 
 export interface MeasureContext {
@@ -79,6 +88,8 @@ export interface MeasureContext {
   label: string;
   options: ResolvedOptions;
   environment: BrowserEnvironment;
+  /** Set by scroll(): blank-row detection for a list (full mode). */
+  list?: ListMeasurement;
 }
 
 // Calls into the in-page collector. Each is a plain page.evaluate (no eval in the page, so
@@ -209,6 +220,9 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
       reason: 'full mode needs Browser.startTracing, which a persistent context has no Browser for',
     });
   }
+  if (options.mode === 'quick' && ctx.list) {
+    notes.push("Blank rows in lists are measured in full mode only (mode: 'full'); this was quick mode.");
+  }
   if (options.mode === 'quick' && options.refreshRate === 120) {
     notes.push('refreshRate 120 adds a prediction in full mode only; this was quick mode.');
   }
@@ -243,14 +257,38 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         }
       };
       let trace: ParsedTrace | null = null;
+      // Blank-row detection: prepared after the page settles and before tracing (the reference
+      // screenshot must not land inside the trace). Skipped on the warm-up run.
+      let listPrepared: ListPrepared | { unavailable: string } | null = null;
+      if (options.mode === 'full' && browser && ctx.list && run > 0) listPrepared = await ctx.list.prepare();
       if (options.mode === 'full' && browser) {
-        trace = await traceRun(browser, page, categories, measured, {
-          browserVersion: ctx.environment.browserVersion,
-          budget120: options.refreshRate === 120,
-          profile: true,
-        });
+        const screenshots = listPrepared !== null && !('unavailable' in listPrepared);
+        trace = await traceRun(
+          browser,
+          page,
+          screenshots ? [...categories, ...SCREENSHOT_CATEGORIES] : categories,
+          measured,
+          {
+            browserVersion: ctx.environment.browserVersion,
+            budget120: options.refreshRate === 120,
+            profile: true,
+            screenshots,
+          },
+        );
       } else {
         await measured();
+      }
+      let list: RunData['list'] = null;
+      if (listPrepared && 'unavailable' in listPrepared) list = listPrepared;
+      else if (listPrepared && trace) {
+        for (const n of listPrepared.notes) if (!notes.includes(n)) notes.push(n);
+        list = trace.screenshots.length
+          ? await ctx.list!.analyze(listPrepared, trace.screenshots)
+          : {
+              unavailable:
+                trace.unavailable.find((u) => u.measurement === 'list')?.reason ?? 'no screenshots',
+            };
+        trace.screenshots = []; // several MB per run; not needed again
       }
       let snapshot: CollectorSnapshot;
       try {
@@ -291,6 +329,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         input: summarizeInput(interactions),
         longFrames: summarizeLongFrames(interactionFrames),
         trace,
+        list,
         // The interaction's windows: its long frames, and each Event Timing interaction (which
         // covers work under LoAF's 50ms threshold too).
         profile: trace?.profile
@@ -383,6 +422,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
   let frames: FramesResult | null | undefined;
   let budget120: Budget120Result | null | undefined;
   let profile: ProfileResult | null | undefined;
+  let list: ListResult | null | undefined;
   if (options.mode === 'full') {
     const traces = runs.map((r) => r.trace);
     const reasons = (measurement: string) => [
@@ -435,6 +475,32 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
       profile = combineProfiles(profiles, await resolveNames(page, profiles, notes));
     }
 
+    if (ctx.list) {
+      const perRun = runs.map((r) => r.list);
+      const ok = perRun.filter((l): l is ListResult => l !== null && !('unavailable' in l));
+      const why = [...new Set(perRun.flatMap((l) => (l && 'unavailable' in l ? [l.unavailable] : [])))];
+      if (ok.length === 0) {
+        list = null;
+        for (const reason of why.length ? why : ['no run produced list data'])
+          unavailable.push({ measurement: 'list', reason });
+      } else {
+        if (ok.length < runs.length)
+          notes.push(
+            `List data was missing from ${runs.length - ok.length} of ${runs.length} runs: ${why.join('; ')}.`,
+          );
+        list = {
+          frames: Math.round(median(ok.map((l) => l.frames))),
+          blankFrames: Math.round(median(ok.map((l) => l.blankFrames))),
+          blankFramePercent: medianOf(ok.map((l) => l.blankFramePercent))!,
+          leastDrawnPercent: medianOf(ok.map((l) => l.leastDrawnPercent))!,
+        };
+        addSpread(
+          'list.blankFramePercent',
+          ok.map((l) => l.blankFramePercent),
+        );
+      }
+    }
+
     if (options.refreshRate === 120) {
       const b = traces.map((t) => t?.budget120 ?? null).filter((x): x is Budget120Result => x !== null);
       if (b.length === 0) {
@@ -472,6 +538,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     ...(frames !== undefined ? { frames } : {}),
     ...(budget120 !== undefined ? { budget120 } : {}),
     ...(profile !== undefined ? { profile } : {}),
+    ...(list !== undefined ? { list } : {}),
     input,
     longFrames,
     spread: spreads,

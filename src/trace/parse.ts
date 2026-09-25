@@ -33,6 +33,8 @@ export interface ParseOptions {
   budget120: boolean;
   /** Also read the V8 CPU profile. */
   profile?: boolean;
+  /** Also return the Screenshot events' JPEGs. */
+  screenshots?: boolean;
 }
 
 export interface ProfileNode {
@@ -55,6 +57,8 @@ export interface ParsedTrace {
   frames: FramesResult | null;
   budget120: Budget120Result | null;
   profile: CpuProfile | null;
+  /** Base64 JPEGs of the frames inside the window, in order (only when asked for). */
+  screenshots: string[];
   unavailable: Unavailable[];
   notes: string[];
 }
@@ -277,7 +281,14 @@ function parseAnimationFrames(
 }
 
 export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedTrace {
-  const out: ParsedTrace = { frames: null, budget120: null, profile: null, unavailable: [], notes: [] };
+  const out: ParsedTrace = {
+    frames: null,
+    budget120: null,
+    profile: null,
+    screenshots: [],
+    unavailable: [],
+    notes: [],
+  };
   const marks = findMarks(events);
   if (!marks) {
     out.unavailable.push({
@@ -294,5 +305,18 @@ export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedT
   parseFrames(events, marks, options.browserVersion, out);
   if (options.budget120) parseAnimationFrames(events, window, options.browserVersion, out);
   if (options.profile) parseProfile(events, marks, options.browserVersion, out);
+  if (options.screenshots) {
+    for (const e of events) {
+      if (e.name !== 'Screenshot' || e.ts < window[0] || e.ts > window[1]) continue;
+      const snapshot = (e.args as { snapshot?: unknown } | undefined)?.snapshot;
+      if (typeof snapshot === 'string') out.screenshots.push(snapshot);
+    }
+    if (out.screenshots.length === 0) {
+      out.unavailable.push({
+        measurement: 'list',
+        reason: `the trace has no Screenshot events inside the measurement (Chrome ${options.browserVersion})`,
+      });
+    }
+  }
   return out;
 }

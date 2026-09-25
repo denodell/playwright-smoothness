@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Catalogue</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+      }
+      .catalogue {
+        position: relative;
+        height: 480px;
+        width: 420px;
+        overflow-y: auto;
+        margin: 16px;
+        padding: 0;
+        list-style: none;
+        background: #fff;
+        border: 1px solid #e4e4e7;
+      }
+      .row {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 72px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 0 12px;
+        box-sizing: border-box;
+      }
+      .thumb {
+        width: 52px;
+        height: 52px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

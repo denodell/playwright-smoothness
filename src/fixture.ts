@@ -1,4 +1,15 @@
-import { test as base, type Page, type TestInfo } from '@playwright/test';
+import { test as base, type Locator, type Page, type TestInfo } from '@playwright/test';
+import { median } from './analysis/stats.js';
+import { listMeasurement } from './list/measure.js';
+import {
+  defaultScrollLabel,
+  performScroll,
+  resolveScroll,
+  MAX_KEY_PRESSES,
+  PX_PER_ARROW_KEY,
+  type ScrollOptions,
+} from './scroll.js';
+import type { MeasureContext } from './runner.js';
 import { relative } from 'node:path';
 import { installCollector } from './collector/collector.js';
 import { browserEnvironment } from './environment.js';
@@ -15,6 +26,12 @@ export interface Smoothness {
    * the baseline, so it must be unique within a test.
    */
   measure(label: string, action: () => Promise<void>, options?: SmoothnessOptions): Promise<SmoothnessResult>;
+  /**
+   * Scrolls a list (or the page) and measures it: long frames and input in quick mode, plus
+   * dropped frames and blank rows from trace screenshots in full mode. Each run reloads the page,
+   * so the list starts from the top.
+   */
+  scroll(target: Locator, options?: ScrollOptions & SmoothnessOptions): Promise<SmoothnessResult>;
 }
 
 /**
@@ -58,26 +75,101 @@ async function createSmoothness(
       "Running in Chromium's headless shell. Measurements are closer to real Chrome in new headless: set channel: 'chromium'.",
     );
   }
+  const record = async (
+    label: string,
+    overrides: SmoothnessOptions | undefined,
+    run: (ctx: MeasureContext) => Promise<SmoothnessResult>,
+  ): Promise<SmoothnessResult> => {
+    if (outputs.has(label)) {
+      throw new Error(
+        `smoothness: the label "${label}" is already used in this test. Labels name baselines, so each must be unique.`,
+      );
+    }
+    const options = resolveOptions([defaults, overrides]);
+    let result: SmoothnessResult;
+    if (environment.browserName !== 'chromium') {
+      const reason = `smoothness is measured in Chromium only; this is ${environment.browserName}`;
+      annotateOnce(testInfo, 'smoothness-skipped', `${label}: ${reason}`);
+      result = emptyResult({ label, options, environment }, reason);
+    } else {
+      result = await run({ page, label, options, environment });
+    }
+    const path = resultPath(testInfo, label);
+    writeResult(result, path);
+    outputs.set(label, path);
+    return result;
+  };
+
   return {
-    async measure(label, action, overrides) {
-      if (outputs.has(label)) {
-        throw new Error(
-          `smoothness.measure(): the label "${label}" is already used in this test. Labels name baselines, so each must be unique.`,
-        );
-      }
-      const options = resolveOptions([defaults, overrides]);
-      let result: SmoothnessResult;
-      if (environment.browserName !== 'chromium') {
-        const reason = `smoothness is measured in Chromium only; this is ${environment.browserName}`;
-        annotateOnce(testInfo, 'smoothness-skipped', `${label}: ${reason}`);
-        result = emptyResult({ label, options, environment }, reason);
-      } else {
-        result = await measure({ page, label, options, environment }, action);
-      }
-      const path = resultPath(testInfo, label);
-      writeResult(result, path);
-      outputs.set(label, path);
-      return result;
+    measure(label, action, overrides) {
+      return record(label, overrides, (ctx) => measure(ctx, action));
+    },
+
+    async scroll(target, all = {}) {
+      const { distance, direction, input, speed, label: givenLabel, ...overrides } = all;
+      const s = resolveScroll({ distance, direction, input, speed });
+      const label = givenLabel ?? defaultScrollLabel(target, s);
+      const done: { requested: number; scrolled: number; presses?: number }[] = [];
+      return record(label, overrides, async (ctx) => {
+        if (s.input === 'touch' && (await page.evaluate(() => navigator.maxTouchPoints)) === 0) {
+          // Touch events on a page that reports no touch support aren't what a phone does:
+          // pages branch on touch support (pointer: coarse, touch handlers).
+          throw new Error(
+            "smoothness.scroll(): input: 'touch' needs a touch-enabled browser context. Use test.use({ hasTouch: true }) or a mobile device, such as devices['Pixel 7'].",
+          );
+        }
+        const cdp = await page.context().newCDPSession(page);
+        const browser = page.context().browser();
+        try {
+          const result = await measure(
+            {
+              ...ctx,
+              ...(browser
+                ? { list: listMeasurement(page, browser, target, s.direction, ctx.options.list) }
+                : {}),
+            },
+            async () => {
+              done.push(await performScroll(page, cdp, target, s));
+            },
+          );
+          const measured = done.slice(1); // the first scroll is the warm-up
+          if (measured.length && measured.every((d) => d.requested > 0 && d.scrolled === 0)) {
+            // Nothing moved: blank-frame numbers would describe a still list, so they're withheld.
+            const reason = `the scroll gesture didn't move the list in any run (asked for ${measured[0]!.requested}px)`;
+            if ('list' in result) result.list = null;
+            result.unavailable.push({ measurement: 'list', reason });
+            result.notes.push(`Nothing scrolled: ${reason}. Is the locator the element that scrolls?`);
+          }
+          if (measured.length) {
+            result.scroll = {
+              input: s.input,
+              direction: s.direction,
+              speedPxPerSec: s.input === 'keys' ? null : s.speedPxPerSec,
+              requestedPx: Math.round(median(measured.map((d) => d.requested))),
+              scrolledPx: Math.round(median(measured.map((d) => d.scrolled))),
+              ...(s.input === 'keys'
+                ? { keyPresses: Math.round(median(measured.map((d) => d.presses ?? 0))) }
+                : {}),
+            };
+            if (measured.every((d) => d.requested === 0)) {
+              result.notes.push(
+                "The list was already at its end, so nothing scrolled. With reset: 'none', later runs start where the last one stopped.",
+              );
+            }
+            if (
+              s.input === 'keys' &&
+              measured.some((d) => d.requested > MAX_KEY_PRESSES * PX_PER_ARROW_KEY)
+            ) {
+              result.notes.push(
+                `Arrow keys were pressed at most ${MAX_KEY_PRESSES} times per run, which didn't reach the requested distance.`,
+              );
+            }
+          }
+          return result;
+        } finally {
+          await cdp.detach().catch(() => undefined);
+        }
+      });
     },
   };
 }

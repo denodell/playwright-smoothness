@@ -2,7 +2,32 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'test-pages/frameworks/', 'node_modules/', 'test-results/', 'playwright-report/'] },
+  {
+    ignores: [
+      'dist/',
+      'test-pages/frameworks/',
+      'node_modules/',
+      'test-results/',
+      'playwright-report/',
+      'examples/**/node_modules/',
+      'examples/**/test-results/',
+      'examples/**/playwright-report/',
+      'examples/**/smoothness-baselines/',
+      'examples/react-list/public/app.js',
+    ],
+  },
+  {
+    files: ['examples/**/*.{js,mjs}'],
+    languageOptions: {
+      globals: {
+        document: 'readonly',
+        location: 'readonly',
+        performance: 'readonly',
+        URL: 'readonly',
+        URLSearchParams: 'readonly',
+      },
+    },
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

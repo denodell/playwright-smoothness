@@ -85,7 +85,10 @@ export interface TargetTiming {
 }
 
 export interface InputResult {
-  /** Discrete interactions (clicks, taps, key presses) seen by Event Timing. Scrolling isn't included. */
+  /**
+   * Discrete interactions (clicks, taps, key presses) that took 16ms or more, Event Timing's
+   * minimum threshold; faster ones aren't reported by the browser. Scrolling isn't included.
+   */
   interactions: number;
   /** 95th percentile input-to-paint time in ms. Null when there were no interactions. */
   p95ToPaintMs: number | null;
@@ -177,10 +180,15 @@ export interface Budget120Result {
   predicted: true;
 }
 
-/** Blank rows while scrolling a list, from trace screenshots (`scroll()` in full mode, M4). */
+/** Blank rows while scrolling a list, from trace screenshots (`scroll()` in full mode). */
 export interface ListResult {
+  /** Screenshots analysed: one per frame the compositor produced while the list moved. */
+  frames: number;
+  /** Frames drawn to less than half of the list at rest. */
   blankFrames: number;
+  /** blankFrames / frames × 100. Gated. */
   blankFramePercent: number;
+  /** The least-drawn frame, as a percentage of the list at rest. */
   leastDrawnPercent: number;
 }
 
@@ -223,6 +231,22 @@ export interface SmoothnessResult {
   budget120?: Budget120Result | null;
   /** Full mode only: where CPU time went during the interaction. Reported, never gated. */
   profile?: ProfileResult | null;
+  /** `scroll()` only: what was scrolled, and how. */
+  scroll?: {
+    input: 'wheel' | 'touch' | 'keys';
+    direction: 'vertical' | 'horizontal';
+    /** Null for keys. */
+    speedPxPerSec: number | null;
+    /** Median across runs. */
+    requestedPx: number;
+    /** Median across runs. */
+    scrolledPx: number;
+    /**
+     * Keys only: arrow-key presses per run. Event Timing reports only interactions of 16ms or
+     * more (its minimum threshold), so `input.interactions` counts the slow presses among these.
+     */
+    keyPresses?: number;
+  };
   /** Null when Event Timing couldn't be measured (see `unavailable`). */
   input: InputResult | null;
   /** Null when LoAF couldn't be measured (see `unavailable`). */
