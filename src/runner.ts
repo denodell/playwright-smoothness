@@ -28,6 +28,9 @@ import {
   SCREENSHOT_CATEGORIES,
 } from './trace/categories.js';
 import type { ListMeasurement, ListPrepared } from './list/measure.js';
+import { BLANK_FRAME_SHARE } from './list/summarize.js';
+import type { ReplayInput } from './replay/encode.js';
+import { setReplaySource } from './replay/source.js';
 import {
   attributeProfile,
   combineProfiles,
@@ -81,6 +84,8 @@ interface RunData {
   profile: ProfileRun | null;
   /** scroll() in full mode only. */
   list: ListResult | { unavailable: string } | null;
+  /** scroll() in full mode: the frames, for a replay. */
+  replay: ReplayInput | null;
 }
 
 export interface MeasureContext {
@@ -151,6 +156,7 @@ export function settingsOf(options: ResolvedOptions): SmoothnessResult['settings
     gateTotalBlocking: options.gateTotalBlocking,
     baselineDir: options.baselineDir ?? null,
     modeSource: options.modeSource,
+    replay: options.replay,
   };
 }
 
@@ -279,16 +285,34 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         await measured();
       }
       let list: RunData['list'] = null;
+      let replay: ReplayInput | null = null;
       if (listPrepared && 'unavailable' in listPrepared) list = listPrepared;
       else if (listPrepared && trace) {
         for (const n of listPrepared.notes) if (!notes.includes(n)) notes.push(n);
-        list = trace.screenshots.length
+        const analysed = trace.screenshots.length
           ? await ctx.list!.analyze(listPrepared, trace.screenshots)
           : {
               unavailable:
                 trace.unavailable.find((u) => u.measurement === 'list')?.reason ?? 'no screenshots',
             };
-        trace.screenshots = []; // several MB per run; not needed again
+        if ('unavailable' in analysed) list = analysed;
+        else {
+          list = analysed.result;
+          if (options.replay !== 'off') {
+            const t0 = trace.screenshotTimes[0] ?? 0;
+            replay = {
+              jpegs: trace.screenshots,
+              timesMs: trace.screenshotTimes.map((t) => (t - t0) / 1000),
+              drawn: analysed.drawn,
+              blankShare: BLANK_FRAME_SHARE,
+              rect: listPrepared.geometry.rect,
+              viewport: listPrepared.geometry.viewport,
+              title: ctx.label,
+            };
+          }
+        }
+        trace.screenshots = []; // several MB per run; kept only in `replay`, if at all
+        trace.screenshotTimes = [];
       }
       let snapshot: CollectorSnapshot;
       try {
@@ -330,6 +354,7 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         longFrames: summarizeLongFrames(interactionFrames),
         trace,
         list,
+        replay,
         // The interaction's windows: its long frames, and each Event Timing interaction (which
         // covers work under LoAF's 50ms threshold too).
         profile: trace?.profile
@@ -523,7 +548,22 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
   const classCount = (k: FrameClass) =>
     Math.round(median(runs.map((r) => r.classes.filter((c) => c === k).length)));
 
-  return {
+  // The replay comes from the run whose blank-frame share is closest to the reported median.
+  let replaySource: ReplayInput | null = null;
+  if (list) {
+    let best = Infinity;
+    for (const r of runs) {
+      if (!r.replay || !r.list || 'unavailable' in r.list) continue;
+      const d = Math.abs(r.list.blankFramePercent - list.blankFramePercent);
+      if (d < best) {
+        best = d;
+        replaySource = r.replay;
+      }
+    }
+  }
+  for (const r of runs) r.replay = null;
+
+  const result: SmoothnessResult = {
     schemaVersion: SCHEMA_VERSION,
     label: ctx.label,
     mode: options.mode,
@@ -550,4 +590,6 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     unavailable,
     notes,
   };
+  if (replaySource) setReplaySource(result, replaySource);
+  return result;
 }

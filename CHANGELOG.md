@@ -2,7 +2,7 @@
 
 ## 1.0.0
 
-The first release. The public API — the `smoothness` fixture with `measure()` and `scroll()`, `smoothnessOptions`, `toBeSmooth()`, `withSmoothness()`, the reporter, the `calibrate` command, and the JSON result format (`schemaVersion: 1`) — follows semantic versioning from here.
+The first release. The public API — the `smoothness` fixture with `measure()` and `scroll()`, `smoothnessOptions` (including `replay`), `toBeSmooth()`, `withSmoothness()`, the reporter, the `calibrate` command, and the JSON result format (`schemaVersion: 1`) — follows semantic versioning from here.
 
 ### Measuring
 
@@ -19,4 +19,5 @@ The first release. The public API — the `smoothness` fixture with `measure()` 
 ### Reporting and tuning
 
 - **`playwright-smoothness/reporter`** writes a markdown summary for pull requests (and the GitHub Actions job summary).
+- **Replays**: when a full-mode `scroll()` check gets worse, a WebM video of the measured scroll is attached to the test, 4× slower than real time, with each frame's drawn share, blank frames marked, and a timeline (`replay: 'on-regression' | 'on' | 'off'`). It's built from the frames the measurement already recorded, with no dependencies.
 - **`npx playwright-smoothness calibrate`** runs the suite several times on unchanged code and suggests a `maxIncrease` per check.

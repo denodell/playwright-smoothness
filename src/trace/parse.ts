@@ -59,6 +59,8 @@ export interface ParsedTrace {
   profile: CpuProfile | null;
   /** Base64 JPEGs of the frames inside the window, in order (only when asked for). */
   screenshots: string[];
+  /** Each screenshot's trace timestamp (µs), in step with `screenshots`. */
+  screenshotTimes: number[];
   unavailable: Unavailable[];
   notes: string[];
 }
@@ -286,6 +288,7 @@ export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedT
     budget120: null,
     profile: null,
     screenshots: [],
+    screenshotTimes: [],
     unavailable: [],
     notes: [],
   };
@@ -309,7 +312,10 @@ export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedT
     for (const e of events) {
       if (e.name !== 'Screenshot' || e.ts < window[0] || e.ts > window[1]) continue;
       const snapshot = (e.args as { snapshot?: unknown } | undefined)?.snapshot;
-      if (typeof snapshot === 'string') out.screenshots.push(snapshot);
+      if (typeof snapshot === 'string') {
+        out.screenshots.push(snapshot);
+        out.screenshotTimes.push(e.ts);
+      }
     }
     if (out.screenshots.length === 0) {
       out.unavailable.push({

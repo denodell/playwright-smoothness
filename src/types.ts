@@ -46,6 +46,12 @@ export interface SmoothnessOptions {
   /** How to reset the page between runs. Default `'reload'`. */
   reset?: ResetStrategy;
   /**
+   * A video replay of `scroll()` in full mode, attached to the test report: each frame with how
+   * drawn the list was and a timeline of blank frames, 4x slower than real time.
+   * `'on-regression'` (default) attaches it when a check got worse; `'on'` always; `'off'` never.
+   */
+  replay?: 'on-regression' | 'on' | 'off';
+  /**
    * Also gate on `longFrames.totalBlockingMs`. Off by default: it varied ±25-40% across runs in
    * the spike's sandbox, so it's reported but not gated unless you ask. Default false.
    */
@@ -65,6 +71,7 @@ export interface ResolvedOptions {
   list: Required<ListOptions>;
   reset: ResetStrategy;
   gateTotalBlocking: boolean;
+  replay: 'on-regression' | 'on' | 'off';
 }
 
 export type HeadlessMode = 'headless-shell' | 'new-headless' | 'headed' | 'unknown';
@@ -222,6 +229,7 @@ export interface SmoothnessResult {
     baselineDir: string | null;
     /** Which rule chose `mode` (docs/mode-detection.md). */
     modeSource: string;
+    replay: 'on-regression' | 'on' | 'off';
   };
   /** Full mode only. */
   frames?: FramesResult | null;
@@ -266,6 +274,8 @@ export interface SmoothnessResult {
   notes: string[];
   /** Set by `toBeSmooth()`: how this result compared with its baseline. */
   comparison?: Comparison;
+  /** The replay video's file name, next to this JSON, when one was attached. */
+  replay?: string;
 }
 
 /**

@@ -92,6 +92,8 @@ In full mode it also finds **blank frames**. It screenshots the list at rest, th
 await smoothness.scroll(list, { mode: 'full', list: { placeholders: ['.skeleton-row', '#e5e7eb'] } });
 ```
 
+**Replays.** When a `scroll()` check gets worse, a video of the measured scroll is attached to the test in the Playwright report. It plays 4× slower than real time. Each frame shows how drawn the list was, blank frames are marked in red, and a timeline shows where they happened. `replay: 'on'` attaches one every time, and `'off'` never. The video is built from the frames the measurement already recorded, so making it doesn't change the numbers.
+
 How it works, and its limits: [docs/list-detection.md](docs/list-detection.md).
 
 ## What the numbers mean
@@ -165,6 +167,7 @@ export default defineConfig<SmoothnessTestOptions>({
 | `gateTotalBlocking` | `false`                                    | Also gate total blocking time.                                                                                      |
 | `mode`              | see below                                  | `'quick'` or `'full'`. Full mode adds a Chrome trace: dropped frames, a CPU profile, and blank rows for `scroll()`. |
 | `list`              | `{ background: 'auto', placeholders: [] }` | `scroll()` in full mode: what counts as blank.                                                                      |
+| `replay`            | `'on-regression'`                          | `scroll()` in full mode: attach a video replay when a check got worse (`'on'`: always, `'off'`: never).             |
 | `refreshRate`       | `60`                                       | `120` adds a reported-only 120Hz prediction in full mode.                                                           |
 
 The mode comes from the option, then `SMOOTHNESS_MODE`, then scheduled CI runs (`full`), then `quick`. See [docs/mode-detection.md](docs/mode-detection.md).

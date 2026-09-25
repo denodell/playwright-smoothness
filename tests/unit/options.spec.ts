@@ -14,6 +14,7 @@ test('defaults', () => {
     list: { background: 'auto', placeholders: [] },
     reset: 'reload',
     gateTotalBlocking: false,
+    replay: 'on-regression',
   });
 });
 
@@ -38,6 +39,7 @@ test('every option is accepted and kept', () => {
         list: { background: '#fff', placeholders: ['.skeleton'] },
         reset,
         gateTotalBlocking: true,
+        replay: 'on',
       },
     ],
     {},
@@ -53,6 +55,7 @@ test('every option is accepted and kept', () => {
     baselineDir: 'baselines',
     list: { background: '#fff', placeholders: ['.skeleton'] },
     gateTotalBlocking: true,
+    replay: 'on',
   });
   expect(o.reset).toBe(reset);
 });
@@ -64,6 +67,7 @@ test('invalid values are rejected with a clear message', () => {
   expect(() => resolveOptions([{ maxIncrease: -1 }], {})).toThrow(/maxIncrease/);
   expect(() => resolveOptions([{ refreshRate: 90 as 60 }], {})).toThrow(/refreshRate/);
   expect(() => resolveOptions([{ enforce: 'maybe' as 'warn' }], {})).toThrow(/enforce/);
+  expect(() => resolveOptions([{ replay: 'sometimes' as 'on' }], {})).toThrow(/replay must be/);
 });
 
 test('mode: option beats SMOOTHNESS_MODE beats scheduled CI beats default', () => {

@@ -27,6 +27,7 @@ export function makeResult(overrides: DeepPartial<SmoothnessResult> = {}): Smoot
       gateTotalBlocking: false,
       baselineDir: null,
       modeSource: 'default',
+      replay: 'on-regression',
     },
     input: {
       interactions: 1,
