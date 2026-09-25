@@ -34,6 +34,16 @@ Trace screenshots are JPEGs. The options were a JPEG decoder in Node (a dependen
 
 The line-counting function (`src/list/coverage.ts`) is plain code with no dependencies. It runs in that page, and unit tests call it directly in Node.
 
+## Replays
+
+A replay turns a measured run's screenshots into a WebM video attached to the test (`smoothness replay: <label>`). The run chosen is the one whose blank-frame share is closest to the reported median. Each frame shows the list outlined, which turns red and says **BLANK** when the frame is blank. A panel below gives the frame number, its time, how drawn the list was, and a timeline of every frame in the run with a playhead. It plays 4× slower than real time (`REPLAY_SLOWDOWN`), because at 60 frames a second a blank frame lasts 16ms.
+
+![A frame from a replay: the list blank and marked in red, with frame 112 of 203 at 0% drawn, and the timeline below](replay-frame.png)
+
+- `replay: 'on-regression'` (the default) attaches one when a check got worse. `'on'` attaches one for every full-mode `scroll()`, and `'off'` never.
+- It's made after the test body, from frames the measurement already recorded, so it doesn't affect the numbers. When no replay is wanted, nothing is encoded.
+- Encoding uses WebCodecs (`VideoEncoder`, VP8) in a throwaway page of the same Chromium; that page is on `http://localhost` because WebCodecs needs a secure context. The WebM container is written by the library (`src/replay/webm.ts`), including cues, so the report's player can seek. There are no dependencies. A 3.3-second fling becomes a 15-second replay of about 550KB, encoded in under a second locally.
+
 ## Results
 
 The test list (`test-pages/list.html`), 600×600, flung 20,000px at 6,000px/s with the mouse wheel, no CPU throttling, median of 3 runs. Locally, Chrome 153:
