@@ -199,6 +199,16 @@ npx playwright-smoothness calibrate --runs 5 -- --project=chromium
 
 This runs your suite 5 times on unchanged code, with `toBeSmooth()` neither comparing nor recording, and prints how much each check's numbers moved between runs, with the smallest `maxIncrease` (in steps of 0.05) that would have absorbed it. It warns when a check needs more than the default 0.15 and names the noisy metric. Changes within a check's floors (16ms, 1 long frame, 1 point) can't fail it, and calibrate says so. Everything after `--` goes to `playwright test`. Results are also written to `smoothness-calibration.json`. Run it on the machine that gates, such as your CI runner.
 
+## Running in CI
+
+The short version of [docs/ci.md](docs/ci.md), with a workflow ready to copy in [examples/github-actions](examples/github-actions):
+
+- **Gate on a machine you control.** Numbers depend on the CPU, and GitHub's hosted runners vary up to 1.5x between jobs (see below). A dedicated or self-hosted runner gives steady baselines; on hosted runners, expect some checks to be skipped when a job lands on a CPU model with no baseline yet.
+- **Baselines come from main, as artifacts.** Main re-records them with `--update-snapshots=all` and uploads them; pull requests download them and point `baselineDir` at them.
+- **Quick mode on pull requests, full mode on a schedule.** Quick mode is the default. Scheduled runs switch to full mode by themselves, adding dropped frames, blank rows and the CPU profile.
+- **Warn first.** Keep `enforce: 'warn'` until `calibrate` says a check is steady on your runner, then switch it to `'fail'`.
+- **Summarise on the pull request** with the reporter, and optionally a `gh pr comment` step.
+
 ## Baselines and CI machines
 
 Baselines are keyed by label, test, project, platform, mode, refresh rate, CPU throttling, and **CPU model**. On GitHub's hosted runners the same job lands on different CPUs, and the same work took 150ms, 197ms, or 226ms depending on which one ([measurements](docs/measurements.md)). A baseline from one CPU model is never compared with a run on another. The result says which machines have baselines instead. For stable gating, use a dedicated runner, or keep baselines for each CPU model your hosted runners use.

@@ -1,12 +1,28 @@
 # Copy to .github/workflows/smoothness.yml. Explained in docs/ci.md.
+#
+# - Pull requests: quick mode, compared with baselines from main, summary on the PR.
+# - Pushes to main: baselines re-recorded and published as an artifact.
+# - Nightly: full mode (dropped frames, blank rows, CPU profile), compared, then re-recorded.
+#
+# Needs the reporter in playwright.config.ts: reporter: [['list'], ['playwright-smoothness/reporter']]
+# and smoothnessOptions: { baselineDir: process.env.SMOOTHNESS_BASELINE_DIR }.
 name: Smoothness
 on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: '0 3 * * *'
+
+permissions:
+  contents: read
+  pull-requests: write # for the summary comment
+  actions: read # to download artifacts from main's runs
 
 jobs:
   smoothness:
+    # A dedicated runner keeps every job on the same CPU, so every check is compared.
+    # On hosted runners use ubuntu-latest: baselines then build up per CPU model.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,8 +31,6 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
-      # Start from main's latest baselines, on every branch. On main this keeps other CPU
-      # models' baselines, so the artifact accumulates one file per CPU model.
       - uses: dawidd6/action-download-artifact@v6
         continue-on-error: true # the very first run has no artifact yet
         with:
@@ -25,31 +39,37 @@ jobs:
           name: smoothness-baselines
           path: smoothness-baselines
 
-      - name: 'Pull request: compare with main'
-        if: github.event_name == 'pull_request'
+      - name: 'Pull request or schedule: compare with main'
+        if: github.event_name == 'pull_request' || github.event_name == 'schedule'
         run: npx playwright test
         env:
           SMOOTHNESS_BASELINE_DIR: smoothness-baselines
 
+      - name: 'Pull request: comment with the summary'
+        if: github.event_name == 'pull_request' && always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment ${{ github.event.pull_request.number }} --body-file test-results/smoothness/summary.md --edit-last --create-if-none
+
       - name: 'Main: re-record baselines'
         if: github.ref == 'refs/heads/main'
         run: |
-          # Keep baselines for other CPU models, then re-record this machine's.
+          # Keep baselines for other CPU models and modes, then re-record this machine's.
           if [ -d smoothness-baselines ]; then cp -R smoothness-baselines/. tests/; fi
           npx playwright test --update-snapshots=all
 
       # upload-artifact trims paths to the files' common directory, which would lose the
       # <spec>-snapshots/ part. Copy the baselines into a staging directory with their paths
-      # relative to the snapshot directory intact.
+      # relative to the snapshot directory intact (portable: no GNU cp --parents).
       - name: 'Main: collect baselines'
         if: github.ref == 'refs/heads/main'
         run: |
           mkdir -p baselines-out
-          # Portable: GNU cp --parents doesn't exist on macOS runners.
           (cd tests && find . -path '*-snapshots/smoothness/*' -type f | while read -r f; do
             mkdir -p "../baselines-out/$(dirname "$f")" && cp "$f" "../baselines-out/$f"
           done)
           test -n "$(find baselines-out -type f)" || { echo 'no baselines were collected'; exit 1; }
+
       - name: 'Main: publish baselines'
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4

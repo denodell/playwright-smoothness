@@ -87,6 +87,12 @@ export default defineConfig<SmoothnessTestOptions>({
 
 This example assumes `snapshotDir` is `tests` (the default when `testDir` is `tests`). `dawidd6/action-download-artifact` is a third-party action; GitHub's own `actions/download-artifact` can only read artifacts from the same workflow run.
 
+## Use a dedicated runner if you can
+
+Baselines are only compared on the same CPU model ([measurements.md](measurements.md) has the numbers). GitHub's hosted `ubuntu-latest` runners landed on three different AMD EPYC models in this project's CI, with up to 1.5x difference in speed. On hosted runners the recipe still works: the artifact collects a baseline per CPU model over time. But a pull request that lands on a model with no baseline isn't compared ("No baseline for this machine").
+
+A self-hosted or larger dedicated runner (`runs-on: [self-hosted, linux]`, or a GitHub larger runner) runs every job on the same hardware, so every check is compared every time. Keep other work off it while smoothness tests run: they measure CPU time, and a busy machine is a noisy one.
+
 ## The summary, on the pull request
 
 With the reporter in your config (`reporter: [['list'], ['playwright-smoothness/reporter']]`), each run adds the smoothness summary to the GitHub Actions job summary. To post it as a comment on the pull request as well:
