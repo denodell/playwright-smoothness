@@ -1,8 +1,12 @@
 # playwright-smoothness
 
-Fail the build when a web UI stops being smooth. `playwright-smoothness` measures scripted interactions in Chromium, compares each one with a stored baseline, and names the element and the scripts responsible when it gets worse.
+Fail the build when a web UI stops being smooth. `playwright-smoothness` measures scripted interactions and list scrolling in Chromium, compares each one with a stored baseline, and names the element and the code responsible when it gets worse.
 
-> **0.1 is a preview.** Quick mode (input-to-paint and long frames), full mode (dropped frames from a Chrome trace), baselines, and the `toBeSmooth()` matcher work. `smoothness.scroll()` (blank rows in long lists) comes next. Expect breaking changes before 1.0. Reports of noise on your CI runners are especially welcome.
+![A virtualized list, flung at 6,000px/s: drawn in every frame (left), and blank in 92% of frames while 97% of frames are still on time (right)](docs/hero.png)
+
+Dropped frames don't show a list going blank. On the right, 97% of frames arrive on time, but the rows aren't there. `smoothness.scroll()` measures both.
+
+> **0.x.** The API may change before 1.0. A reporter for pull-request comments, a `calibrate` command, and automatic measurement of existing tests are planned. Reports of noise on your CI runners are especially welcome.
 
 ## Quick start
 
@@ -13,13 +17,24 @@ npm install -D playwright-smoothness
 Requires Node 20 or later and `@playwright/test` 1.49 or later.
 
 ```ts
-// tests/filters.spec.ts
+// tests/smoothness.spec.ts
 import { test, expect } from 'playwright-smoothness';
 
 test('filters open smoothly', async ({ page, smoothness }) => {
   await page.goto('/articles');
   const result = await smoothness.measure('open filters', async () => {
     await page.getByRole('button', { name: 'Filters' }).click();
+  });
+  expect(result).toBeSmooth();
+});
+
+test('catalogue flick stays drawn', async ({ page, smoothness }) => {
+  await page.goto('/catalogue');
+  const result = await smoothness.scroll(page.getByRole('list', { name: 'Trending' }), {
+    mode: 'full', // blank rows need the trace's screenshots
+    input: 'touch', // 'wheel' | 'touch' | 'keys'
+    speed: 'fast', // 'slow' | 'normal' | 'fast' | pixels per second
+    distance: 20_000, // or 'end'
   });
   expect(result).toBeSmooth();
 });
@@ -56,6 +71,22 @@ await smoothness.measure('add to cart', action, {
 });
 ```
 
+## What `scroll()` does
+
+`smoothness.scroll(locator, options)` does the same repeated, reloaded runs as `measure()`, with the scroll as the action:
+
+- `input: 'wheel'` (default) and `'touch'` send a real compositor-driven gesture (`Input.synthesizeScrollGesture`). A touch fling coasts past its distance, as on a phone.
+- `input: 'keys'` presses the arrow keys 100ms apart and measures each press as an interaction.
+- `direction: 'vertical'` (default) or `'horizontal'`. `distance: 'end'` (default) or pixels. On a long or endless list, pass pixels: the end of a 5,000-row list is minutes away.
+
+In full mode it also finds **blank frames**. It screenshots the list at rest, then compares each frame the compositor produced during the scroll with it. A frame drawn to less than half of the resting list is blank. Tell it about skeleton rows, which should count as blank too:
+
+```ts
+await smoothness.scroll(list, { mode: 'full', list: { placeholders: ['.skeleton-row', '#e5e7eb'] } });
+```
+
+How it works, and its limits: [docs/list-detection.md](docs/list-detection.md).
+
 ## What the numbers mean
 
 | Field                        | Meaning                                                                                                | Gated    |
@@ -68,12 +99,14 @@ await smoothness.measure('add to cart', action, {
 
 In full mode (`mode: 'full'`), each run is also traced:
 
-| Field                  | Meaning                                                                                                                                                                    | Gated |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
-| `frames.onTimePercent` | Frames presented on time, out of frames that had an update to show, from Chrome's frame reporter in the trace. Catches drops that are too short for Long Animation Frames. | Yes   |
-| `frames.dropped`       | Frames whose update missed its deadline.                                                                                                                                   | No    |
-| `profile.hotFunctions` | Functions that used the most CPU during the interaction, from V8's sampling profiler, with their callers. Names your handler even behind React's or Angular's dispatcher.  | Never |
-| `budget120`            | With `refreshRate: 120`: main-thread frames over 8.33ms. A prediction, because headless Chrome runs at 60Hz.                                                               | Never |
+| Field                    | Meaning                                                                                                                                                                    | Gated |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| `frames.onTimePercent`   | Frames presented on time, out of frames that had an update to show, from Chrome's frame reporter in the trace. Catches drops that are too short for Long Animation Frames. | Yes   |
+| `frames.dropped`         | Frames whose update missed its deadline.                                                                                                                                   | No    |
+| `list.blankFramePercent` | `scroll()` only: frames where the list was drawn to less than half of its resting state.                                                                                   | Yes   |
+| `list.leastDrawnPercent` | `scroll()` only: the emptiest frame, as a percentage of the list at rest.                                                                                                  | No    |
+| `profile.hotFunctions`   | Functions that used the most CPU during the interaction, from V8's sampling profiler, with their callers. Names your handler even behind React's or Angular's dispatcher.  | Never |
+| `budget120`              | With `refreshRate: 120`: main-thread frames over 8.33ms. A prediction, because headless Chrome runs at 60Hz.                                                               | Never |
 
 Full mode costs about 5–25% more time per measurement and doesn't change the other numbers ([docs/trace-categories.md](docs/trace-categories.md)).
 
@@ -114,17 +147,18 @@ export default defineConfig<SmoothnessTestOptions>({
 });
 ```
 
-| Option              | Default    |                                                                                           |
-| ------------------- | ---------- | ----------------------------------------------------------------------------------------- |
-| `runs`              | `5`        | Measured runs. The median is reported.                                                    |
-| `cpuThrottling`     | `4`        | CPU slowdown. `1` turns it off.                                                           |
-| `maxIncrease`       | `0.15`     | Allowed increase over the baseline.                                                       |
-| `enforce`           | `'warn'`   | `'warn'` or `'fail'`.                                                                     |
-| `reset`             | `'reload'` | `'reload'`, `'none'`, or an async function.                                               |
-| `baselineDir`       | none       | A directory of baselines from your main branch, checked before the ones next to the test. |
-| `gateTotalBlocking` | `false`    | Also gate total blocking time.                                                            |
-| `mode`              | see below  | `'quick'` or `'full'`. Full mode adds a Chrome trace for dropped frames.                  |
-| `refreshRate`       | `60`       | `120` adds a reported-only 120Hz prediction in full mode.                                 |
+| Option              | Default                                    |                                                                                                                     |
+| ------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `runs`              | `5`                                        | Measured runs. The median is reported.                                                                              |
+| `cpuThrottling`     | `4`                                        | CPU slowdown. `1` turns it off.                                                                                     |
+| `maxIncrease`       | `0.15`                                     | Allowed increase over the baseline.                                                                                 |
+| `enforce`           | `'warn'`                                   | `'warn'` or `'fail'`.                                                                                               |
+| `reset`             | `'reload'`                                 | `'reload'`, `'none'`, or an async function.                                                                         |
+| `baselineDir`       | none                                       | A directory of baselines from your main branch, checked before the ones next to the test.                           |
+| `gateTotalBlocking` | `false`                                    | Also gate total blocking time.                                                                                      |
+| `mode`              | see below                                  | `'quick'` or `'full'`. Full mode adds a Chrome trace: dropped frames, a CPU profile, and blank rows for `scroll()`. |
+| `list`              | `{ background: 'auto', placeholders: [] }` | `scroll()` in full mode: what counts as blank.                                                                      |
+| `refreshRate`       | `60`                                       | `120` adds a reported-only 120Hz prediction in full mode.                                                           |
 
 The mode comes from the option, then `SMOOTHNESS_MODE`, then scheduled CI runs (`full`), then `quick`. See [docs/mode-detection.md](docs/mode-detection.md).
 
@@ -146,7 +180,15 @@ Every result is written as JSON (`schemaVersion: 1`) under `test-results/smoothn
 - **Main-thread attribution.** Long frames and scripts come from the main thread. Compositor-only jank isn't attributed.
 - **Noise.** Results within one CI job are steady (about ±2% on GitHub's runners), but runner hardware varies between jobs; see above.
 - **Headless.** Use new headless (`channel: 'chromium'`). The older headless shell is detected and warned about.
+- **120Hz is a prediction.** Headless Chrome runs at 60Hz; `budget120` counts main-thread frames over 8.33ms, and is never gated.
+- **Fast interactions are invisible to Event Timing.** Interactions under 16ms aren't reported by the browser, so `input.interactions` counts slower ones only.
 - **Navigation.** An action that navigates to a new document can't be measured; the result says so.
+
+## Examples
+
+- [`examples/plain-site`](examples/plain-site): a static page with a button and a long list. CI checks the baseline recipe against it end to end.
+- [`examples/react-list`](examples/react-list): a minified React windowed list, where full mode names the slow component through source maps.
+- [`examples/github-actions`](examples/github-actions): the CI workflow from [docs/ci.md](docs/ci.md), ready to copy.
 
 ## Licence
 
