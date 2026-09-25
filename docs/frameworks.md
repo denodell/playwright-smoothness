@@ -58,6 +58,24 @@ Each entry in `longFrames.topScripts` has a `during` list: the interactions whos
 
 That relies only on timing, so it works the same for React, Zone.js, zoneless Angular, and frameworks not tested here. Reports (M2 and M5) lead with the element ("click on `button#checkout`: 180ms to paint") and show the script as supporting detail.
 
-## Possible follow-up: naming the handler in full mode
+## Naming the handler: the CPU profile (full mode)
 
-Naming the app's own function needs a JavaScript profile, not LoAF. Full mode already records a Chrome trace; adding V8's sampling profiler category (`disabled-by-default-v8.cpu_profiler`) to it would give self-time per function, including `onCheckout`, during the interaction's frames. That's a bigger piece of work, and traces with profiles are larger again. It's proposed as an M3 option, not built.
+Full mode records V8's sampling profiler in the same trace (`disabled-by-default-v8.cpu_profiler`, a sample about every 140µs). The library attributes the samples that fall inside the interaction's long frames and Event Timing windows to functions, and reports the top ones as `profile.hotFunctions`, each with self time, total time and its most common callers. A profile has whole stacks, not just entry points, so it can see past the dispatcher.
+
+Minified names are mapped back through the page's source maps: V8 gives each function's position in the bundle (the `(` of its parameter list), the identifier just before it is the minified name, and the source map gives its original name and position. The bundle position is kept as `generated`.
+
+| Page                    | Profile alone                                                                       | With source maps                                                       |
+| ----------------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| React, dev              | `busyWait` ← **`onCheckout`** ← `executeDispatch` ← …                               | same, located at `work.js:2`                                           |
+| React, prod             | `G0` ← `n` ← `Cm` ← …                                                               | `busyWait` ← **`onCheckout`** ← `processDispatchQueue` ← …             |
+| Angular + Zone.js, dev  | `busyWait` ← **`onCheckout`** ← `AppComponent_Template_button_click_1_listener` ← … | same                                                                   |
+| Angular + Zone.js, prod | `QN` ← **`onCheckout`** ← `yv_Template_button_click_1_listener` ← …                 | `busyWait` ← **`onCheckout`** ← … ← `executeListenerWithErrorHandling` |
+| Angular zoneless, prod  | `V1` ← **`onCheckout`** ← `Eg_Template_button_click_1_listener` ← …                 | `busyWait` ← **`onCheckout`** ← …                                      |
+
+(`busyWait` is the test pages' stand-in for slow work, and `onCheckout` is the handler that calls it.)
+
+- **The handler is named on every build**, minified or not, behind React's dispatcher, Zone.js, and Angular's listener wrapper.
+- **Source maps are fetched the way the page would fetch them**, through Playwright's request context, so cookies and HTTP credentials apply. `//# sourceMappingURL` comments, `data:` URLs and the `SourceMap` header all work. Pages that don't publish maps keep the names V8 reports, without a note, because those names are what the code is actually called. A map that is referenced but can't be loaded or parsed gets a note.
+- The decoder is in-house (`src/sourcemap/`, no dependencies). Index maps (with `sections`) aren't supported and are reported as such.
+- **Workers are excluded.** Each thread has its own profile, and the library reads only the one on the thread its start mark came from (the page's main thread). `test-pages/worker.html` keeps a worker busy next to a slow click handler; the worker's function never appears.
+- `(program)` is browser work outside JavaScript (style, layout, painting), and `now` is `performance.now()` itself.

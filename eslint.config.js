@@ -23,6 +23,8 @@ export default tseslint.config(
       globals: {
         // Defined by test-pages/lib/work.js, which every page loads first.
         busyWait: 'readonly',
+        self: 'readonly',
+        Worker: 'readonly',
         doWork: 'readonly',
         param: 'readonly',
         window: 'readonly',

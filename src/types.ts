@@ -126,12 +126,55 @@ export interface LongFramesResult {
   topScripts: TopScript[];
 }
 
-/** Frame delivery from the Chrome trace (full mode, M3). */
+/** Frame delivery from the Chrome trace (full mode). */
 export interface FramesResult {
+  /** Frames that had an update to show: presented plus dropped. */
   total: number;
+  /** Presented in full or in part (`STATE_PRESENTED_ALL`, `STATE_PRESENTED_PARTIAL`). */
   onTime: number;
+  /** `STATE_DROPPED`: an update missed its frame. */
   dropped: number;
-  onTimePercent: number;
+  /** onTime / total × 100. Null when no frame had an update (nothing to be on time for). */
+  onTimePercent: number | null;
+}
+
+/** A function that used CPU during the interaction, from the V8 sampling profiler (full mode). */
+export interface HotFunction {
+  /** Function name, `(anonymous)`, or a V8 pseudo-frame such as `(program)` (browser work outside JavaScript) or `(garbage collector)`. */
+  fn: string;
+  url: string;
+  /** 1-based, 0 when unknown. */
+  line: number;
+  /** 1-based, 0 when unknown. */
+  column: number;
+  /** Time sampled in this function itself, averaged per run. */
+  selfMs: number;
+  /** Time sampled in this function or anything it called, averaged per run. */
+  totalMs: number;
+  /** The most common callers, nearest first: `['onCheckout', 'executeDispatch', …]`. */
+  callers: string[];
+  /**
+   * Set when a source map resolved this function: its minified name and bundle position.
+   * `fn`, `url`, `line` and `column` are then the original ones.
+   */
+  generated?: { fn: string; url: string; line: number; column: number };
+}
+
+export interface ProfileResult {
+  /** Functions ranked by self time during the interaction (its long frames and Event Timing windows). */
+  hotFunctions: HotFunction[];
+  /** JavaScript and browser time sampled in those windows, averaged per run (idle excluded). */
+  sampledMs: number;
+}
+
+/** A 120Hz prediction from AnimationFrame durations (full mode, refreshRate 120). Never gated. */
+export interface Budget120Result {
+  /** Main-thread frames longer than 8.33ms, the 120Hz budget. */
+  framesOverBudget: number;
+  /** Main-thread frames measured. */
+  frames: number;
+  /** Always true: headless Chrome runs at 60Hz, so 120Hz is predicted, not observed. */
+  predicted: true;
 }
 
 /** Blank rows while scrolling a list, from trace screenshots (`scroll()` in full mode, M4). */
@@ -176,6 +219,10 @@ export interface SmoothnessResult {
   frames?: FramesResult | null;
   /** `scroll()` in full mode only. */
   list?: ListResult | null;
+  /** Full mode with refreshRate 120 only. Reported, never gated. */
+  budget120?: Budget120Result | null;
+  /** Full mode only: where CPU time went during the interaction. Reported, never gated. */
+  profile?: ProfileResult | null;
   /** Null when Event Timing couldn't be measured (see `unavailable`). */
   input: InputResult | null;
   /** Null when LoAF couldn't be measured (see `unavailable`). */

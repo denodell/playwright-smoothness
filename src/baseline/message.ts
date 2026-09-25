@@ -1,5 +1,5 @@
 import { isAbsolute, relative } from 'node:path';
-import type { Check, Comparison, SmoothnessResult, TopScript } from '../types.js';
+import type { Check, Comparison, HotFunction, SmoothnessResult, TopScript } from '../types.js';
 import { PACKAGE_NAME } from '../constants.js';
 
 /** How many scripts a message names. */
@@ -44,6 +44,19 @@ export function shortSource(source: string): string {
 function displayPath(path: string, cwd: string): string {
   const rel = relative(cwd, path);
   return rel.startsWith('..') || isAbsolute(rel) ? path : rel;
+}
+
+/** How many callers a message shows for a hot function. */
+export const MESSAGE_CALLERS = 4;
+
+/** `busyWait in work.js:3: 117.5ms self (149.9ms with calls), from onCheckout ← executeDispatch`. */
+export function describeHotFunction(f: HotFunction): string {
+  const where = f.url ? ` in ${shortSource(f.url)}${f.line ? `:${f.line}` : ''}` : '';
+  const total = f.totalMs > f.selfMs ? ` (${r1(f.totalMs)}ms with calls)` : '';
+  const from = f.callers.length
+    ? `, from ${f.callers.slice(0, MESSAGE_CALLERS).join(' ← ')}${f.callers.length > MESSAGE_CALLERS ? ' ← …' : ''}`
+    : '';
+  return `${f.fn}${where}: ${r1(f.selfMs)}ms self${total}${from}`;
 }
 
 export function describeScript(s: TopScript): string {
@@ -94,6 +107,12 @@ export function formatMessage(result: SmoothnessResult, comparison: Comparison, 
   if (worse.length && scripts.length) {
     lines.push('', 'Scripts blocking the interaction:');
     scripts.forEach((s, i) => lines.push(`  ${i + 1}. ${describeScript(s)}`));
+  }
+
+  const hot = result.profile?.hotFunctions.slice(0, MESSAGE_SCRIPTS) ?? [];
+  if (worse.length && hot.length) {
+    lines.push('', 'Where the time went (CPU profile):');
+    hot.forEach((f, i) => lines.push(`  ${i + 1}. ${describeHotFunction(f)}`));
   }
 
   if (comparison.checks.length) {

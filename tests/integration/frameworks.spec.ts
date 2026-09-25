@@ -54,3 +54,27 @@ for (const name of PAGES) {
     expect(typing.longFrames!.topScripts[0]!.during).toEqual(['keydown on input#search']);
   });
 }
+
+// Full mode's CPU profile names the app's handler behind each framework's dispatcher, which
+// LoAF can't. In minified builds the names come back through the page's source maps.
+for (const name of PAGES) {
+  test(`CPU profile names onCheckout on ${name}`, async ({ page, smoothness }) => {
+    await page.goto(`/frameworks/dist/${name}.html`);
+    await page.locator('#checkout').waitFor();
+    const result = await smoothness.measure(`${name} profile`, () => page.click('#checkout .label'), {
+      mode: 'full',
+      runs: 2,
+    });
+    const top = result.profile!.hotFunctions[0]!;
+    save(`framework-profile-${name}`, { profile: result.profile, notes: result.notes });
+    expect(top.selfMs).toBeGreaterThan(80);
+    expect(top.fn).toBe('busyWait');
+    expect(top.callers[0]).toBe('onCheckout');
+    expect(top.url).toMatch(/\/frameworks\/src\/work\.js$/);
+    // Every build here ships a source map, so the bundle position is kept alongside.
+    expect(top.generated!.url).toMatch(new RegExp(`/frameworks/dist/${name.replace('.', '\\.')}\\.js$`));
+    if (name.endsWith('.prod')) expect(top.generated!.fn).not.toBe('busyWait');
+    // Only the page's own compositor is counted, so there's nothing to note.
+    expect(result.notes).toEqual([]);
+  });
+}

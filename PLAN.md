@@ -233,3 +233,13 @@ Order: `test.use({ smoothness: { mode } })` → `SMOOTHNESS_MODE` → scheduled 
 19. **Typed config:** `defineConfig<SmoothnessTestOptions>()` is needed for `use: { smoothnessOptions }` to typecheck in `playwright.config.ts`. Covered by a compile-only test.
 20. **CI baselines** come from the main branch through `baselineDir` (`docs/ci.md`). The recipe is checked end to end before the public release (M4).
 21. **Preview publishing** uses `npm run release:preview`, which passes `--tag next` explicitly, because npm didn't show `publishConfig.tag` taking effect in a dry run. Publishing needs your go-ahead.
+
+## Decisions made during M3
+
+22. **Trace window from in-page marks**, not from input events. `performance.mark()` calls land in the trace (`blink.user_timing`) with both clocks, so frames are counted between the marks. This also explains M0's "tracing start" drop: it came from Playwright's `about:blank` compositor.
+23. **Minimal categories:** `disabled-by-default-devtools.timeline.frame` + `blink.user_timing` (240KB, against 2,148KB for the spike's set), plus `devtools.timeline` only for `refreshRate: 120`.
+24. **A frame reported both presented and dropped counts as both.** That's how a blocked main thread shows while the compositor keeps scrolling, and it's what the section 3 table measures.
+25. **`frames.onTimePercent` is null when no frame had an update**, rather than 100.
+26. **Full mode records a V8 CPU profile** (your call on PR #4). It's in the same trace and windowed by the same marks, and attributed to the page's main thread only. `profile.hotFunctions` names `onCheckout` behind React's and Angular's dispatchers in readable builds. Minified React would need source maps; that's an open question.
+27. **Source maps, decoded in-house** (your call on PR #4). They're used only to name functions in the CPU profile, where they work: the profile gives each function's bundle position. They weren't needed for LoAF, where only the dispatcher's entry point is known. The decoder is `src/sourcemap/`, with no new dependency.
+28. **Frames count only from the page's renderer process.** The browser's own compositor presented one frame inside the window after every reload, and was being counted. Out-of-process iframes aren't counted either, with a note.

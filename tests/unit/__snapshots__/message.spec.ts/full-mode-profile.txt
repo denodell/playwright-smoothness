@@ -1,0 +1,16 @@
+"open filters" is less smooth than its baseline:
+  input-to-paint (p95) 176ms (+72ms, +69.2%), slowest: click on button#checkout
+
+Scripts blocking the interaction:
+  1. dispatchDiscreteEvent in index-3f9a.js (DIV#root.onclick): ran 171.4ms, 121.4ms of it blocking, during click on button#checkout
+
+Where the time went (CPU profile):
+  1. busyWait in index-3f9a.js:23841: 117.5ms self (149.9ms with calls), from onCheckout ← executeDispatch ← run ← runWithFiberInDEV ← …
+
+Checks:
+  check                 now    baseline  change          allowed  result
+  input-to-paint (p95)  176ms  104ms     +72ms (+69.2%)  +16ms    WORSE
+  long frames           1      0         +1              +1       ok
+
+Baseline: tests/checkout.spec.ts-snapshots/smoothness/open-filters-quick-60hz-cpu4x-amd-epyc-7763-4cpu-chromium-linux.json (snapshot, recorded 2026-09-20, chromium 153.0.8010.12, AMD EPYC 7763 64-Core Processor)
+This is a warning (enforce: 'warn'). Set enforce: 'fail' to fail the test once you trust this check.
