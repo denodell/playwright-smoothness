@@ -138,9 +138,9 @@ export function analyzeDocs(docs: Map<number, DocData>) {
       .sort((a, b) => a.timeOrigin - b.timeOrigin)[0];
     const input = d.lastInput;
     if (next && input && next.timeOrigin - (d.timeOrigin + input.at) <= UNPAINTED_INPUT_MS) {
-      const covered = d.events.some(
-        (e) => e.interactionId > 0 && e.start <= input.at + 1 && e.start + e.duration >= input.at - 1,
-      );
+      // An Event Timing entry's startTime is its event's timeStamp. Overlap isn't enough: an
+      // earlier input's entry can still be running when this one arrives.
+      const covered = d.events.some((e) => e.interactionId > 0 && Math.abs(e.start - input.at) <= 1);
       if (!covered) unmeasured.push(`${input.type} on ${d.url}`);
     }
     const di = groupInteractions(d.events, d.loaf);

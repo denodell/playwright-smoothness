@@ -131,6 +131,15 @@ test('analyzeDocs: an input the page navigated away from before painting is repo
   expect(analyzeDocs(docs).unmeasured).toEqual(['pointerdown on http://x/a']);
 });
 
+test("analyzeDocs: an earlier click's entry still running when the input arrived doesn't count as measuring it", () => {
+  // A slow click at 780ms is measured until 910ms; the navigating click at 900ms never paints.
+  const docs = new Map([
+    [1_000_000, doc({ lastInput: { at: 900, type: 'pointerdown' }, events: [click(780, 130)] })],
+    [1_000_960, doc({ url: 'http://x/b', timeOrigin: 1_000_960 })],
+  ]);
+  expect(analyzeDocs(docs).unmeasured).toEqual(['pointerdown on http://x/a']);
+});
+
 test('analyzeDocs: not reported when the input was measured, when the page stayed, or when another tab navigated', () => {
   const measured = new Map([
     [1_000_000, doc({ lastInput: { at: 900, type: 'pointerdown' }, events: [click(899, 40)] })],
