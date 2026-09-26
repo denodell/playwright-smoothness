@@ -6,10 +6,9 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { SmoothnessResult } from '../../src/types.js';
-import { files } from './helpers.js';
+import { files, PLAYWRIGHT_CLI } from './helpers.js';
 
 const CONFIG = 'tests/e2e/fixture-project/playwright.config.ts';
-const PLAYWRIGHT = join('node_modules', '.bin', 'playwright');
 
 let work: string;
 test.beforeAll(() => {
@@ -22,7 +21,7 @@ function run(env: Record<string, string>, args: string[] = []) {
   const out = join(work, 'out');
   // Drop the parent run's worker variables so the child is an ordinary top-level run.
   const clean = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^(TEST_|PW_)/.test(k)));
-  const child = spawnSync(PLAYWRIGHT, ['test', '-c', CONFIG, ...args], {
+  const child = spawnSync(process.execPath, [PLAYWRIGHT_CLI, 'test', '-c', CONFIG, ...args], {
     env: {
       ...clean,
       GITHUB_ACTIONS: '',

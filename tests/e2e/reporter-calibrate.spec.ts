@@ -2,6 +2,7 @@
 // the reporter loaded by package name, and calibrate's stability over two invocations.
 import { test, expect } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
+import { PLAYWRIGHT_CLI } from './helpers.js';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,8 +25,8 @@ test('the reporter writes the markdown summary and the job summary', () => {
   test.skip(!built, 'run npm run build first');
   const step = join(work, 'step-summary.md');
   const child = spawnSync(
-    join('node_modules', '.bin', 'playwright'),
-    ['test', '-c', CONFIG, `--reporter=list,${join(process.cwd(), 'dist', 'reporter.js')}`],
+    process.execPath,
+    [PLAYWRIGHT_CLI, 'test', '-c', CONFIG, `--reporter=list,${join(process.cwd(), 'dist', 'reporter.js')}`],
     {
       env: {
         ...clean(),
@@ -52,7 +53,7 @@ test('calibrate gives the same suggestions twice in a row (within one 0.05 step)
   const once = (n: number) => {
     const out = join(work, `calibration-${n}.json`);
     const child = spawnSync(
-      'node',
+      process.execPath,
       ['dist/cli.js', 'calibrate', '--runs', '3', '--out', out, '--', '-c', CONFIG],
       {
         env: { ...clean(), CLICK_MS: '60', SMOOTHNESS_E2E_SNAPSHOTS: join(work, 'snapshots-cal') },
