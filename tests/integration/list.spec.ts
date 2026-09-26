@@ -258,7 +258,7 @@ test.describe('replays', () => {
     expect(webm.endsWith(json.replay)).toBe(true);
     expect(statSync(webm).size).toBeGreaterThan(50_000);
     const info = await playable(page, webm);
-    expect(info.width).toBe(548); // the 500px screenshot, with a 24px margin on each side
+    expect(info.width).toBe(556); // the 500px screenshot, with a 28px margin on each side
     expect(info.duration).toBeGreaterThan(12); // a 3.3s fling, 4x slower, plus a 1s hold
     expect(info.seekedTo).toBeGreaterThan(info.duration / 4); // seeking works
   });
