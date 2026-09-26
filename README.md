@@ -48,7 +48,7 @@ Use new headless Chromium, which is closer to real Chrome than the default headl
 use: { browserName: 'chromium', channel: 'chromium' },
 ```
 
-The first run records a baseline next to your test, the way `toMatchSnapshot()` does, and passes. Later runs compare with it. Re-record with `npx playwright test --update-snapshots`.
+The first run records a baseline next to your test, the way `toMatchSnapshot()` does, and passes. Later runs compare with it. Re-record with `npx playwright test --update-snapshots`: `=all` replaces every baseline, `=changed` only those that got worse, and `=none` never writes (a missing baseline is then reported as not compared). Renaming a test starts a fresh baseline, because the test title is part of its key.
 
 Baselines are per machine (see [Baselines and CI machines](#baselines-and-ci-machines)), so baselines from your laptop aren't used in CI. In CI, record baselines on your main branch and give them to pull-request runs with `baselineDir`. [docs/ci.md](docs/ci.md) has a GitHub Actions recipe.
 
