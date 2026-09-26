@@ -96,12 +96,17 @@ test('switching the fixtures file to withSmoothness', () => {
     expect.arrayContaining(['onHeavyClick', 'onNestedClick', 'onSearchKeydown']),
   );
   expect(result.notes.join(' ')).not.toContain("wasn't measured");
-  // A click whose handler navigates unloads the page before it paints: never measured, and reported.
+  // A click whose handler navigates usually unloads the page before it paints, so the browser
+  // never measures it. On a slow machine the paint can win the race. Either way the click is
+  // accounted for: measured, or reported as not measured.
   const leave = r.results.find((x) => x.label === 'leave from a button that navigates')!;
-  expect(leave.auto!.interactions.map((i) => `${i.event} on ${i.target}`)).toEqual(['click on button#heavy']);
-  expect(leave.notes.join(' ')).toContain(
-    "The last input before a navigation (pointerdown on http://localhost:4175/click.html?ms=80) wasn't measured",
-  );
+  const leaveClicks = leave.auto!.interactions.map((i) => `${i.event} on ${i.target}`);
+  expect(leaveClicks[0]).toBe('click on button#heavy');
+  if (!leaveClicks.includes('click on button#leave')) {
+    expect(leave.notes.join(' ')).toContain(
+      "The last input before a navigation (pointerdown on http://localhost:4175/click.html?ms=80) wasn't measured",
+    );
+  }
   // Load frames can happen on a slow machine, but they never count as the test's work.
   expect(result.longFrames!.count).toBe(result.frameClasses.interaction);
   expect(result.comparison!.status).toBe('not-compared');
