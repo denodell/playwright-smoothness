@@ -7,7 +7,7 @@ import { appendFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync 
 import { join, relative, resolve } from 'node:path';
 import type { SmoothnessResult } from '../../src/types.js';
 import type { HistoryFile } from '../../src/auto/history.js';
-import { files } from './helpers.js';
+import { files, PLAYWRIGHT_CLI } from './helpers.js';
 
 const repo = process.cwd();
 const project = join(repo, '.tmp-e2e', `auto-${process.pid}`);
@@ -34,8 +34,8 @@ function run(env: Record<string, string> = {}) {
     Object.entries(process.env).filter(([k]) => !/^(TEST_|PW_|GITHUB_|SMOOTHNESS_)/.test(k)),
   );
   const child = spawnSync(
-    join(repo, 'node_modules', '.bin', 'playwright'),
-    ['test', '-c', join(project, 'playwright.config.ts')],
+    process.execPath,
+    [PLAYWRIGHT_CLI, 'test', '-c', join(project, 'playwright.config.ts')],
     {
       cwd: project,
       env: { ...clean, SMOOTHNESS_TEST_PAGES: join(repo, 'test-pages'), ...env },

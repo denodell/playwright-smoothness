@@ -2,8 +2,10 @@
 import { parseArgs } from 'node:util';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
+import { forwardSlashes } from './output.js';
 import type { SmoothnessResult } from './types.js';
 import { calibrate, formatCalibration } from './calibrate/analyze.js';
 import { CALIBRATE_ENV, PACKAGE_NAME } from './constants.js';
@@ -34,8 +36,8 @@ function collect(outputDir: string): Map<string, SmoothnessResult> {
   const root = join(outputDir, 'smoothness');
   const results = new Map<string, SmoothnessResult>();
   for (const file of jsonFiles(root)) {
-    const id = relative(root, file);
-    if (/-retry\d+[/\\]/.test(id)) continue; // a retry is a different attempt, not another sample
+    const id = forwardSlashes(relative(root, file));
+    if (/-retry\d+\//.test(id)) continue; // a retry is a different attempt, not another sample
     try {
       const r = JSON.parse(readFileSync(file, 'utf8')) as SmoothnessResult;
       if (r.schemaVersion === 1) results.set(id, r);
@@ -77,17 +79,29 @@ export function main(argv: string[]): number {
     return 1;
   }
 
+  // Playwright's CLI script, from the project being calibrated. It's run with node directly:
+  // on Windows, Node won't spawn npx.cmd without a shell.
+  let playwrightCli: string;
+  try {
+    playwrightCli = createRequire(join(process.cwd(), 'package.json')).resolve('@playwright/test/cli');
+  } catch {
+    console.error("Couldn't find @playwright/test in this project. Run calibrate from the project's folder.");
+    return 1;
+  }
   const work = mkdtempSync(join(tmpdir(), 'smoothness-calibrate-'));
   const collected: Map<string, SmoothnessResult>[] = [];
   try {
     for (let i = 1; i <= runs; i++) {
       const outputDir = join(work, `run-${i}`);
       console.log(`Run ${i} of ${runs}…`);
-      const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-      const child = spawnSync(npx, ['playwright', 'test', `--output=${outputDir}`, ...passthrough], {
-        stdio: ['ignore', 'ignore', 'inherit'],
-        env: { ...process.env, [CALIBRATE_ENV]: '1' },
-      });
+      const child = spawnSync(
+        process.execPath,
+        [playwrightCli, 'test', `--output=${outputDir}`, ...passthrough],
+        {
+          stdio: ['ignore', 'ignore', 'inherit'],
+          env: { ...process.env, [CALIBRATE_ENV]: '1' },
+        },
+      );
       if (child.error) {
         console.error(`Couldn't run Playwright: ${child.error.message}`);
         return 1;

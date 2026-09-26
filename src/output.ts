@@ -1,8 +1,13 @@
 import { mkdirSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, sep } from 'node:path';
 import { createHash } from 'node:crypto';
 import type { SmoothnessResult } from './types.js';
 import { labelSlug, slug } from './baseline/key.js';
+
+/** A path as shown to people: with forward slashes on every platform, as in Markdown and on GitHub. */
+export function forwardSlashes(path: string): string {
+  return sep === '/' ? path : path.split(sep).join('/');
+}
 
 /** Where each result's JSON was written, so toBeSmooth() can rewrite it with the comparison. */
 const written = new WeakMap<SmoothnessResult, string>();

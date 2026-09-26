@@ -2,6 +2,7 @@ import { isAbsolute, relative } from 'node:path';
 import type { Check, Comparison, HotFunction, SmoothnessResult, TopScript } from '../types.js';
 import { PACKAGE_NAME } from '../constants.js';
 import { round1 } from '../analysis/stats.js';
+import { forwardSlashes } from '../output.js';
 
 /** How many scripts a message names. */
 const MESSAGE_SCRIPTS = 3;
@@ -43,7 +44,7 @@ export function shortSource(source: string): string {
 /** Relative to the working directory when inside it, absolute otherwise. */
 function displayPath(path: string, cwd: string): string {
   const rel = relative(cwd, path);
-  return rel.startsWith('..') || isAbsolute(rel) ? path : rel;
+  return forwardSlashes(rel.startsWith('..') || isAbsolute(rel) ? path : rel);
 }
 
 /** How many callers a message shows for a hot function. */

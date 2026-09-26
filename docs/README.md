@@ -2,6 +2,7 @@
 
 | Page                                       | What it covers                                                                                                      |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| [faq.md](faq.md)                           | Before you adopt it: suite time, flakiness, requirements, privacy, and how it differs from Lighthouse and RUM       |
 | [ci.md](ci.md)                             | Baselines in CI: the GitHub Actions recipe, dedicated runners, full mode on a schedule, the pull-request summary    |
 | [automatic-mode.md](automatic-mode.md)     | `withSmoothness()`: measuring every test, the rolling history, and its limits                                       |
 | [list-detection.md](list-detection.md)     | How blank rows are detected, the thresholds, and measured results                                                   |

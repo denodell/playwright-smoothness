@@ -5,7 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { files } from './helpers.js';
+import { files, PLAYWRIGHT_CLI } from './helpers.js';
 
 const CONFIG = 'tests/e2e/replay-project/playwright.config.ts';
 const REPORTER = join(process.cwd(), 'dist', 'reporter.js');
@@ -23,7 +23,7 @@ function run(env: Record<string, string> = {}) {
     Object.entries(process.env).filter(([k]) => !/^(TEST_|PW_|GITHUB_)/.test(k)),
   );
   const out = join(work, 'out');
-  const child = spawnSync(join('node_modules', '.bin', 'playwright'), ['test', '-c', CONFIG], {
+  const child = spawnSync(process.execPath, [PLAYWRIGHT_CLI, 'test', '-c', CONFIG], {
     env: {
       ...clean,
       SMOOTHNESS_E2E_OUT: out,

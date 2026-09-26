@@ -104,7 +104,12 @@ test('a page that never goes quiet: the run continues, background frames are exc
 }) => {
   test.setTimeout(90_000);
   await page.goto('/mixed.html?bgevery=250');
-  const result = await smoothness.measure('buy on a busy page', () => page.click('#buy .label'), { runs: 2 });
+  // Unthrottled: on Windows, Chrome's CPU throttling spaces timers irregularly (gaps of up to
+  // 500ms for a 100ms interval), so a throttled page can go quiet between background jobs.
+  const result = await smoothness.measure('buy on a busy page', () => page.click('#buy .label'), {
+    runs: 2,
+    cpuThrottling: 1,
+  });
   await attach(result);
   expect(result.notes.join(' ')).toMatch(/didn't go quiet within 5000ms before 3 run/);
   expect(result.longFrames!.topScripts.map((s) => s.fn)).not.toContain('repeatingBackgroundJob');
