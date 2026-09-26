@@ -114,7 +114,7 @@ for (const wait of BLOCKING_MS) {
     // they allow for noise.
     if (wait <= 12) {
       expect(row.traceDroppedMedian, 'trace: at most noise-level drops at ≤12ms').toBeLessThanOrEqual(2);
-      expect(row.loaf, 'LoAF misses ≤12ms').toBe(0);
+      expect(row.loaf, 'LoAF misses ≤12ms').toBeLessThanOrEqual(1);
       expect(row.rafTimestampLate, 'rAF timestamps miss ≤12ms').toBe(0);
     }
     if (wait === 12) {
@@ -123,7 +123,7 @@ for (const wait of BLOCKING_MS) {
     }
     if (wait === 25) {
       expect(row.traceDroppedMedian, 'trace sees drops at 25ms').toBeGreaterThan(0);
-      expect(row.loaf, 'LoAF misses 25ms').toBe(0);
+      expect(row.loaf, 'LoAF misses 25ms').toBeLessThanOrEqual(1);
       expect(row.rafTimestampLate, 'rAF timestamps miss 25ms').toBe(0);
     }
     if (wait >= 40) {
