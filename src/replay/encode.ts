@@ -38,7 +38,7 @@ interface Chunk {
 
 /** Renders and encodes in the page. Self-contained: it's serialized into the browser. */
 async function renderInPage(
-  args: ReplayInput & { slowdown: number; panel: number; keyEvery: number; bitrate: number },
+  args: ReplayInput & { slowdown: number; panel: number; keyEvery: number; bitrate: number; meter: boolean },
 ) {
   const bytes = (b64: string) => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
   const decode = (b64: string) => createImageBitmap(new Blob([bytes(b64)], { type: 'image/jpeg' }));
@@ -61,6 +61,7 @@ async function renderInPage(
     ink: '#111111',
     graphite: '#6b6b6b',
     rule: '#d9d9d9',
+    grid: '#f1f1f1',
     future: '#e4e4e4',
     blank: '#d92d20',
   };
@@ -191,29 +192,45 @@ async function renderInPage(
       text(value, cx, py + 22, mono, 17, 500, fill);
     };
     readout(0, 'DRAWN', `${Math.round(drawn * 100)}%`, blank ? color.blank : color.ink);
+    if (args.meter) {
+      // A ten-segment level meter after the value.
+      g.font = `500 17px ${mono}`;
+      const mx = left + g.measureText('100%').width + 12;
+      const lit = Math.round(drawn * 10);
+      for (let k = 0; k < 10; k++) {
+        g.fillStyle = k < lit ? (blank ? color.blank : color.ink) : color.future;
+        g.fillRect(mx + k * 6, py + 10, 4, 12);
+      }
+    }
     readout(1, 'FRAME', `${String(i + 1).padStart(String(n).length, '0')} / ${n}`, color.ink);
     readout(2, 'TIME', `${secs(args.timesMs[i]!)} / ${secs(total)}`, color.ink);
 
-    // Strip chart: one column per frame, as tall as the frame was drawn; ink, red when blank,
-    // pale grey for frames still to come. A hairline marks the blank threshold.
+    // Strip chart: the drawn share as a stepped trace over time (each frame holds its value until
+    // the next one), filled underneath; red where frames were blank, pale grey for frames still to
+    // come. A faint grid follows the ruler's minor ticks, and a hairline marks the blank threshold.
     const trackTop = py + 44;
     const trackH = 40;
     const base = trackTop + trackH;
     const trackW = right - left;
-    const xAt = (ms: number) => left + (ms / (total || 1)) * (trackW - 1);
-    const barW = Math.max(1, (trackW / n) * 0.6);
-    for (let j = 0; j < n; j++) {
-      const d = args.drawn[j]!;
-      const barH = Math.max(1, d * trackH);
-      g.fillStyle = j > i ? color.future : d < args.blankShare ? color.blank : color.ink;
-      g.fillRect(xAt(args.timesMs[j]!), base - barH, barW, barH);
+    const xAt = (ms: number) => left + (ms / (total || 1)) * trackW;
+    const yAt = (d: number) => base - d * (trackH - 8); // headroom above 100% for the playhead
+    const niceSteps = [0.1, 0.2, 0.25, 0.5, 1, 2, 5];
+    const tickS = niceSteps.find((t) => total / 1000 / t <= 6) ?? 5;
+    const minorS = tickS / 5;
+    g.strokeStyle = color.grid;
+    g.lineWidth = 1;
+    for (let t = minorS; t < total / 1000; t += minorS) {
+      const gx = Math.round(xAt(t * 1000)) + 0.5;
+      g.beginPath();
+      g.moveTo(gx, trackTop);
+      g.lineTo(gx, base);
+      g.stroke();
     }
-    hline(left, right, base, color.ink);
-    hline(left, right, base - args.blankShare * trackH, color.rule);
+    hline(left, right, yAt(args.blankShare), color.rule);
     text(
       `${Math.round(args.blankShare * 100)}%`,
       left - 4,
-      base - args.blankShare * trackH + 3,
+      yAt(args.blankShare) + 3,
       mono,
       9,
       400,
@@ -221,32 +238,65 @@ async function renderInPage(
       'right',
     );
 
-    // Time ruler under the strip.
-    const niceSteps = [0.1, 0.2, 0.25, 0.5, 1, 2, 5];
-    const tickS = niceSteps.find((t) => total / 1000 / t <= 6) ?? 5;
+    // One step per frame: from this frame's time to the next frame's (the last runs to the end).
+    const steps = args.drawn.map((d, j) => ({
+      d,
+      x0: xAt(args.timesMs[j]!),
+      x1: xAt(j + 1 < n ? args.timesMs[j + 1]! : total),
+      played: j <= i,
+      blank: d < args.blankShare,
+    }));
+    for (const st of steps) {
+      g.fillStyle = !st.played
+        ? 'rgba(0, 0, 0, 0.03)'
+        : st.blank
+          ? 'rgba(217, 45, 32, 0.14)'
+          : 'rgba(17, 17, 17, 0.08)';
+      g.fillRect(st.x0, yAt(st.d), Math.max(0.5, st.x1 - st.x0), base - yAt(st.d));
+    }
+    g.lineWidth = 1.5;
+    g.lineJoin = 'miter';
+    for (let j = 0; j < n; j++) {
+      const st = steps[j]!;
+      g.strokeStyle = !st.played ? color.future : st.blank ? color.blank : color.ink;
+      g.beginPath();
+      if (j > 0) g.moveTo(st.x0, yAt(steps[j - 1]!.d));
+      else g.moveTo(st.x0, yAt(st.d));
+      g.lineTo(st.x0, yAt(st.d));
+      g.lineTo(st.x1, yAt(st.d));
+      g.stroke();
+    }
+    hline(left, right, base, color.ink);
+
+    // Time ruler: labelled major ticks, short minor ticks between them.
     g.strokeStyle = color.ink;
     g.lineWidth = 1;
-    for (let t = 0; t <= total / 1000 + 1e-9; t += tickS) {
-      const tx = Math.round(left + ((t * 1000) / (total || 1)) * trackW) + 0.5;
+    for (let t = 0; t <= total / 1000 + 1e-9; t += minorS) {
+      const major = Math.abs(t / tickS - Math.round(t / tickS)) < 1e-6;
+      const tx = Math.round(xAt(t * 1000)) + 0.5;
+      g.strokeStyle = major ? color.ink : color.rule;
       g.beginPath();
       g.moveTo(tx, base);
-      g.lineTo(tx, base + 4);
+      g.lineTo(tx, base + (major ? 5 : 3));
       g.stroke();
-      text(
-        `${Number(t.toFixed(2))}s`,
-        tx,
-        base + 16,
-        mono,
-        9,
-        400,
-        color.graphite,
-        t === 0 ? 'left' : 'center',
-      );
+      if (major)
+        text(
+          `${Number(t.toFixed(2))}s`,
+          tx,
+          base + 17,
+          mono,
+          9,
+          400,
+          color.graphite,
+          t === 0 ? 'left' : 'center',
+        );
     }
 
-    // Playhead: a line with a downward triangle, as in a video editor.
-    const headX = Math.round(xAt(args.timesMs[i]!) + barW / 2) + 0.5;
+    // Playhead: a line with a downward triangle, as in a video editor, and a dot where it meets
+    // the trace.
+    const headX = Math.round(xAt(args.timesMs[i]!)) + 0.5;
     g.strokeStyle = color.ink;
+    g.lineWidth = 1;
     g.beginPath();
     g.moveTo(headX, trackTop - 4);
     g.lineTo(headX, base);
@@ -258,6 +308,13 @@ async function renderInPage(
     g.lineTo(headX, trackTop - 3);
     g.closePath();
     g.fill();
+    g.beginPath();
+    g.arc(headX, yAt(drawn), 3.5, 0, Math.PI * 2);
+    g.fillStyle = blank ? color.blank : color.ink;
+    g.fill();
+    g.strokeStyle = color.paper;
+    g.lineWidth = 1.5;
+    g.stroke();
 
     const footY = base + 36;
     hline(left, right, footY - 14, color.rule);
@@ -319,6 +376,7 @@ export async function encodeReplay(
       panel: PANEL_HEIGHT,
       keyEvery: KEY_FRAME_EVERY,
       bitrate: REPLAY_BITRATE,
+      meter: process.env.SMOOTHNESS_REPLAY_METER === '1', // temporary, for comparing designs
     });
     if (out.failure) return { unavailable: `the replay couldn't be encoded: ${out.failure}` };
     const frames: EncodedFrame[] = out.chunks
