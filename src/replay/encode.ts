@@ -57,12 +57,13 @@ async function renderInPage(
   const font =
     '-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
   const color = {
-    stage: '#0a0a0b',
-    text: '#f5f5f7',
-    muted: '#8e8e93',
-    faint: 'rgba(255, 255, 255, 0.14)',
-    drawn: '#30d158',
-    blank: '#ff453a',
+    stage: '#ffffff',
+    text: '#1d1d1f',
+    muted: '#6e6e73',
+    faint: 'rgba(0, 0, 0, 0.16)',
+    hairline: 'rgba(0, 0, 0, 0.1)',
+    drawn: '#34c759',
+    blank: '#ff3b30',
   };
 
   const canvas = new OffscreenCanvas(width, height);
@@ -114,7 +115,16 @@ async function renderInPage(
     g.fillStyle = color.stage;
     g.fillRect(0, 0, width, height);
 
-    // The screenshot, with rounded corners.
+    // The screenshot, with rounded corners, a soft shadow and a hairline edge.
+    g.save();
+    g.shadowColor = 'rgba(0, 0, 0, 0.10)';
+    g.shadowBlur = 24;
+    g.shadowOffsetY = 6;
+    g.fillStyle = color.stage;
+    g.beginPath();
+    g.roundRect(pad, pad, imgW, imgH, 12);
+    g.fill();
+    g.restore();
     g.save();
     g.beginPath();
     g.roundRect(pad, pad, imgW, imgH, 12);
@@ -128,11 +138,11 @@ async function renderInPage(
     const w = args.rect.width * sx;
     const h = args.rect.height * sy;
     if (blank) {
-      g.fillStyle = 'rgba(255, 69, 58, 0.10)';
+      g.fillStyle = 'rgba(255, 59, 48, 0.08)';
       g.fillRect(x, y, w, h);
     }
     g.lineWidth = blank ? 3 : 1.5;
-    g.strokeStyle = blank ? color.blank : 'rgba(255, 255, 255, 0.55)';
+    g.strokeStyle = blank ? color.blank : 'rgba(0, 0, 0, 0.35)';
     g.beginPath();
     g.roundRect(x + g.lineWidth / 2, y + g.lineWidth / 2, w - g.lineWidth, h - g.lineWidth, 8);
     g.stroke();
@@ -149,6 +159,11 @@ async function renderInPage(
       g.letterSpacing = '0px';
     }
     g.restore();
+    g.strokeStyle = color.hairline;
+    g.lineWidth = 1;
+    g.beginPath();
+    g.roundRect(pad + 0.5, pad + 0.5, imgW - 1, imgH - 1, 12);
+    g.stroke();
 
     // Panel: the check's name, then this frame's drawn share, position and time.
     const left = pad;
@@ -176,7 +191,7 @@ async function renderInPage(
     const trackW = right - left;
     const step = trackW / n;
     const barW = Math.max(1, step - (step > 3 ? 1 : 0));
-    g.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    g.fillStyle = 'rgba(0, 0, 0, 0.035)';
     g.beginPath();
     g.roundRect(left - 6, trackTop - 6, trackW + 12, trackH + 12, 8);
     g.fill();
@@ -200,7 +215,7 @@ async function renderInPage(
     g.stroke();
     g.setLineDash([]);
     const headX = left + (i + 0.5) * step;
-    g.fillStyle = '#fff';
+    g.fillStyle = color.text;
     g.fillRect(headX - 1, trackTop - 6, 2, trackH + 8);
     g.beginPath();
     g.arc(headX, trackTop - 7, 4, 0, Math.PI * 2);
@@ -211,7 +226,7 @@ async function renderInPage(
     const legend = `blank below ${Math.round(args.blankShare * 100)}% drawn`;
     g.font = `500 11px ${font}`;
     const legendX = right - g.measureText(legend).width;
-    g.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    g.strokeStyle = 'rgba(0, 0, 0, 0.3)';
     g.setLineDash([3, 4]);
     g.beginPath();
     g.moveTo(legendX - 26, footY - 4);

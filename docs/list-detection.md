@@ -38,7 +38,7 @@ The line-counting function (`src/list/coverage.ts`) is plain code with no depend
 
 A replay turns a measured run's screenshots into a WebM video attached to the test (`smoothness replay: <label>`). The run chosen is the one whose blank-frame share is closest to the reported median. Each frame shows the list outlined; on a blank frame the outline turns red, with a **BLANK** label. A panel below gives how drawn the list was, the frame number and its time, and a timeline with one bar per frame, as tall as that frame was drawn and red when it was blank. It plays 4× slower than real time (`REPLAY_SLOWDOWN`), because at 60 frames a second a blank frame lasts 16ms.
 
-![A frame from a replay: the list blank and outlined in red, at 0% drawn on frame 123 of 204, with the run's timeline below](replay-frame.png)
+![A frame from a replay: the list blank and outlined in red, at 0% drawn on frame 123 of 203, with the run's timeline below](replay-frame.png)
 
 - `replay: 'on-regression'` (the default) attaches one when a check got worse. `'on'` attaches one for every full-mode `scroll()`, and `'off'` never.
 - It's made after the test body, from frames the measurement already recorded, so it doesn't affect the numbers. When no replay is wanted, nothing is encoded.
