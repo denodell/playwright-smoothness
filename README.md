@@ -82,7 +82,7 @@ await smoothness.measure('add to cart', action, {
 - `input: 'touch'` flicks with real touch events: press, drag across the list at the requested speed, release (the list flings on), and repeat until the distance is covered. It needs a touch-enabled context (`hasTouch: true`, or a mobile device), and throws without one.
 - If the list never moves (for example, the locator isn't the element that scrolls), its blank-frame numbers are reported as unavailable, not as 0%.
 - `input: 'keys'` presses the arrow keys 100ms apart and measures each press as an interaction.
-- `direction: 'vertical'` (default) or `'horizontal'`. `distance: 'end'` (default) or pixels. On a long or endless list, pass pixels: the end of a 5,000-row list is minutes away.
+- `direction: 'vertical'` (default) or `'horizontal'`. `distance: 'end'` (default) or pixels. `'end'` stops after 20,000px, and the result says how far the end really was: the end of a 5,000-row list is minutes away, and a baseline shouldn't move because the data grew. A pixel distance isn't capped.
 
 In full mode it also finds **blank frames**. It screenshots the list at rest, then compares each frame the compositor produced during the scroll with it. A frame drawn to less than half of the resting list is blank. Tell it about skeleton rows, which should count as blank too:
 
