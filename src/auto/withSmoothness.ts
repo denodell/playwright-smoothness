@@ -35,7 +35,7 @@ import {
 import { compareMetrics } from '../baseline/compare.js';
 import { formatMessage, formatSummary } from '../baseline/message.js';
 import { resolveOptions } from '../options.js';
-import { browserEnvironment } from '../environment.js';
+import { browserEnvironment, type BrowserEnvironment } from '../environment.js';
 import { onMainBranch, warnInGitHubActions } from '../ci.js';
 import { resultPath, writeResult } from '../output.js';
 import { CALIBRATE_ENV, SCHEMA_VERSION } from '../constants.js';
@@ -48,7 +48,7 @@ import {
   specHash,
   type HistoryEntry,
 } from './history.js';
-import type { Comparison, SmoothnessOptions, SmoothnessResult } from '../types.js';
+import type { Comparison, ResolvedOptions, SmoothnessOptions, SmoothnessResult } from '../types.js';
 
 export interface AutoOptions extends SmoothnessOptions {
   /** Measure every test automatically. */
@@ -165,6 +165,244 @@ export function analyzeDocs(docs: Map<number, DocData>) {
 }
 
 /**
+ * Streams every document's records from the in-page collector into the returned map, and
+ * throttles the context's pages if asked. Returns null, with an annotation, if it can't start.
+ */
+async function startStreaming(
+  context: BrowserContext,
+  resolved: ResolvedOptions,
+  testInfo: TestInfo,
+): Promise<Map<number, DocData> | null> {
+  const docs = new Map<number, DocData>();
+  const pageIds = new Map<Page, number>();
+  try {
+    await context.exposeBinding(STREAM_BINDING, (source, batch: StreamBatch) => {
+      let d = docs.get(batch.doc);
+      if (!d) {
+        let page = pageIds.get(source.page);
+        if (page === undefined) pageIds.set(source.page, (page = pageIds.size));
+        d = {
+          url: batch.url,
+          timeOrigin: batch.doc,
+          page,
+          loaf: [],
+          events: [],
+          scrolls: [],
+          loadEventEnd: 0,
+          errors: [],
+        };
+        docs.set(batch.doc, d);
+      }
+      d.loaf.push(...batch.loaf);
+      d.events.push(...batch.events);
+      d.scrolls.push(...batch.scrolls);
+      d.errors.push(...batch.errors);
+      if (batch.loadEventEnd) d.loadEventEnd = batch.loadEventEnd;
+      if (batch.lastInput && (!d.lastInput || batch.lastInput.at >= d.lastInput.at))
+        d.lastInput = batch.lastInput;
+    });
+  } catch (err) {
+    annotate(testInfo, 'smoothness-warning', `automatic mode couldn't start: ${String(err).split('\n')[0]}`);
+    return null;
+  }
+  await context.addInitScript(installCollector, { ...COLLECTOR_CONFIG, stream: STREAM_BINDING });
+  if (resolved.cpuThrottling > 1) {
+    for (const p of context.pages()) await throttle(p, resolved.cpuThrottling);
+    context.on('page', (p) => void throttle(p, resolved.cpuThrottling));
+  }
+  return docs;
+}
+
+/** The test's result from its streamed documents: one quick-mode run, not yet compared. */
+function autoResult(
+  docs: Map<number, DocData>,
+  label: string,
+  environment: BrowserEnvironment,
+  resolved: ResolvedOptions,
+): SmoothnessResult {
+  const { interactions, frames, classes, errors, unmeasured } = analyzeDocs(docs);
+  const count = (k: FrameClass) => classes.filter((c) => c === k).length;
+  return {
+    schemaVersion: SCHEMA_VERSION,
+    label,
+    mode: 'quick',
+    runs: 1,
+    browserName: environment.browserName,
+    browserVersion: environment.browserVersion,
+    headlessMode: environment.headlessMode,
+    machine: machine(),
+    cpuThrottling: resolved.cpuThrottling,
+    refreshRate: resolved.refreshRate,
+    settings: settingsOf(resolved),
+    input: summarizeInput(interactions),
+    longFrames: summarizeLongFrames(frames),
+    spread: {},
+    frameClasses: {
+      interaction: count('interaction'),
+      load: count('load'),
+      background: count('background'),
+    },
+    unavailable: errors.size
+      ? [
+          {
+            measurement: 'collector',
+            reason: `in-page collector errors: ${[...errors].slice(0, 5).join('; ')}`,
+          },
+        ]
+      : [],
+    notes: [
+      'Automatic mode: measured once, with no warm-up. The first interaction on a page can read higher on some machines (docs/measurements.md).',
+      ...(resolved.mode === 'full'
+        ? ['Automatic mode measures in quick mode; full mode is for measure() and scroll().']
+        : []),
+      ...unmeasured.map(
+        (u) =>
+          `The last input before a navigation (${u}) wasn't measured: the page navigated before painting it, and the browser only measures an input once it paints.`,
+      ),
+    ],
+    auto: {
+      documents: docs.size,
+      interactions: interactions.map((i) => ({
+        event: i.event,
+        target: i.target,
+        ms: i.duration,
+        url: i.url,
+      })),
+    },
+  };
+}
+
+/** A test's history as read for this run, and where to write it back. */
+interface TestHistory {
+  path: string;
+  project: string;
+  specHash: string;
+  /** Empty when there's no history yet, or it restarts because the spec file changed. */
+  entries: HistoryEntry[];
+  /** Notes on reading the history, for the comparison. */
+  notes: string[];
+}
+
+/** Reads the test's history, starting it again if the spec file has changed since it was recorded. */
+function readTestHistory(
+  testInfo: TestInfo,
+  label: string,
+  result: SmoothnessResult,
+  historyDir: string | undefined,
+): TestHistory {
+  // Relative paths are relative to the config file's folder, whatever directory the run started in.
+  const configDir = testInfo.config.configFile ? dirname(testInfo.config.configFile) : process.cwd();
+  const dir = resolvePath(configDir, historyDir ?? 'smoothness-history');
+  const project = testInfo.project.name;
+  const path = historyPath(dir, relative(testInfo.config.rootDir, testInfo.file), label, project, result);
+  const hash = specHash(testInfo.file);
+  const read = readHistory(path);
+  const notes: string[] = [];
+  if (typeof read === 'string') notes.push(`Ignored the history: ${read}.`);
+  const historyFile = read && typeof read !== 'string' ? read : null;
+  const reset = historyFile !== null && historyFile.specHash !== hash;
+  const entries: HistoryEntry[] = reset || !historyFile ? [] : historyFile.entries;
+  if (reset) {
+    notes.push("The spec file changed since this test's history was recorded, so its history starts again.");
+    annotate(testInfo, 'smoothness-baseline-reset', `${label}: spec file changed; history restarts`);
+  }
+  return { path, project, specHash: hash, entries, notes };
+}
+
+/**
+ * Compares the result with the median of the last `history` entries, once there are at least
+ * `minHistory` of them. Not compared while calibrating.
+ */
+function compareWithHistory(
+  result: SmoothnessResult,
+  h: TestHistory,
+  resolved: ResolvedOptions,
+  calibrating: boolean,
+  history: number,
+  minHistory: number,
+): Comparison {
+  const { path, entries, notes } = h;
+  if (calibrating) {
+    return {
+      status: 'not-compared',
+      checks: [],
+      baseline: null,
+      notes: ['Calibrating: not compared.'],
+    };
+  }
+  if (entries.length >= minHistory) {
+    const recent = entries.slice(-history);
+    const checks = compareMetrics(result, medianMetrics(recent), resolved.maxIncrease);
+    const worse = checks.some((c) => c.status === 'worse');
+    return {
+      status: worse ? (resolved.enforce === 'fail' ? 'fail' : 'warn') : 'pass',
+      checks,
+      baseline: {
+        path,
+        source: 'history',
+        recordedAt: recent[recent.length - 1]!.recordedAt,
+        browserVersion: recent[recent.length - 1]!.browserVersion,
+        machine: result.machine,
+      },
+      notes: [...notes, `Compared with the median of the last ${recent.length} main-branch run(s).`],
+    };
+  }
+  return {
+    status: 'not-compared',
+    checks: [],
+    baseline: null,
+    notes: [...notes, `Building history: ${entries.length} of ${minHistory} main-branch runs recorded.`],
+  };
+}
+
+/** Adds this run to the test's history, keeping the last `history` entries, and notes it. */
+function addToHistory(
+  h: TestHistory,
+  label: string,
+  result: SmoothnessResult,
+  history: number,
+  comparison: Comparison,
+): void {
+  appendHistory(
+    h.path,
+    {
+      test: label,
+      project: h.project,
+      machine: result.machine.cpuModel,
+      cpuThrottling: result.cpuThrottling,
+      specHash: h.specHash,
+    },
+    h.entries,
+    result,
+    history,
+  );
+  comparison.notes.push(`This run was added to the history (${h.path}).`);
+}
+
+/** Writes and attaches the result, then fails, warns, or annotates according to the comparison. */
+async function reportResult(
+  testInfo: TestInfo,
+  label: string,
+  result: SmoothnessResult,
+  comparison: Comparison,
+): Promise<void> {
+  const out = resultPath(testInfo, 'auto');
+  writeResult(result, out);
+  await testInfo.attach('smoothness: auto', { path: out, contentType: 'application/json' });
+
+  if (comparison.status === 'warn' || comparison.status === 'fail') {
+    const summary = formatSummary(result, comparison);
+    const message = formatMessage(result, comparison);
+    if (comparison.status === 'fail' && testInfo.status === testInfo.expectedStatus) throw new Error(message);
+    annotate(testInfo, 'smoothness-warning', summary);
+    console.warn(message);
+    warnInGitHubActions(summary, testInfo);
+  } else if (comparison.status === 'not-compared') {
+    annotate(testInfo, 'smoothness-not-compared', `${label}: ${comparison.notes.join(' ')}`);
+  }
+}
+
+/**
  * Wraps a Playwright `test` so every test that opens a page is measured once, with no code
  * changes, and compared with a rolling median of recent passing runs on the main branch.
  * `smoothness` and `smoothnessOptions` are available too.
@@ -208,205 +446,34 @@ export function withSmoothness<T extends object, W extends object>(
           return;
         }
 
-        const docs = new Map<number, DocData>();
-        const pageIds = new Map<Page, number>();
-        let bound = true;
-        try {
-          await context.exposeBinding(STREAM_BINDING, (source, batch: StreamBatch) => {
-            let d = docs.get(batch.doc);
-            if (!d) {
-              let page = pageIds.get(source.page);
-              if (page === undefined) pageIds.set(source.page, (page = pageIds.size));
-              d = {
-                url: batch.url,
-                timeOrigin: batch.doc,
-                page,
-                loaf: [],
-                events: [],
-                scrolls: [],
-                loadEventEnd: 0,
-                errors: [],
-              };
-              docs.set(batch.doc, d);
-            }
-            d.loaf.push(...batch.loaf);
-            d.events.push(...batch.events);
-            d.scrolls.push(...batch.scrolls);
-            d.errors.push(...batch.errors);
-            if (batch.loadEventEnd) d.loadEventEnd = batch.loadEventEnd;
-            if (batch.lastInput && (!d.lastInput || batch.lastInput.at >= d.lastInput.at))
-              d.lastInput = batch.lastInput;
-          });
-        } catch (err) {
-          bound = false;
-          annotate(
-            testInfo,
-            'smoothness-warning',
-            `automatic mode couldn't start: ${String(err).split('\n')[0]}`,
-          );
-        }
-        if (bound) {
-          await context.addInitScript(installCollector, { ...COLLECTOR_CONFIG, stream: STREAM_BINDING });
-          if (resolved.cpuThrottling > 1) {
-            for (const p of context.pages()) await throttle(p, resolved.cpuThrottling);
-            context.on('page', (p) => void throttle(p, resolved.cpuThrottling));
-          }
-        }
+        const docs = await startStreaming(context, resolved, testInfo);
 
         await use();
 
-        if (!bound) return;
+        if (!docs) return;
         await drain(context);
         if (docs.size === 0) return; // the test never loaded a page: nothing to measure
 
-        const { interactions, frames, classes, errors, unmeasured } = analyzeDocs(docs);
-        const count = (k: FrameClass) => classes.filter((c) => c === k).length;
-        const result: SmoothnessResult = {
-          schemaVersion: SCHEMA_VERSION,
-          label,
-          mode: 'quick',
-          runs: 1,
-          browserName: environment.browserName,
-          browserVersion: environment.browserVersion,
-          headlessMode: environment.headlessMode,
-          machine: machine(),
-          cpuThrottling: resolved.cpuThrottling,
-          refreshRate: resolved.refreshRate,
-          settings: settingsOf(resolved),
-          input: summarizeInput(interactions),
-          longFrames: summarizeLongFrames(frames),
-          spread: {},
-          frameClasses: {
-            interaction: count('interaction'),
-            load: count('load'),
-            background: count('background'),
-          },
-          unavailable: errors.size
-            ? [
-                {
-                  measurement: 'collector',
-                  reason: `in-page collector errors: ${[...errors].slice(0, 5).join('; ')}`,
-                },
-              ]
-            : [],
-          notes: [
-            'Automatic mode: measured once, with no warm-up. The first interaction on a page can read higher on some machines (docs/measurements.md).',
-            ...(resolved.mode === 'full'
-              ? ['Automatic mode measures in quick mode; full mode is for measure() and scroll().']
-              : []),
-            ...unmeasured.map(
-              (u) =>
-                `The last input before a navigation (${u}) wasn't measured: the page navigated before painting it, and the browser only measures an input once it paints.`,
-            ),
-          ],
-          auto: {
-            documents: docs.size,
-            interactions: interactions.map((i) => ({
-              event: i.event,
-              target: i.target,
-              ms: i.duration,
-              url: i.url,
-            })),
-          },
-        };
+        const result = autoResult(docs, label, environment, resolved);
 
         // Compare with, and maybe add to, the history.
-        // Relative paths are relative to the config file's folder, whatever directory the run started in.
-        const configDir = testInfo.config.configFile ? dirname(testInfo.config.configFile) : process.cwd();
-        const dir = resolvePath(configDir, historyDir ?? resolved.baselineDir ?? 'smoothness-history');
-        const project = testInfo.project.name;
-        const path = historyPath(
-          dir,
-          relative(testInfo.config.rootDir, testInfo.file),
-          label,
-          project,
-          result,
-        );
-        const hash = specHash(testInfo.file);
-        const read = readHistory(path);
-        const notes: string[] = [];
-        if (typeof read === 'string') notes.push(`Ignored the history: ${read}.`);
-        const historyFile = read && typeof read !== 'string' ? read : null;
-        const reset = historyFile !== null && historyFile.specHash !== hash;
-        const entries: HistoryEntry[] = reset || !historyFile ? [] : historyFile.entries;
-        if (reset) {
-          notes.push(
-            "The spec file changed since this test's history was recorded, so its history starts again.",
-          );
-          annotate(testInfo, 'smoothness-baseline-reset', `${label}: spec file changed; history restarts`);
-        }
-
-        let comparison: Comparison;
+        const testHistory = readTestHistory(testInfo, label, result, historyDir ?? resolved.baselineDir);
         const calibrating = !!process.env[CALIBRATE_ENV];
-        if (calibrating) {
-          comparison = {
-            status: 'not-compared',
-            checks: [],
-            baseline: null,
-            notes: ['Calibrating: not compared.'],
-          };
-        } else if (entries.length >= minHistory) {
-          const recent = entries.slice(-history);
-          const checks = compareMetrics(result, medianMetrics(recent), resolved.maxIncrease);
-          const worse = checks.some((c) => c.status === 'worse');
-          comparison = {
-            status: worse ? (resolved.enforce === 'fail' ? 'fail' : 'warn') : 'pass',
-            checks,
-            baseline: {
-              path,
-              source: 'history',
-              recordedAt: recent[recent.length - 1]!.recordedAt,
-              browserVersion: recent[recent.length - 1]!.browserVersion,
-              machine: result.machine,
-            },
-            notes: [...notes, `Compared with the median of the last ${recent.length} main-branch run(s).`],
-          };
-        } else {
-          comparison = {
-            status: 'not-compared',
-            checks: [],
-            baseline: null,
-            notes: [
-              ...notes,
-              `Building history: ${entries.length} of ${minHistory} main-branch runs recorded.`,
-            ],
-          };
-        }
+        const comparison = compareWithHistory(
+          result,
+          testHistory,
+          resolved,
+          calibrating,
+          history,
+          minHistory,
+        );
 
         const shouldRecord = record ?? (process.env.SMOOTHNESS_RECORD === '1' || onMainBranch());
-        if (shouldRecord && testInfo.status === testInfo.expectedStatus && !calibrating) {
-          appendHistory(
-            path,
-            {
-              test: label,
-              project,
-              machine: result.machine.cpuModel,
-              cpuThrottling: result.cpuThrottling,
-              specHash: hash,
-            },
-            entries,
-            result,
-            history,
-          );
-          comparison.notes.push(`This run was added to the history (${path}).`);
-        }
+        if (shouldRecord && testInfo.status === testInfo.expectedStatus && !calibrating)
+          addToHistory(testHistory, label, result, history, comparison);
         result.comparison = comparison;
 
-        const out = resultPath(testInfo, 'auto');
-        writeResult(result, out);
-        await testInfo.attach('smoothness: auto', { path: out, contentType: 'application/json' });
-
-        if (comparison.status === 'warn' || comparison.status === 'fail') {
-          const summary = formatSummary(result, comparison);
-          const message = formatMessage(result, comparison);
-          if (comparison.status === 'fail' && testInfo.status === testInfo.expectedStatus)
-            throw new Error(message);
-          annotate(testInfo, 'smoothness-warning', summary);
-          console.warn(message);
-          warnInGitHubActions(summary, testInfo);
-        } else if (comparison.status === 'not-compared') {
-          annotate(testInfo, 'smoothness-not-compared', `${label}: ${comparison.notes.join(' ')}`);
-        }
+        await reportResult(testInfo, label, result, comparison);
       },
       { auto: true },
     ],
