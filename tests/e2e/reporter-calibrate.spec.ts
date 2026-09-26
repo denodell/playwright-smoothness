@@ -48,7 +48,7 @@ test('the reporter writes the markdown summary and the job summary', () => {
   expect(child.stdout).toContain('Smoothness summary:');
 });
 
-test('calibrate gives the same suggestions twice in a row (within one 0.05 step)', () => {
+test('calibrate is repeatable', () => {
   test.skip(!built, 'run npm run build first');
   const once = (n: number) => {
     const out = join(work, `calibration-${n}.json`);

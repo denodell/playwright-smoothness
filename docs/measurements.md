@@ -14,8 +14,8 @@ All numbers are new headless (`channel: 'chromium'`) unless stated.
 
 ## Versions and sources
 
-- **Minimum Playwright: 1.49.** The 1.49 release notes introduce opt-in new headless: "You can opt into the new headless mode by using `'chromium'` channel." 1.49 bundles Chromium 131, which is past LoAF's Chrome 123. Source: https://playwright.dev/docs/release-notes (1.49 section).
-- **1.57 switched to Chrome for Testing builds.** The release notes say headed mode uses `chrome` and headless mode uses `chrome-headless-shell`. That is why headless-mode detection is tested across versions (see below).
+- Minimum Playwright: 1.49. The 1.49 release notes introduce opt-in new headless: "You can opt into the new headless mode by using `'chromium'` channel." 1.49 bundles Chromium 131, which is past LoAF's Chrome 123. Source: https://playwright.dev/docs/release-notes (1.49 section).
+- 1.57 switched to Chrome for Testing builds. The release notes say headed mode uses `chrome` and headless mode uses `chrome-headless-shell`. That is why headless-mode detection is tested across versions (see below).
 - `browser.startTracing` / `stopTracing` and CDP `Input.synthesizeScrollGesture` are present and typed in Playwright 1.63 (`types.d.ts`, `protocol.d.ts`).
 
 ## Scroll-blocking table
@@ -32,15 +32,15 @@ A scroll handler blocks the main thread N ms (wall clock) per scroll. Ten wheel 
 
 Trace size: about 1.9MB per run on both machines (spike: about 1.8MB).
 
-**On the GitHub Actions runner the spike's table reproduces exactly,** with no spread at all: every one of the five runs gave 0 / 0 / 2 / 4 / 8. The local Mac is the noisy environment, not the runner.
+On the GitHub Actions runner the spike's table reproduces exactly, with no spread at all: every one of the five runs gave 0 / 0 / 2 / 4 / 8. The local Mac is the noisy environment, not the runner.
 
 ### Why the suite differs from the spike's method (found on the local Mac)
 
-The spike counted every `STATE_DROPPED` frame in the trace from one run. Reproducing that on Chrome 153 gave 1 dropped frame at 0ms and 3 at 12ms, which contradicts the spike's table. Probing the raw traces showed three separate causes, and the suite now handles each one. **The GitHub Actions run shows that causes 2 and 3 are specific to the Mac** (see the notes after each). The suite keeps all three measures: they cost little, they're correct in principle, and developers run the suite locally.
+The spike counted every `STATE_DROPPED` frame in the trace from one run. Reproducing that on Chrome 153 gave 1 dropped frame at 0ms and 3 at 12ms, which contradicts the spike's table. Probing the raw traces showed three separate causes, and the suite now handles each one. The GitHub Actions run shows that causes 2 and 3 are specific to the Mac (see the notes after each). The suite keeps all three measures: they cost little, they're correct in principle, and developers run the suite locally.
 
-1. **Tracing start adds a dropped frame.** _(Explained later: the frame belongs to Playwright's initial `about:blank` document, a different compositor, not to tracing or the page. See docs/trace-categories.md.)_ In most runs, one `STATE_DROPPED` frame lands about 550ms before the first input, when tracing starts. The suite counts only frames inside the input window: from the first input's `EventLatency` to the last one plus 150ms (`INPUT_TAIL_MS`). The library windows trace frames to the interaction too, with in-page marks (docs/trace-categories.md).
-2. **The first wheel on a page costs a 46–58ms frame,** with no page work at all (three runs: 46, 58, 46ms). After one warm-up wheel it's gone (longest frame 18–20ms). The suite does one warm-up wheel before measuring. This is why `measure()` makes a warm-up run first. _GitHub Actions:_ after the warm-up the longest frame with no work was 16.5ms. The first-click equivalent didn't show up on the runner at all (see Event Timing below), so this is at least partly a Mac effect. The warm-up run stays for developer machines.
-3. **Single runs are noisy because there are very few frames.** Each wheel tick presents about one frame (12–14 presented frames per run), so one stray pair of drops moves a run a lot. At 12ms blocking, one run of five dropped 7 frames and the other four dropped 0. The suite takes the median of 5 traced runs. Gating on one run's drop count would be flaky on a developer machine, which is why `runs: 5` takes a median. _GitHub Actions:_ zero spread across five runs at every blocking level, so the runner doesn't need the median. It stays for local runs.
+1. Tracing start adds a dropped frame. _(Explained later: the frame belongs to Playwright's initial `about:blank` document, a different compositor, not to tracing or the page. See docs/trace-categories.md.)_ In most runs, one `STATE_DROPPED` frame lands about 550ms before the first input, when tracing starts. The suite counts only frames inside the input window: from the first input's `EventLatency` to the last one plus 150ms (`INPUT_TAIL_MS`). The library windows trace frames to the interaction too, with in-page marks (docs/trace-categories.md).
+2. The first wheel on a page costs a 46–58ms frame, with no page work at all (three runs: 46, 58, 46ms). After one warm-up wheel it's gone (longest frame 18–20ms). The suite does one warm-up wheel before measuring. This is why `measure()` makes a warm-up run first. _GitHub Actions:_ after the warm-up the longest frame with no work was 16.5ms. The first-click equivalent didn't show up on the runner at all (see Event Timing below), so this is at least partly a Mac effect. The warm-up run stays for developer machines.
+3. Single runs are noisy because there are very few frames. Each wheel tick presents about one frame (12–14 presented frames per run), so one stray pair of drops moves a run a lot. At 12ms blocking, one run of five dropped 7 frames and the other four dropped 0. The suite takes the median of 5 traced runs. Gating on one run's drop count would be flaky on a developer machine, which is why `runs: 5` takes a median. _GitHub Actions:_ zero spread across five runs at every blocking level, so the runner doesn't need the median. It stays for local runs.
 
 `frame_reporter.affects_smoothness` was also checked as a filter. It was false on nearly every dropped frame, including the real drops at 25ms, so it isn't useful.
 
@@ -67,7 +67,7 @@ The spike counted every `STATE_DROPPED` frame in the trace from one run. Reprodu
 | Wheel scrolling in Event Timing | none                                            | none; scroll listener saw ≥10 events      |
 | Idle page                       | 0 LoAF                                          | 0                                         |
 
-**First interaction on a page: inflated on the Mac, not on the runner.** With a 25ms handler, the local Mac measured the first click at 56ms, with a LoAF entry, and the next three at 24ms. GitHub Actions measured all four at 24ms with no LoAF entry. So this is a property of the machine, not Chrome. Automatic mode measures each test once, so on developer machines a test's first interaction may read high. CI runners, where histories come from, aren't affected (docs/automatic-mode.md, Limitations).
+First interaction on a page: inflated on the Mac, not on the runner. With a 25ms handler, the local Mac measured the first click at 56ms, with a LoAF entry, and the next three at 24ms. GitHub Actions measured all four at 24ms with no LoAF entry. So this is a property of the machine, not Chrome. Automatic mode measures each test once, so on developer machines a test's first interaction may read high. CI runners, where histories come from, aren't affected (docs/automatic-mode.md, Limitations).
 
 ## CPU throttling
 
@@ -96,9 +96,9 @@ Wall clock versus iterations, measured from the click handler's LoAF script dura
 
 A noise workflow (since removed; `calibrate` now does this job) ran the whole detection suite five times in one job on `main` (run 35943204024).
 
-**Within one job, noise is very low.** Every scroll-table number was identical across all five runs (0 / 0 / 2 / 4 / 8 dropped; LoAF and rAF columns exact). Throttled long-frame counts didn't move (10 / 10 / 10). Throttled total blocking time varied ±1–2%. The spike's single-CPU sandbox saw ±25–40%. List fling dropped-frame counts were the least steady (cheap: 2–3; costly: 7–9).
+Within one job, noise is very low. Every scroll-table number was identical across all five runs (0 / 0 / 2 / 4 / 8 dropped; LoAF and rAF columns exact). Throttled long-frame counts didn't move (10 / 10 / 10). Throttled total blocking time varied ±1–2%. The spike's single-CPU sandbox saw ±25–40%. List fling dropped-frame counts were the least steady (cheap: 2–3; costly: 7–9).
 
-**Between jobs, runner speed varies up to 1.5x** (and total blocking at 4x up to 2x). The same iteration-based work took:
+Between jobs, runner speed varies up to 1.5x (and total blocking at 4x up to 2x). The same iteration-based work took:
 
 | Job                        | CPU                        | `doWork(6,000,000)` at 1x | Throttled scroll, total blocking (4x) |
 | -------------------------- | -------------------------- | ------------------------- | ------------------------------------- |
@@ -107,12 +107,12 @@ A noise workflow (since removed; `calibrate` now does this job) ran the whole de
 | PR #2 CI (run 35945190946) | AMD EPYC 9V74, 4 vCPU      | 197ms                     | 1,568ms                               |
 | Noise (run 35945158558)    | AMD EPYC 7763, 4 vCPU      | 226ms                     | 1,902ms                               |
 
-The later runs recorded their CPUs. Three models gave three speeds for the same work: **EPYC 9V45** 150ms, **EPYC 9V74** 197ms, and **EPYC 7763** 226ms (the same as the earlier unrecorded noise run). So `ubuntu-latest` is a pool of different hardware, and each job lands on one of them.
+The later runs recorded their CPUs. Three models gave three speeds for the same work: EPYC 9V45 150ms, EPYC 9V74 197ms, and EPYC 7763 226ms (the same as the earlier unrecorded noise run). So `ubuntu-latest` is a pool of different hardware, and each job lands on one of them.
 
 Two consequences:
 
-1. **The unthrottled throttling check failed on the slower runner.** Without throttling, the 1,500,000-iteration scroll work already made 60ms frames there, so 4x couldn't add long frames (10 against 10). The detection test now asserts what throttling actually guarantees: total blocking time and the worst frame at least double. The spike's "moderate jank gives zero long frames at 1x" only holds on a fast machine.
-2. **Baselines are only comparable on the same kind of machine.** A baseline recorded on a fast runner would make every check on a slow runner look about 100% worse. Every result now records `machine` (CPU model, core count, platform), so a baseline from a different machine is detected and reported instead of reporting a false regression. Timing-based checks (`input.p95ToPaintMs`, `longFrames.worstMs`) move with CPU speed. Counts (`longFrames.count`, dropped frames) move less, but they can still cross the 50ms threshold, as shown above.
+1. The unthrottled throttling check failed on the slower runner. Without throttling, the 1,500,000-iteration scroll work already made 60ms frames there, so 4x couldn't add long frames (10 against 10). The detection test now asserts what throttling actually guarantees: total blocking time and the worst frame at least double. The spike's "moderate jank gives zero long frames at 1x" only holds on a fast machine.
+2. Baselines are only comparable on the same kind of machine. A baseline recorded on a fast runner would make every check on a slow runner look about 100% worse. Every result now records `machine` (CPU model, core count, platform), so a baseline from a different machine is detected and reported instead of reporting a false regression. Timing-based checks (`input.p95ToPaintMs`, `longFrames.worstMs`) move with CPU speed. Counts (`longFrames.count`, dropped frames) move less, but they can still cross the 50ms threshold, as shown above.
 
 ## Refresh rate and AnimationFrame
 
@@ -134,13 +134,13 @@ Two consequences:
 
 - Every fling scrolled the full 20,000px on the compositor thread (`SCROLL_COMPOSITOR_THREAD`).
 - Dropped frames stay under 4% even for the costly list, so they can't reveal blank rows. That's why blank rows are measured from screenshots (docs/list-detection.md).
-- **`has_missing_content` changed between Chrome versions.** On 141 it fired on about 78% of frames for every list. On 153 it's 0 for every list, including the blank one, on both the Mac and the runner. The library doesn't use it. The suite now asserts only that it doesn't separate cheap from costly, which holds on both versions.
-- **Trace size is about 10x the spike's estimate** once screenshots are on: 13–22MB per 3.3s fling, against about 1.8MB per 1.5s without screenshots. The library parses and discards each trace as soon as it's recorded.
+- `has_missing_content` changed between Chrome versions. On 141 it fired on about 78% of frames for every list. On 153 it's 0 for every list, including the blank one, on both the Mac and the runner. The library doesn't use it. The suite now asserts only that it doesn't separate cheap from costly, which holds on both versions.
+- Trace size is about 10x the spike's estimate once screenshots are on: 13–22MB per 3.3s fling, against about 1.8MB per 1.5s without screenshots. The library parses and discards each trace as soon as it's recorded.
 - Blank-frame percentages (spike: cheap ≥87% drawn, costly median 0%) are measured by `scroll()`: see docs/list-detection.md.
 
 ## Synthetic touch scrolling
 
-`Input.synthesizeScrollGesture` with `gestureSourceType: 'touch'` **does nothing on Linux**, and the CDP call returns no error. A temporary probe on the GitHub Actions runner (PR #5), scrolling the test list 2,000px, Chrome 153:
+`Input.synthesizeScrollGesture` with `gestureSourceType: 'touch'` does nothing on Linux, and the CDP call returns no error. A temporary probe on the GitHub Actions runner (PR #5), scrolling the test list 2,000px, Chrome 153:
 
 | Method                                                   | macOS   | Linux (`ubuntu-latest`) |
 | -------------------------------------------------------- | ------- | ----------------------- |
@@ -166,11 +166,11 @@ Local, Playwright 1.63.0:
 | new headless   | `Chrome/153.0.8010.12`           | `HeadlessChrome/153.0.0.0`     | Chromium, Not_A Brand                 | Chrome for Testing app         |
 | headed         | `Chrome/153.0.8010.12`           | `Chrome/153.0.0.0`             | Chromium, Not_A Brand                 | Chrome for Testing app         |
 
-**Rule (CDP only, so page user-agent overrides from device descriptors don't affect it):** product starts with `HeadlessChrome/` → headless shell; otherwise the CDP user agent contains `HeadlessChrome/` → new headless; otherwise headed. `scripts/headless-summary.mjs` mirrors it and checks it against every record from the matrix.
+Rule (CDP only, so page user-agent overrides from device descriptors don't affect it): product starts with `HeadlessChrome/` → headless shell; otherwise the CDP user agent contains `HeadlessChrome/` → new headless; otherwise headed. `scripts/headless-summary.mjs` mirrors it and checks it against every record from the matrix.
 
-`browserType().executablePath()` is **not** usable. It returns the browser type's default executable, not the one that was launched, so it names the full Chrome binary even when the headless shell is running.
+`browserType().executablePath()` is not usable. It returns the browser type's default executable, not the one that was launched, so it names the full Chrome binary even when the headless shell is running.
 
-Matrix results, GitHub Actions `ubuntu-latest` (headed under `xvfb-run`), run 35940477338: **12 of 12 records detected correctly.**
+Matrix results, GitHub Actions `ubuntu-latest` (headed under `xvfb-run`), run 35940477338: 12 of 12 records detected correctly.
 
 | Playwright | Chrome        | Headless shell product | New headless: product / CDP UA token       | Headed: product / CDP UA token     |
 | ---------- | ------------- | ---------------------- | ------------------------------------------ | ---------------------------------- |
@@ -179,4 +179,4 @@ Matrix results, GitHub Actions `ubuntu-latest` (headed under `xvfb-run`), run 35
 | 1.57.0     | 143.0.7499.4  | `HeadlessChrome/143…`  | `Chrome/143…` / `HeadlessChrome/143.0.0.0` | `Chrome/143…` / `Chrome/143.0.0.0` |
 | 1.63.0     | 153.0.8010.12 | `HeadlessChrome/153…`  | `Chrome/153…` / `HeadlessChrome/153.0.0.0` | `Chrome/153…` / `Chrome/153.0.0.0` |
 
-The Chrome for Testing switch in 1.57 didn't change any of these signals. `executablePath()` was wrong on every version (it always names `chrome`). **`src/environment.ts` uses the CDP rule above.** If `Browser.getVersion` fails, or returns something that matches none of the patterns, the result reports `headlessMode: 'unknown'`.
+The Chrome for Testing switch in 1.57 didn't change any of these signals. `executablePath()` was wrong on every version (it always names `chrome`). `src/environment.ts` uses the CDP rule above. If `Browser.getVersion` fails, or returns something that matches none of the patterns, the result reports `headlessMode: 'unknown'`.

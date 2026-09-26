@@ -36,10 +36,7 @@ test('a cheap list stays drawn: close to 0% blank frames', async ({ page, smooth
   expect(r.scroll!.scrolledPx).toBeGreaterThanOrEqual(19_000);
 });
 
-test('a costly list (15ms per row, no overscan) is mostly blank, though frames barely drop', async ({
-  page,
-  smoothness,
-}) => {
+test('a costly list is mostly blank', async ({ page, smoothness }) => {
   await page.goto('/list.html?cost=15&overscan=0');
   const r = await smoothness.scroll(list(page), FLING);
   save('list-costly', r);
@@ -51,7 +48,7 @@ test('a costly list (15ms per row, no overscan) is mostly blank, though frames b
   expect(r.spread['list.blankFramePercent']).toBeDefined();
 });
 
-test('the blank-row gate fails a list that went from cheap to costly', async ({ page, smoothness }) => {
+test('the blank-row gate catches a regression', async ({ page, smoothness }) => {
   await page.goto('/list.html?cost=0&overscan=2');
   const before = await smoothness.scroll(list(page), { ...FLING, label: 'catalogue' });
   expect(before).toBeSmooth();
@@ -77,7 +74,7 @@ test('placeholders: skeleton rows count as blank only when named', async ({ page
   expect(named.list!.blankFramePercent).toBeGreaterThan(without.list!.blankFramePercent + 20);
 });
 
-test("background 'auto' reads the list's own colour (a dark list)", async ({ page, smoothness }) => {
+test("background 'auto' reads the list's own color (a dark list)", async ({ page, smoothness }) => {
   await page.goto('/list.html?cost=15&overscan=0&bg=%23202020');
   const r = await smoothness.scroll(list(page), FLING);
   expect(r.list!.blankFramePercent).toBeGreaterThan(50);
@@ -114,10 +111,7 @@ test.describe('touch', () => {
   });
 });
 
-test("distance 'end' on a long list stops at 20,000px and says how far the end was", async ({
-  page,
-  smoothness,
-}) => {
+test("distance 'end' on a very long list", async ({ page, smoothness }) => {
   await page.goto('/list.html?cost=0');
   const r = await smoothness.scroll(list(page), { speed: 'fast', mode: 'quick', runs: 1 });
   const max = await list(page).evaluate((el) => el.scrollHeight - el.clientHeight);
@@ -129,20 +123,14 @@ test("distance 'end' on a long list stops at 20,000px and says how far the end w
   );
 });
 
-test("touch input without a touch-enabled context is an error, not a scroll that doesn't happen", async ({
-  page,
-  smoothness,
-}) => {
+test('touch input without a touch context', async ({ page, smoothness }) => {
   await page.goto('/list.html?rows=300&cost=0');
   await expect(smoothness.scroll(list(page), { input: 'touch' })).rejects.toThrow(
     /needs a touch-enabled browser context/,
   );
 });
 
-test("a locator that doesn't scroll: list data is unavailable, never 0% blank", async ({
-  page,
-  smoothness,
-}) => {
+test("a locator that doesn't scroll", async ({ page, smoothness }) => {
   await page.goto('/list.html?cost=15&overscan=0');
   // The spacer inside the list isn't the scroller; scrolling "it" moves nothing.
   const r = await smoothness.scroll(page.locator('#spacer'), { ...FLING, distance: 2000, runs: 2 });
@@ -153,10 +141,7 @@ test("a locator that doesn't scroll: list data is unavailable, never 0% blank", 
   });
 });
 
-test('arrow keys: presses are measured by Event Timing (those of 16ms or more)', async ({
-  page,
-  smoothness,
-}) => {
+test('arrow keys', async ({ page, smoothness }) => {
   // 15ms per new row, and a new row every couple of presses: some presses cross 16ms.
   await page.goto('/list.html?cost=15&overscan=0');
   const r = await smoothness.scroll(list(page), { input: 'keys', distance: 400, mode: 'quick', runs: 2 });
@@ -171,14 +156,14 @@ test('arrow keys: presses are measured by Event Timing (those of 16ms or more)',
   expect(r.input!.p95ToPaintMs!).toBeGreaterThanOrEqual(16);
 });
 
-test('quick mode: no list data, and a note says blank rows need full mode', async ({ page, smoothness }) => {
+test('quick mode has no list data', async ({ page, smoothness }) => {
   await page.goto('/list.html?cost=0');
   const r = await smoothness.scroll(list(page), { ...FLING, mode: 'quick', runs: 1 });
   expect('list' in r).toBe(false);
   expect(r.notes.join(' ')).toMatch(/Blank rows in lists are measured in full mode only/);
 });
 
-test('200 frames are analysed in under 2 seconds', async ({ page, browser }) => {
+test('200 frames are analyzed in under 2 seconds', async ({ page, browser }) => {
   await page.goto('/list.html?cost=15&overscan=0');
   await page.waitForTimeout(500);
   const target = list(page);
@@ -260,7 +245,7 @@ test.describe('replays', () => {
     expect(r).toBeSmooth(); // the first run creates the baseline; 'on' attaches a replay anyway
   });
 
-  test("the 'on' replay is a playable, seekable WebM, named in the result", async ({ page }) => {
+  test("the 'on' replay is a playable WebM", async ({ page }) => {
     const files = await outputOf('replays-on-a-replay-even');
     const webm = files.find((f) => f.endsWith('.replay.webm'))!;
     expect(webm).toBeTruthy();

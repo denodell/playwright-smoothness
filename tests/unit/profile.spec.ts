@@ -29,14 +29,14 @@ const profile: CpuProfile = {
   ],
 };
 
-test('self and total time inside the windows only; idle is not work', () => {
+test('self and total time within the windows', () => {
   const run = attributeProfile(profile, [[90, 200]]);
   expect(run.sampledMs).toBe(25);
   const byFn = Object.fromEntries([...run.functions.values()].map((f) => [f.fn, [f.selfMs, f.totalMs]]));
   expect(byFn).toEqual({ busyWait: [20, 20], onCheckout: [5, 25], dispatch: [0, 25] });
 });
 
-test('combined across runs: averaged, ranked by self time, with the most common callers', () => {
+test('combining runs', () => {
   const a = attributeProfile(profile, [[90, 200]]);
   const b = attributeProfile(profile, [[90, 115]]); // only the two busyWait samples
   const result = combineProfiles([a, b]);

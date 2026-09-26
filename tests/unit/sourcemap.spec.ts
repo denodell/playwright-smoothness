@@ -98,7 +98,7 @@ function frameFor(js: string, search: RegExp) {
   throw new Error(`not found: ${search}`);
 }
 
-test('resolver: minified esbuild output maps back to the original names and lines', async () => {
+test('resolver: minified esbuild output', async () => {
   const { js, map } = await minified();
   const fetches: string[] = [];
   const fetchText: FetchText = async (url) => {
@@ -125,7 +125,7 @@ test('resolver: minified esbuild output maps back to the original names and line
   expect(await resolver.failures()).toEqual([]);
 });
 
-test('resolver: inline data: maps and the SourceMap header both work', async () => {
+test('resolver: inline maps and the SourceMap header', async () => {
   const { js, map } = await minified();
   const inline = js.replace(
     /\/\/# sourceMappingURL=.*\n$/,
@@ -145,7 +145,7 @@ test('resolver: inline data: maps and the SourceMap header both work', async () 
   );
 });
 
-test('resolver: no map, broken maps and unfetchable scripts resolve to null and are reported', async () => {
+test('resolver: missing, broken or unfetchable maps', async () => {
   const noMap = new NameResolver(async () => ({ text: 'function a(){}' }));
   expect(await noMap.resolve({ fn: 'a', url: 'http://x/a.js', line: 1, column: 11 })).toBeNull();
   expect(await noMap.failures()).toEqual(['http://x/a.js: it has no sourceMappingURL']);

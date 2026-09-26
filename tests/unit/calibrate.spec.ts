@@ -32,7 +32,8 @@ test('steady checks: changes within the floor need no allowance', () => {
   expect(c!.suggestedMaxIncrease).toBe(0.05);
 });
 
-test('a noisy metric: suggestion just above its spread, and a warning above 0.15', () => {
+// A suggestion above the default 0.15 comes with a warning.
+test('a noisy metric', () => {
   const [c] = calibrate([run(200, 1), run(260, 1), run(230, 1)]);
   const p95 = c!.metrics.find((m) => m.metric === 'input.p95ToPaintMs')!;
   expect(p95.spreadPercent).toBe(30);
@@ -41,7 +42,7 @@ test('a noisy metric: suggestion just above its spread, and a warning above 0.15
   expect(c!.suggestedMaxIncrease).toBe(0.35);
 });
 
-test('from zero, beyond the floor: no maxIncrease helps, and it says so', () => {
+test('from zero to beyond the floor', () => {
   const [c] = calibrate([run(100, 0), run(100, 3)]);
   const lf = c!.metrics.find((m) => m.metric === 'longFrames.count')!;
   expect(lf).toMatchObject({ spreadPercent: null, withinFloor: false, suggestedMaxIncrease: null });
@@ -58,7 +59,7 @@ test('ungated metrics are reported but do not drive the suggestion', () => {
   expect(c!.suggestedMaxIncrease).toBe(0.05);
 });
 
-test('checks seen in fewer than two runs, or unmeasured, are skipped', () => {
+test('checks with fewer than two measured runs are skipped', () => {
   const empty = new Map([['x/a.json', makeResult({ runs: 0, input: null, longFrames: null })]]);
   expect(calibrate([run(100, 1), new Map(), empty])).toEqual([]);
 });

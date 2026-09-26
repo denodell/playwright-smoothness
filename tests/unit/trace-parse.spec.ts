@@ -35,7 +35,7 @@ test('recorded trace, 12ms blocking: frames and a 120Hz prediction', () => {
   expect(out.budget120!.framesOverBudget).toBeGreaterThanOrEqual(8); // 12ms > 8.33ms, ten scrolls
 });
 
-test('recorded trace, 12ms blocking: the CPU profile names the scroll handler', () => {
+test('recorded trace, 12ms blocking: CPU profile', () => {
   const t = load('scroll-12ms');
   const out = parseTrace(t.traceEvents, {
     browserVersion: t.browserVersion,
@@ -58,7 +58,7 @@ test('recorded trace, 25ms blocking: dropped frames', () => {
   expect(out.budget120).toBeNull();
 });
 
-test('counts presented and dropped inside the marks only, and computes on-time percent', () => {
+test('counts frames between the marks only', () => {
   const out = parseTrace(
     [
       reporter(50, 'STATE_DROPPED', 5, 1), // before the start mark: Playwright's about:blank host
@@ -76,7 +76,8 @@ test('counts presented and dropped inside the marks only, and computes on-time p
   expect(out.notes).toEqual([]);
 });
 
-test('exact repeats are dropped; presented and dropped for the same frame both count', () => {
+// Exact repeats count once; a frame reported both presented and dropped counts as both.
+test('duplicate reporter events', () => {
   const out = parseTrace(
     [
       mark(MARK_START, 0),
@@ -93,7 +94,7 @@ test('exact repeats are dropped; presented and dropped for the same frame both c
   expect(out.frames).toEqual({ total: 3, onTime: 2, dropped: 1, onTimePercent: 66.7 });
 });
 
-test('no frame needed an update: on-time percent is null, not 100 or 0', () => {
+test('no frame needed an update', () => {
   const out = parseTrace(
     [mark(MARK_START, 0), reporter(10, 'STATE_NO_UPDATE_DESIRED', 1), mark(MARK_END, 100)],
     opts,
@@ -121,13 +122,13 @@ test('no PipelineReporter events: unavailable, never zero', () => {
   ]);
 });
 
-test('PipelineReporter without a state field (a format change): unavailable', () => {
+test('PipelineReporter without a state field', () => {
   const out = parseTrace([mark(MARK_START, 0), reporter(10, undefined, 1), mark(MARK_END, 100)], opts);
   expect(out.frames).toBeNull();
   expect(out.unavailable[0]!.reason).toMatch(/no args\.frame_reporter\.state/);
 });
 
-test('Chrome 131 names the field chrome_frame_reporter: counted the same', () => {
+test('Chrome 131: chrome_frame_reporter', () => {
   const older = (e: TraceEvent): TraceEvent => ({
     ...e,
     args: { chrome_frame_reporter: e.args!.frame_reporter },
@@ -143,7 +144,7 @@ test('Chrome 131 names the field chrome_frame_reporter: counted the same', () =>
   expect(out.frames).toMatchObject({ onTime: 1, dropped: 1 });
 });
 
-test('unknown states are excluded and noted; several compositors are noted', () => {
+test('unknown states and several compositors', () => {
   const out = parseTrace(
     [
       mark(MARK_START, 0),
@@ -161,7 +162,7 @@ test('unknown states are excluded and noted; several compositors are noted', () 
   ]);
 });
 
-test('120Hz: missing or unpairable AnimationFrame events are unavailable', () => {
+test('120Hz from AnimationFrame events', () => {
   const none = parseTrace(
     [mark(MARK_START, 0), reporter(10, 'STATE_PRESENTED_ALL', 1), mark(MARK_END, 100)],
     {
@@ -233,7 +234,8 @@ const chunk = (
   args: { data: { cpuProfile: { nodes, samples }, timeDeltas: deltas } },
 });
 
-test('profile: the main thread is chosen by the start mark, and times convert to page ms', () => {
+// The start mark's thread is the main thread, so the worker's profile is ignored.
+test('profile: main thread and page times', () => {
   // Trace clock 1,000,000µs is page time 500ms, so page ms = (µs − 500,000) / 1000.
   const out = parseTrace(
     [
@@ -264,7 +266,7 @@ test('profile: the main thread is chosen by the start mark, and times convert to
   ]);
 });
 
-test('profile: missing, misaligned or malformed profiles are unavailable', () => {
+test('profile: unusable profiles', () => {
   const base = [startMark(1_000, 1), { ...mark(MARK_END, 2_000), ...MAIN }];
   const none = parseTrace(base, { ...opts, profile: true });
   expect(none.unavailable).toContainEqual({
@@ -287,7 +289,8 @@ test('profile: missing, misaligned or malformed profiles are unavailable', () =>
   expect(empty.unavailable.find((u) => u.measurement === 'profile')!.reason).toMatch(/no samples/);
 });
 
-test('frames from other processes are not counted: the browser silently, other renderers with a note', () => {
+// Not counted: the browser's own frames silently, other renderers' with a note.
+test('frames from other processes', () => {
   const inProcess = (pid: number, ts: number, state: string, seq: number): TraceEvent => ({
     ...reporter(ts, state, seq),
     pid,

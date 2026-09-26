@@ -43,10 +43,7 @@ test('refreshRate 120 adds a reported-only prediction', async ({ page, smoothnes
   expect(result.budget120!.framesOverBudget).toBeGreaterThanOrEqual(8);
 });
 
-test('quick mode has no frames field at all, and refreshRate 120 says it needs full mode', async ({
-  page,
-  smoothness,
-}) => {
+test('quick mode has no frames or 120Hz prediction', async ({ page, smoothness }) => {
   await page.goto('/scroll.html?wait=12');
   const result = await smoothness.measure('quick 120', () => tenWheelScrolls(page), {
     mode: 'quick',

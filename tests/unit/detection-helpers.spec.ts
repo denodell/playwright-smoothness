@@ -28,7 +28,7 @@ test('median of odd, even and empty lists', () => {
   expect(median([])).toBeNaN();
 });
 
-test('pipelineStates counts begin events only and flags a missing state', () => {
+test('pipelineStates counts begin events', () => {
   const events = [
     reporter(1, 'STATE_DROPPED'),
     reporter(2, 'STATE_PRESENTED_ALL'),
@@ -47,13 +47,13 @@ test('pipelineStates respects the window', () => {
   expect(pipelineStates(events, [150, 250])).toEqual({ STATE_DROPPED: 1 });
 });
 
-test('inputWindow spans inputs, ignores mouse moves, and adds the tail', () => {
+test('inputWindow spans the inputs', () => {
   const events = [latency(10, 'MOUSE_MOVED_EVENT'), latency(100, 'MOUSE_WHEEL'), latency(500, 'MOUSE_WHEEL')];
   expect(inputWindow(events)).toEqual([100, 500 + INPUT_TAIL_MS * 1000]);
   expect(inputWindow([latency(10, 'MOUSE_MOVED_EVENT')])).toBeNull();
 });
 
-test('animationFrameDurations pairs async begin/end by id and reads complete events', () => {
+test('animationFrameDurations', () => {
   const events: TraceEvent[] = [
     { name: 'AnimationFrame', ph: 'b', ts: 1000, id: 'a' },
     { name: 'AnimationFrame', ph: 'b', ts: 2000, id2: { local: 'b' } },

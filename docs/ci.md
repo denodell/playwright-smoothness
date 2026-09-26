@@ -2,8 +2,8 @@
 
 A baseline only means something on the machine that gates, so baselines come from CI, not from developer laptops. The flow:
 
-1. **On the main branch**, run the suite with `--update-snapshots=all`, so every baseline is re-recorded from main, and upload the snapshot files as an artifact.
-2. **On pull requests**, download the latest artifact from main into a directory and point `baselineDir` at it. Each check then compares against main.
+1. On the main branch, run the suite with `--update-snapshots=all`, so every baseline is re-recorded from main, and upload the snapshot files as an artifact.
+2. On pull requests, download the latest artifact from main into a directory and point `baselineDir` at it. Each check then compares against main.
 
 `baselineDir` mirrors your snapshot layout: a baseline at `<snapshotDir>/<path>` is looked for at `<baselineDir>/<path>` first. Baselines are matched on CPU model, so an artifact built on one hosted-runner CPU won't be used on another. Keep each CPU model's files (the recipe below merges them), or use a dedicated runner.
 

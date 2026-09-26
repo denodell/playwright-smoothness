@@ -29,12 +29,12 @@ Chrome 153. Identical locally and on GitHub Actions (PR #2, run 35945190946):
 
 The keydown results follow the same pattern (`DIV#root.onkeydown`, `INPUT#search.onkeydown`).
 
-In every case LoAF measured the work correctly: one long frame of at least 150ms for the click, and one per key press. **But it never named `onCheckout` or `onSearchKey`.**
+In every case LoAF measured the work correctly: one long frame of at least 150ms for the click, and one per key press. But it never named `onCheckout` or `onSearchKey`.
 
-- **React** blames its own root listener and dispatcher. The invoker names the root container, not the button.
-- **Zone.js** blames its wrapper. The invoker does name the right element, because Zone.js patches `addEventListener` on the element itself.
-- **Zoneless Angular** blames an anonymous wrapper, so there's no function name at all.
-- **Event Timing names the real element every time,** including through React's delegation.
+- React blames its own root listener and dispatcher. The invoker names the root container, not the button.
+- Zone.js blames its wrapper. The invoker does name the right element, because Zone.js patches `addEventListener` on the element itself.
+- Zoneless Angular blames an anonymous wrapper, so there's no function name at all.
+- Event Timing names the real element every time, including through React's delegation.
 
 ## Why source maps don't fix LoAF
 
@@ -74,9 +74,9 @@ Minified names are mapped back through the page's source maps: V8 gives each fun
 
 (`busyWait` is the test pages' stand-in for slow work, and `onCheckout` is the handler that calls it.)
 
-- **The handler is named on every build**, minified or not, behind React's dispatcher, Zone.js, and Angular's listener wrapper.
-- **Source maps are fetched the way the page would fetch them**, through Playwright's request context, so cookies and HTTP credentials apply. `//# sourceMappingURL` comments, `data:` URLs and the `SourceMap` header all work. Pages that don't publish maps keep the names V8 reports, without a note, because those names are what the code is actually called. A map that is referenced but can't be loaded or parsed gets a note.
+- The handler is named on every build, minified or not, behind React's dispatcher, Zone.js, and Angular's listener wrapper.
+- Source maps are fetched the way the page would fetch them, through Playwright's request context, so cookies and HTTP credentials apply. `//# sourceMappingURL` comments, `data:` URLs and the `SourceMap` header all work. Pages that don't publish maps keep the names V8 reports, without a note, because those names are what the code is actually called. A map that is referenced but can't be loaded or parsed gets a note.
 - The decoder is in-house (`src/sourcemap/`, no dependencies). Index maps (with `sections`) aren't supported and are reported as such.
-- **Workers are excluded.** Each thread has its own profile, and the library reads only the one on the thread its start mark came from (the page's main thread). `test-pages/worker.html` keeps a worker busy next to a slow click handler; the worker's function never appears.
-- **Inlining.** V8's optimizing compiler inlines small hot functions into their callers, and the sampled profile then attributes their time to the caller. In `examples/react-list`, `expensiveFormat()` is sometimes inlined into the `Row` component and sometimes not, from run to run, so the profile names one or the other (both at their `main.jsx` lines, through the source map). DevTools shows the same.
+- Workers are excluded. Each thread has its own profile, and the library reads only the one on the thread its start mark came from (the page's main thread). `test-pages/worker.html` keeps a worker busy next to a slow click handler; the worker's function never appears.
+- V8's optimizing compiler inlines small hot functions into their callers, and the sampled profile then attributes their time to the caller. In `examples/react-list`, `expensiveFormat()` is sometimes inlined into the `Row` component and sometimes not, from run to run, so the profile names one or the other (both at their `main.jsx` lines, through the source map). DevTools shows the same.
 - `(program)` is browser work outside JavaScript (style, layout, painting), and `now` is `performance.now()` itself.

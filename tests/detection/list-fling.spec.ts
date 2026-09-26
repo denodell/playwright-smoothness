@@ -76,7 +76,7 @@ for (const s of SCENARIOS) {
   });
 }
 
-test('has_missing_content does not separate a drawn list from a blank one', () => {
+test("has_missing_content can't tell a blank list from a drawn one", () => {
   // Chrome 141: fired on ~78% of frames for every list. Chrome 153: 0% for every list.
   // Either way it says nothing about blank rows, so the library must not use it.
   test.skip(Object.keys(missingContentRate).length !== SCENARIOS.length, 'needs every fling from this file');

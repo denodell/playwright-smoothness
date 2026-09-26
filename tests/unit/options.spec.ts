@@ -70,7 +70,8 @@ test('invalid values are rejected with a clear message', () => {
   expect(() => resolveOptions([{ replay: 'sometimes' as 'on' }], {})).toThrow(/replay must be/);
 });
 
-test('mode: option beats SMOOTHNESS_MODE beats scheduled CI beats default', () => {
+// The option, then SMOOTHNESS_MODE, then scheduled CI, then the default.
+test('mode: which setting wins', () => {
   const env = { SMOOTHNESS_MODE: 'quick', GITHUB_EVENT_NAME: 'schedule' };
   expect(detectMode('full', env)).toEqual({ mode: 'full', source: 'option' });
   expect(detectMode(undefined, env)).toEqual({ mode: 'quick', source: 'SMOOTHNESS_MODE' });

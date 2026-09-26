@@ -51,7 +51,7 @@ test('a 150ms click handler is reported and attributed', async ({ page }) => {
   );
 });
 
-test('LoAF ignores durationThreshold: 12ms and 25ms clicks produce no entries', async ({ page }) => {
+test('LoAF ignores durationThreshold', async ({ page }) => {
   for (const ms of [12, 25]) {
     await page.goto(`/click.html?ms=${ms}`);
     await page.waitForTimeout(PAGE_SETTLE_MS);

@@ -19,9 +19,9 @@ export type Enforce = 'warn' | 'fail';
 export type ResetStrategy = 'reload' | 'none' | ((ctx: { page: Page }) => Promise<void>);
 
 export interface ListOptions {
-  /** Colour treated as "blank" in list screenshots. `'auto'` samples the list's computed background. */
+  /** Color treated as "blank" in list screenshots. `'auto'` samples the list's computed background. */
   background?: 'auto' | string;
-  /** Colours or selectors whose appearance counts as blank (skeleton rows, placeholders). */
+  /** Colors or selectors whose appearance counts as blank (skeleton rows, placeholders). */
   placeholders?: string[];
 }
 
@@ -192,7 +192,7 @@ export interface Budget120Result {
 
 /** Blank rows while scrolling a list, from trace screenshots (`scroll()` in full mode). */
 export interface ListResult {
-  /** Screenshots analysed: one per frame the compositor produced while the list moved. */
+  /** Screenshots analyzed: one per frame the compositor produced while the list moved. */
   frames: number;
   /** Frames drawn to less than half of the list at rest. */
   blankFrames: number;

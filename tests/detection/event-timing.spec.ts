@@ -15,9 +15,8 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(installObservers);
 });
 
-test('a 25ms click is visible to Event Timing (threshold 16), in 8ms steps, while LoAF misses it', async ({
-  page,
-}) => {
+test('a 25ms click: Event Timing sees it, LoAF misses it', async ({ page }) => {
+  // Event Timing reports from 16ms, in 8ms steps; LoAF only from 50ms.
   await page.goto('/click.html?ms=25');
   await page.waitForTimeout(PAGE_SETTLE_MS);
   // The first click on a page carries a one-off cost (see 'first interaction' below).
@@ -42,9 +41,7 @@ test('a 25ms click is visible to Event Timing (threshold 16), in 8ms steps, whil
   expect(loaf).toHaveLength(0);
 });
 
-test('a click on a nested span reports the span; the interactive ancestor is the button', async ({
-  page,
-}) => {
+test('a click on a nested span', async ({ page }) => {
   await page.goto('/click.html?ms=80');
   await page.waitForTimeout(PAGE_SETTLE_MS);
   await clearCollected(page);
@@ -64,7 +61,7 @@ test('a click on a nested span reports the span; the interactive ancestor is the
   expect(ancestor).toBe('nested');
 });
 
-test('a self-removing button leaves target null; LoAF still names the invoker', async ({ page }) => {
+test('a self-removing button', async ({ page }) => {
   await page.goto('/click.html?ms=70');
   await page.waitForTimeout(PAGE_SETTLE_MS);
   await clearCollected(page);
@@ -96,7 +93,7 @@ test('a 60ms keydown handler is reported per key with its target', async ({ page
   }
 });
 
-test('wheel scrolling produces no scroll or wheel Event Timing entries', async ({ page }) => {
+test('wheel scrolling has no Event Timing entries', async ({ page }) => {
   await page.goto('/scroll.html?wait=40');
   await page.waitForTimeout(PAGE_SETTLE_MS);
   await clearCollected(page);
@@ -112,8 +109,9 @@ test('wheel scrolling produces no scroll or wheel Event Timing entries', async (
   expect(scrolls.length).toBeGreaterThanOrEqual(10);
 });
 
-test('the first interaction on a page costs more than later ones (warm-up matters)', async ({ page }) => {
-  // Recorded, not gated on: it informs the warm-up run and single-run automatic mode.
+test('the first interaction on a page', async ({ page }) => {
+  // It costs more than later clicks. Recorded, not gated on: it informs the warm-up run and
+  // single-run automatic mode.
   await page.goto('/click.html?ms=25');
   await page.waitForTimeout(PAGE_SETTLE_MS);
   await clearCollected(page);

@@ -23,7 +23,7 @@ Where each event lives:
 - `performance.mark()` calls are in `blink.user_timing`. Each mark's `args.data.startTime` is its `performance.now()` value, so the marks line the trace up with the page's clock exactly.
 - `EventLatency` is in `cc,benchmark,input,input.scrolling`. The detection suite used it to find the input window. The library doesn't need it, because it places its own marks.
 
-**Chosen sets** (`src/trace/categories.ts`):
+Chosen sets (`src/trace/categories.ts`):
 
 | Use                                            | Categories                                                         | Size for this interaction                         |
 | ---------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------- |
@@ -38,14 +38,14 @@ That's about 9x smaller than the broad set, with the same frame states.
 
 The library puts `playwright-smoothness:start` and `:end` marks around the measured action and counts only frames between them. The start mark is placed two animation frames after tracing starts.
 
-The detection suite found a dropped frame about 550ms before the first input in most traces, and works around it with an input window. That frame comes from a **different compositor** (`layer_tree_host_id` 1, frame sequence 5): Playwright's initial `about:blank` document. The page under test is `layer_tree_host_id` 2. The mark window excludes it naturally.
+The detection suite found a dropped frame about 550ms before the first input in most traces, and works around it with an input window. That frame comes from a different compositor (`layer_tree_host_id` 1, frame sequence 5): Playwright's initial `about:blank` document. The page under test is `layer_tree_host_id` 2. The mark window excludes it naturally.
 
 Each frame can appear in more than one `PipelineReporter` event:
 
-- **Exact repeats** (same host, source, sequence and state) are counted once.
-- **One frame reported as both `STATE_PRESENTED_ALL` and `STATE_DROPPED`** counts as both. The compositor presented the scroll, but the blocked main thread missed its update. That's the signal the section 3 table rests on (25ms blocking: 2 dropped). Collapsing the pair into "presented" would hide it.
+- Exact repeats (same host, source, sequence and state) are counted once.
+- One frame reported as both `STATE_PRESENTED_ALL` and `STATE_DROPPED` counts as both. The compositor presented the scroll, but the blocked main thread missed its update, which is how a blocked scroll handler shows up in the trace (25ms of blocking drops 2 frames in the scroll-blocking table in [measurements.md](measurements.md)). Counting the pair as only "presented" would hide it.
 
-Only frames from the page's own renderer process count, identified by the process the start mark came from. The browser process also presents frames: after a reload it presented one inside the measurement window in every run, which inflated `onTime` by one until this was found. Out-of-process iframes are other documents; their frames aren't counted, and the result notes that they were there.
+Only frames from the page's own renderer process count, identified by the process the start mark came from. The browser process also presents frames: after a reload it presents one inside the measurement window in every run, which would add one to `onTime`. Out-of-process iframes are other documents; their frames aren't counted, and the result notes that they were there.
 
 `frames.total` is presented plus dropped. `STATE_NO_UPDATE_DESIRED` frames had nothing to show and aren't counted. When no frame had an update, `onTimePercent` is `null`, not 100.
 
@@ -59,8 +59,8 @@ The same interactions measured in quick mode and full mode on the same page, 5 r
 | Typing, 60ms keydown | 3 / 3                      | 64.3 / 65.0ms   | 64 / 64ms          | 6.5s / 6.5s             |
 | Scroll, 70ms handler | 5 / 5                      | 87.2 / 87.7ms   | n/a / n/a          | 6.9s / 7.2s             |
 
-**With the CPU profiler on** (the same test, re-run after it was added), the counts still matched (1 / 1, 3 / 3, 5 / 5), worst frames were within 1.8ms, p95 was identical, and wall time per `measure()` rose 6–13% instead of 1–4% locally. On GitHub Actions (PR #4) the counts and p95 were again identical in both modes, and wall time rose 7–22% (a single click: 4.96s to 6.06s). The profiler samples the main thread about every 140µs, which costs a little time around the interaction but didn't change what was measured.
+With the CPU profiler on (the same test, re-run after it was added), the counts still matched (1 / 1, 3 / 3, 5 / 5), worst frames were within 1.8ms, p95 was identical, and wall time per `measure()` rose 6–13% instead of 1–4% locally. On GitHub Actions (PR #4) the counts and p95 were again identical in both modes, and wall time rose 7–22% (a single click: 4.96s to 6.06s). The profiler samples the main thread about every 140µs, which costs a little time around the interaction but didn't change what was measured.
 
 Before the profiler was added: tracing with the chosen categories doesn't change what's measured: identical long-frame counts, worst frames within 0.7ms, and input-to-paint within one Event Timing step (8ms), which is under the 16ms floor. Wall time rises 1–4%. The integration test asserts this on every CI run.
 
-**Per-mode baselines are enough.** Baselines are keyed by mode, so a full-mode run is never compared with a quick-mode baseline, and the numbers the two modes share agree anyway.
+Per-mode baselines are enough. Baselines are keyed by mode, so a full-mode run is never compared with a quick-mode baseline, and the numbers the two modes share agree anyway.

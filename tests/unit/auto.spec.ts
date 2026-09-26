@@ -7,7 +7,7 @@ import { analyzeDocs, type DocData } from '../../src/auto/withSmoothness.js';
 import { onMainBranch } from '../../src/ci.js';
 import { makeResult } from './result-factory.js';
 
-test('medianMetrics: per metric, skipping runs that did not measure it', () => {
+test('medianMetrics skips unmeasured runs', () => {
   const e = (p95: number | null, count: number) => ({
     recordedAt: '',
     browserVersion: '',
@@ -20,7 +20,7 @@ test('medianMetrics: per metric, skipping runs that did not measure it', () => {
   expect(medianMetrics([e(null, 0)])).toEqual({ 'input.p95ToPaintMs': null, 'longFrames.count': 0 });
 });
 
-test('history files: keep the newest N, written atomically, readable back', () => {
+test('history files', () => {
   const dir = mkdtempSync(join(tmpdir(), 'smoothness-history-'));
   try {
     const result = makeResult();
@@ -63,7 +63,7 @@ test('specHash changes when the file changes', () => {
   }
 });
 
-test('onMainBranch, per CI provider: pushes to main record, pull requests never do', () => {
+test('onMainBranch for each CI provider', () => {
   expect(onMainBranch({})).toBe(false);
   expect(onMainBranch({ GITHUB_ACTIONS: 'true', GITHUB_EVENT_NAME: 'push', GITHUB_REF_NAME: 'main' })).toBe(
     true,
@@ -122,7 +122,7 @@ const click = (start: number, duration: number) => ({
   rawTarget: 'button#go',
 });
 
-test('analyzeDocs: an input the page navigated away from before painting is reported', () => {
+test('analyzeDocs: navigating away before paint', () => {
   // Input at 900ms on the first document; the next document on the same page started 60ms later.
   const docs = new Map([
     [1_000_000, doc({ lastInput: { at: 900, type: 'pointerdown' } })],
@@ -131,7 +131,7 @@ test('analyzeDocs: an input the page navigated away from before painting is repo
   expect(analyzeDocs(docs).unmeasured).toEqual(['pointerdown on http://x/a']);
 });
 
-test("analyzeDocs: an earlier click's entry still running when the input arrived doesn't count as measuring it", () => {
+test('analyzeDocs: an overlapping earlier click', () => {
   // A slow click at 780ms is measured until 910ms; the navigating click at 900ms never paints.
   const docs = new Map([
     [1_000_000, doc({ lastInput: { at: 900, type: 'pointerdown' }, events: [click(780, 130)] })],
@@ -140,7 +140,7 @@ test("analyzeDocs: an earlier click's entry still running when the input arrived
   expect(analyzeDocs(docs).unmeasured).toEqual(['pointerdown on http://x/a']);
 });
 
-test('analyzeDocs: not reported when the input was measured, when the page stayed, or when another tab navigated', () => {
+test("analyzeDocs: inputs that aren't reported", () => {
   const measured = new Map([
     [1_000_000, doc({ lastInput: { at: 900, type: 'pointerdown' }, events: [click(899, 40)] })],
     [1_000_960, doc({ timeOrigin: 1_000_960 })],

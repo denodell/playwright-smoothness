@@ -10,7 +10,7 @@ import { installObservers, collected, save, type LoafRecord } from './helpers.js
  */
 const LOAD_GRACE_MS = 50;
 
-test('load, interaction and background frames are classified correctly', async ({ page }) => {
+test('classifying load, interaction and background frames', async ({ page }) => {
   await page.addInitScript(installObservers);
   await page.goto('/mixed.html');
   await page.waitForTimeout(1200); // past load work and the background job at +300ms
