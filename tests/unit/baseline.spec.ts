@@ -284,7 +284,7 @@ test('two tests in one file with the same label get separate baselines', () => {
       titlePath: ['spec.ts', 'another test'],
     });
     expect(b.status).toBe('baseline-created');
-    expect(a.baseline!.path).toContain('/filters-opens-quickly/');
+    expect(a.baseline!.path.replaceAll('\\', '/')).toContain('/filters-opens-quickly/');
     expect(b.baseline!.path).toContain('/another-test/');
   } finally {
     rmSync(dir, { recursive: true, force: true });

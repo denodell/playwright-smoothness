@@ -3,6 +3,7 @@
 //   reporter: [['list'], ['playwright-smoothness/reporter', { outputFile: 'smoothness.md' }]]
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
+import { forwardSlashes } from '../output.js';
 import type { FullConfig, Reporter, TestCase, TestResult } from '@playwright/test/reporter';
 import type { SmoothnessResult } from '../types.js';
 import { buildMarkdown, type ReportEntry } from './markdown.js';
@@ -41,7 +42,7 @@ export default class SmoothnessReporter implements Reporter {
         if (r.schemaVersion !== 1) continue;
         this.entries.push({
           test: test.titlePath().slice(3).join(' › ') || test.title,
-          file: relative(this.rootDir, test.location.file),
+          file: forwardSlashes(relative(this.rootDir, test.location.file)),
           project: test.parent.project()?.name ?? '',
           result: r,
         });
