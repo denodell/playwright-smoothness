@@ -57,7 +57,7 @@ test('an unchanged run (a change within noise) passes', () => {
   expect(r.result!.comparison!.status).toBe('pass');
 });
 
-test("10ms → 60ms click work fails with enforce: 'fail', naming the element and the handler", () => {
+test("10ms → 60ms click work fails with enforce: 'fail'", () => {
   const r = run({ CLICK_MS: '60', ENFORCE: 'fail' });
   expect(r.code, r.output).toBe(1);
   expect(r.result!.comparison!.status).toBe('fail');
@@ -66,7 +66,7 @@ test("10ms → 60ms click work fails with enforce: 'fail', naming the element an
   expect(r.output).toContain('onHeavyClick in click.js');
 });
 
-test("the same regression with enforce: 'warn' passes, annotates, and warns on the pull request", () => {
+test("the same regression with enforce: 'warn'", () => {
   const r = run({ CLICK_MS: '60', GITHUB_ACTIONS: 'true' });
   expect(r.code, r.output).toBe(0);
   expect(r.result!.comparison!.status).toBe('warn');
@@ -75,7 +75,7 @@ test("the same regression with enforce: 'warn' passes, annotates, and warns on t
   );
 });
 
-test('--update-snapshots replaces the baseline, and the new level then passes', () => {
+test('--update-snapshots accepts the new level', () => {
   const updated = run({ CLICK_MS: '60', ENFORCE: 'fail' }, ['--update-snapshots']);
   expect(updated.code, updated.output).toBe(0);
   expect(updated.result!.comparison!.status).toBe('baseline-updated');

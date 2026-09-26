@@ -3,10 +3,7 @@ import { attach } from '../detection/helpers.js';
 
 test.use({ smoothnessOptions: { runs: 3 } });
 
-test('a 150ms click handler: one long interaction frame per run, attributed to the handler', async ({
-  page,
-  smoothness,
-}) => {
+test('a 150ms click handler', async ({ page, smoothness }) => {
   await page.goto('/click.html?ms=150');
   const result = await smoothness.measure('heavy click', async () => {
     await page.click('#heavy');
@@ -63,10 +60,7 @@ test('typing into a slow search box: one interaction per key', async ({ page, sm
   expect(result.longFrames!.topScripts[0]!.fn).toBe('onSearchKeydown');
 });
 
-test('scrolling: long frames counted, and no interactions means null, never zero', async ({
-  page,
-  smoothness,
-}) => {
+test('scrolling without interactions', async ({ page, smoothness }) => {
   await page.goto('/scroll.html?wait=70');
   const result = await smoothness.measure('scroll', async () => {
     await page.mouse.move(400, 400);
@@ -84,11 +78,9 @@ test('scrolling: long frames counted, and no interactions means null, never zero
   expect(result.spread['input.p95ToPaintMs']).toBeUndefined();
 });
 
-test('load and background frames are excluded; reload settles before each run', async ({
-  page,
-  smoothness,
-}) => {
-  // mixed.html blocks 120ms during load and 90ms in a timer 300ms after load.
+test('load and background frames are excluded', async ({ page, smoothness }) => {
+  // mixed.html blocks 120ms during load and 90ms in a timer 300ms after load. No notes: the page
+  // goes quiet after each reload, before its run.
   await page.goto('/mixed.html');
   const result = await smoothness.measure('buy', () => page.click('#buy .label'));
   await attach(result);
@@ -98,10 +90,7 @@ test('load and background frames are excluded; reload settles before each run', 
   expect(result.notes).toEqual([]);
 });
 
-test('a page that never goes quiet: the run continues, background frames are excluded, and a note says so', async ({
-  page,
-  smoothness,
-}) => {
+test('a page that never goes quiet', async ({ page, smoothness }) => {
   test.setTimeout(90_000);
   await page.goto('/mixed.html?bgevery=250');
   // Unthrottled: on Windows, Chrome's CPU throttling spaces timers irregularly (gaps of up to
@@ -124,10 +113,7 @@ test('CPU throttling slows iteration-based work', async ({ page, smoothness }) =
   expect(at4.input!.p95ToPaintMs!).toBeGreaterThan(2 * at1.input!.p95ToPaintMs!);
 });
 
-test("reset: 'reload' reloads before each run after the warm-up; 'none' never reloads; a function is called", async ({
-  page,
-  smoothness,
-}) => {
+test("reset: 'reload', 'none' and a function", async ({ page, smoothness }) => {
   await page.goto('/click.html?ms=20');
   let loads = 0;
   page.on('load', () => loads++);
@@ -166,10 +152,7 @@ test('an action that navigates is reported, not measured', async ({ page, smooth
   expect(result.notes.join(' ')).toMatch(/navigated to a new document/);
 });
 
-test('a hostile element does not break the collector; the error is reported', async ({
-  page,
-  smoothness,
-}) => {
+test("a hostile element doesn't break the collector", async ({ page, smoothness }) => {
   await page.goto('/click.html?ms=150&hostile=1');
   const result = await smoothness.measure('hostile', () => page.click('#heavy'), { runs: 2 });
   await attach(result);

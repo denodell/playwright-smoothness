@@ -34,7 +34,7 @@ test('a drawn row of the test list: content on 70 of 80 lines', () => {
   expect(lineCoverage(img, 200, 80, opts())).toBeCloseTo(70 / 80);
 });
 
-test('blank, JPEG noise within tolerance, and a line with too little content', () => {
+test('lines that count as blank', () => {
   expect(
     lineCoverage(
       image(100, 10, () => null),
@@ -50,7 +50,7 @@ test('blank, JPEG noise within tolerance, and a line with too little content', (
       10,
       opts(),
     ),
-  ).toBe(0); // noise
+  ).toBe(0); // JPEG noise, within tolerance
   // One non-blank pixel per line is under the 2-pixel minimum.
   expect(
     lineCoverage(
@@ -90,7 +90,7 @@ test('summarizeList: frames against the at-rest reference', () => {
   expect(summarizeList([0.9, 0.95], reference).leastDrawnPercent).toBe(100); // capped at the reference
 });
 
-test('scroll options: defaults, named and numeric speeds, validation', () => {
+test('scroll options', () => {
   expect(resolveScroll({})).toEqual({
     distance: 'end',
     direction: 'vertical',
@@ -103,7 +103,7 @@ test('scroll options: defaults, named and numeric speeds, validation', () => {
   expect(() => resolveScroll({ distance: -5 })).toThrow(/distance/);
 });
 
-test('default labels name the list and only the options that differ', () => {
+test('default scroll labels', () => {
   const target = { toString: () => "getByRole('list', { name: 'Trending' })" } as never;
   expect(defaultScrollLabel(target, resolveScroll({}))).toBe(
     "scroll getByRole('list', { name: 'Trending' })",
@@ -119,7 +119,7 @@ test('default labels name the list and only the options that differ', () => {
   );
 });
 
-test("scrollDistance: 'end' is the real end up to the cap; pixel distances aren't capped", () => {
+test("scrollDistance: the 'end' cap", () => {
   expect(scrollDistance({ distance: 'end' }, 16_000)).toEqual({ px: 16_000 });
   expect(scrollDistance({ distance: 'end' }, END_CAP_PX)).toEqual({ px: END_CAP_PX });
   expect(scrollDistance({ distance: 'end' }, 399_400)).toEqual({ px: END_CAP_PX, toEnd: 399_400 });

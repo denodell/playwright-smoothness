@@ -134,7 +134,7 @@ for (const wait of BLOCKING_MS) {
   });
 }
 
-test('trace drops separate no work from heavy work (medians across runs)', () => {
+test('trace drops separate no work from heavy work', () => {
   test.skip(rows.length !== BLOCKING_MS.length, 'needs every blocking row from this file');
   const by = Object.fromEntries(rows.map((r) => [r.wait, r.traceDroppedMedian]));
   save(

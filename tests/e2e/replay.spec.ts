@@ -48,7 +48,7 @@ test('a drawn list: baseline recorded, no replay', () => {
   expect(files(join(r.out, 'smoothness'), '.replay.webm')).toEqual([]);
 });
 
-test('blank rows appear: the check warns, and a replay is attached and named in the summary', () => {
+test('blank rows appear: a warning and a replay', () => {
   test.skip(!existsSync(REPORTER), 'run npm run build first');
   const r = run({ ROW_COST: '15' });
   expect(r.code).toBe(0); // enforce: 'warn'

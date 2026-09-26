@@ -41,9 +41,7 @@ async function scrollRun(page: Page, rate: number) {
   };
 }
 
-test('iteration-based scroll work: 4x throttling produces long frames, five runs, with spread', async ({
-  page,
-}) => {
+test('4x throttling slows iteration-based scroll work', async ({ page }) => {
   test.setTimeout(120_000);
   const at1 = [];
   const at4 = [];
@@ -85,7 +83,7 @@ test('iteration-based scroll work: 4x throttling produces long frames, five runs
   expect(at4.every((r) => r.topInvoker === 'DOMWindow.onscroll')).toBe(true);
 });
 
-test('wall-clock busy-waits are not slowed by throttling; iteration work is', async ({ page }) => {
+test('throttling slows iterations, not wall-clock waits', async ({ page }) => {
   test.setTimeout(60_000);
   // Measure the click handler's own script duration from LoAF at 1x and 4x.
   const scriptMs = async (query: string, rate: number) => {

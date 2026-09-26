@@ -44,7 +44,7 @@ const FLAG_VARIANTS: Record<string, string[]> = {
   'disable-gpu-vsync': ['--disable-gpu-vsync'],
 };
 
-test('headless Chrome runs at ~60fps and the frame-rate flags do not change it', async ({ baseURL }) => {
+test('headless Chrome runs at ~60fps', async ({ baseURL }) => {
   test.setTimeout(90_000);
   const results: Record<string, number> = {};
   for (const [name, args] of Object.entries(FLAG_VARIANTS)) {

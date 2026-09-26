@@ -125,7 +125,7 @@ test('message: baseline created', () => {
   expect(formatMessage(result, comparison, '/repo')).toMatchSnapshot('baseline-created.txt');
 });
 
-test('message: full mode, with the CPU profile naming the handler behind a dispatcher', () => {
+test('message: full mode with a CPU profile', () => {
   const { result, comparison } = compared(
     {
       mode: 'full',

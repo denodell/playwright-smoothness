@@ -65,7 +65,9 @@ test('elementFromInvoker', () => {
   expect(elementFromInvoker('https://x/app.js')).toBeNull();
 });
 
-test('interactions: grouped by id, longest duration, named after what the user did', () => {
+// One per interaction id, with its longest duration, named after what the user did (click, not
+// pointerdown).
+test('interactions: grouping entries by id', () => {
   const out = groupInteractions(
     [
       ev({ name: 'pointerdown', duration: 64 }),
@@ -82,7 +84,7 @@ test('interactions: grouped by id, longest duration, named after what the user d
   ]);
 });
 
-test('interactions: a removed target is named from another entry, then from the LoAF invoker', () => {
+test('interactions: naming a removed target', () => {
   const fromPointerdown = groupInteractions(
     [ev({ name: 'pointerdown', target: 'button#v' }), ev({ name: 'click', target: null })],
     [],
@@ -150,11 +152,11 @@ test('classify: a recorded run of the mixed test page', () => {
   );
 });
 
-test('summarizeInput: nulls when there were no interactions, never zero', () => {
+test('summarizeInput: no interactions', () => {
   expect(summarizeInput([])).toEqual({ interactions: 0, p95ToPaintMs: null, worstMs: null, byTarget: [] });
 });
 
-test('scriptBlocking: splits a frame’s blocking time by script duration', () => {
+test('scriptBlocking: split by script duration', () => {
   const m = scriptBlocking([
     frame({
       blockingDuration: 90,
@@ -196,7 +198,7 @@ test('summarizeLongFrames and combining runs', () => {
   });
 });
 
-test('attributeFrames links frames to the interactions and scrolls they served', () => {
+test('attributeFrames', () => {
   const frames = attributeFrames(
     [frame({ start: 100, duration: 80 }), frame({ start: 1000, duration: 60 }), frame({ start: 5000 })],
     [
@@ -218,7 +220,7 @@ test('attributeFrames links frames to the interactions and scrolls they served',
   expect(top).toMatchObject({ invoker: 'DIV#root.onclick', fn: 'QS', during: ['click on button#checkout'] });
 });
 
-test('classify: a background frame the input arrived during is not the interaction’s', () => {
+test('classify: input arriving during a background frame', () => {
   const click = {
     id: 1,
     event: 'click',
@@ -236,7 +238,7 @@ test('classify: a background frame the input arrived during is not the interacti
   expect(classifyFrame(frame({ start: 1029, duration: 80 }), base)).toBe('interaction');
 });
 
-test('classify and blame: a timer the input interrupted is not the interaction', () => {
+test('classify and blame: a timer the input interrupted', () => {
   const base = { interactions: [], scrolls: [], loadEventEnd: 100 };
   const timer = script({
     invoker: 'TimerHandler:setInterval',
@@ -279,7 +281,7 @@ test('classify and blame: a timer the input interrupted is not the interaction',
   expect(classifyFrame(unknown, base)).toBe('interaction');
 });
 
-test('classify and blame: setInterval callbacks are never the interaction’s', () => {
+test('classify and blame: setInterval callbacks', () => {
   const click = {
     id: 1,
     event: 'click',

@@ -27,7 +27,7 @@ test('machine slugs', () => {
   expect(machineSlug({ cpuModel: 'Apple M1 Pro', cpus: 10, platform: 'darwin' })).toBe('apple-m1-pro-10cpu');
 });
 
-test('the baseline key separates mode, refresh rate, throttling and machine', () => {
+test('the baseline key and file name', () => {
   const key = baselineKey(makeResult(), 'chromium');
   expect(key).toEqual({
     label: 'open filters',
@@ -59,7 +59,7 @@ test('within maxIncrease passes; beyond it is worse', () => {
   expect(bad.find((c) => c.metric === 'input.p95ToPaintMs')).toMatchObject({ status: 'worse', change: 88 });
 });
 
-test('floors: one extra long frame over a zero baseline, or one Event Timing step, is not a regression', () => {
+test('floors: small changes near zero are not regressions', () => {
   const zero = metricsOf(makeResult({ longFrames: { count: 0 }, input: { p95ToPaintMs: 24 } }));
   const checks = compareMetrics(
     makeResult({ longFrames: { count: 1 }, input: { p95ToPaintMs: 40 } }),
@@ -80,7 +80,8 @@ test('floors: one extra long frame over a zero baseline, or one Event Timing ste
   expect(two.find((c) => c.metric === 'longFrames.count')!.status).toBe('worse');
 });
 
-test('10ms to 60ms click work fails (the end-to-end baseline scenario, as numbers)', () => {
+// The end-to-end baseline scenario (tests/e2e/acceptance.spec.ts), as numbers.
+test('10ms to 60ms click work fails', () => {
   const before = metricsOf(makeResult({ input: { p95ToPaintMs: 24 }, longFrames: { count: 0 } }));
   const after = compareMetrics(
     makeResult({ input: { p95ToPaintMs: 72 }, longFrames: { count: 1 } }),
@@ -107,7 +108,7 @@ test('on-time frames are compared on the missed share', () => {
   expect(bad.find((c) => c.metric === 'frames.onTimePercent')!.status).toBe('worse');
 });
 
-test('missing measurements are unavailable or not compared, never zero', () => {
+test('missing measurements', () => {
   const now = makeResult({
     longFrames: null,
     unavailable: [{ measurement: 'longFrames', reason: 'LoAF is not supported' }],
@@ -182,13 +183,13 @@ test.describe('evaluate', () => {
     });
   });
 
-  test('no baseline with --update-snapshots=none: not compared, nothing written', () => {
+  test('no baseline with --update-snapshots=none', () => {
     const c = evaluate(makeResult(), fakeInfo(dir, 'none'));
     expect(c.status).toBe('not-compared');
     expect(c.notes.join(' ')).toMatch(/--update-snapshots=none/);
   });
 
-  test('worse: warn by default, fail with enforce fail, and the matcher option overrides', () => {
+  test('worse: warn or fail', () => {
     evaluate(makeResult(), fakeInfo(dir));
     const slower = makeResult({ input: { p95ToPaintMs: 200 } });
     expect(evaluate(slower, fakeInfo(dir)).status).toBe('warn');
@@ -200,7 +201,7 @@ test.describe('evaluate', () => {
     expect(evaluate(slower, fakeInfo(dir), { maxIncrease: 1 }).status).toBe('pass');
   });
 
-  test('--update-snapshots=all replaces the baseline; changed only replaces it when worse', () => {
+  test('updating with --update-snapshots', () => {
     evaluate(makeResult(), fakeInfo(dir));
     const slower = makeResult({ input: { p95ToPaintMs: 200 } });
     expect(evaluate(makeResult({ input: { p95ToPaintMs: 113 } }), fakeInfo(dir, 'changed')).status).toBe(
@@ -237,7 +238,7 @@ test.describe('evaluate', () => {
     expect(c.status).toBe('pass'); // 112 against 300, not against 50
   });
 
-  test('a baseline from another machine is not used, and the note says which machines have one', () => {
+  test('a baseline from another machine is not used', () => {
     evaluate(makeResult({ machine: { cpuModel: 'AMD EPYC 9V74 80-Core Processor' } }), fakeInfo(dir));
     const c = evaluate(makeResult(), fakeInfo(dir));
     expect(c.status).toBe('baseline-created');
@@ -275,7 +276,7 @@ test.describe('evaluate', () => {
   });
 });
 
-test('two tests in one file with the same label get separate baselines', () => {
+test('same label, different tests: separate baselines', () => {
   const dir = mkdtempSync(join(tmpdir(), 'smoothness-'));
   try {
     const a = evaluate(makeResult(), fakeInfo(dir));

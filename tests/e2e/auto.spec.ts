@@ -74,7 +74,7 @@ test('the plain project runs, and nothing is measured', () => {
   expect(r.results).toEqual([]);
 });
 
-test('changing only the fixtures file: every page-using test gets a result, and main records a history', () => {
+test('switching the fixtures file to withSmoothness', () => {
   writeFileSync(join(project, 'fixtures.ts'), withSmoothness());
   const r = run({ SMOOTHNESS_RECORD: '1' });
   expect(r.code, r.output).toBe(0);
@@ -109,7 +109,8 @@ test('changing only the fixtures file: every page-using test gets a result, and 
   expect(r.histories.map((h) => h.entries.length)).toEqual([1, 1]);
 });
 
-test('once the history is long enough, runs are compared with its median; pull requests do not record', () => {
+// Two recorded runs make the history long enough; later runs are compared with its median.
+test('comparing against the history', () => {
   expect(buyHistory(run({ SMOOTHNESS_RECORD: '1' })).entries).toHaveLength(2);
   const r = run(); // not main: compare only
   expect(r.code, r.output).toBe(0);
@@ -118,7 +119,7 @@ test('once the history is long enough, runs are compared with its median; pull r
   expect(buyHistory(r).entries).toHaveLength(2);
 });
 
-test("a regression fails with enforce: 'fail', naming the element and the handler", () => {
+test("a regression fails with enforce: 'fail'", () => {
   const r = run({ CLICK_MS: '400', SMOOTHNESS_ENFORCE: 'fail' });
   expect(r.code, r.output).toBe(1);
   expect(r.output).toContain('"buy, then search" is less smooth than its baseline');
@@ -135,7 +136,7 @@ test('editing the spec file resets its history instead of failing', () => {
   expect(buyHistory(r).entries).toHaveLength(1);
 });
 
-test('historyDir and record: an explicit folder, and an explicit decision to record or not', () => {
+test('historyDir and record options', () => {
   const custom = join(project, 'custom-history');
   // record: false wins over SMOOTHNESS_RECORD=1
   run({ HISTORY_DIR: 'custom-history', RECORD: 'no', SMOOTHNESS_RECORD: '1' });
