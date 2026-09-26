@@ -93,6 +93,8 @@ export interface MeasureContext {
   environment: BrowserEnvironment;
   /** Set by scroll(): blank-row detection for a list (full mode). */
   list?: ListMeasurement;
+  /** Called before each run (0 is the warm-up), after the page is reset and before it settles. */
+  beforeRun?: (run: number) => Promise<void>;
 }
 
 // Calls into the in-page collector. Each is a plain page.evaluate (no eval in the page, so
@@ -306,6 +308,7 @@ async function measureRun(
   const { ctx, browser, collector: c } = m;
   const { page, options } = ctx;
   if (run > 0) await resetPage(page, options);
+  if (ctx.beforeRun) await ctx.beforeRun(run);
   await cdp.throttle(options.cpuThrottling);
   const settle = await c.settle(SETTLE_QUIET_MS, SETTLE_TIMEOUT_MS);
   if (!settle.settled) tally.unsettled++;
