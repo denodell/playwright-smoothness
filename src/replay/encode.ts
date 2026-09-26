@@ -7,7 +7,7 @@ import { muxWebM, type EncodedFrame } from './webm.js';
 /** Replays play this many times slower than real time: at 60fps, blank frames flash past unseen. */
 const REPLAY_SLOWDOWN = 4;
 /** Height of the panel under each frame. */
-const PANEL_HEIGHT = 196;
+const PANEL_HEIGHT = 210;
 /** A key frame this often, so the report's player can seek. */
 const KEY_FRAME_EVERY = 30;
 const REPLAY_BITRATE = 2_000_000;
@@ -47,23 +47,22 @@ async function renderInPage(
   const imgH = first.height;
   first.close();
 
-  // Layout: the screenshot inset on a dark stage, and a panel underneath.
-  const pad = 20;
+  // Layout: the screenshot framed on white paper, and an instrument panel underneath.
+  const pad = 24;
   const even = (n: number) => n + (n % 2);
   const width = even(imgW + pad * 2);
   const height = even(pad + imgH + args.panel);
   const sx = imgW / args.viewport.width;
   const sy = imgH / args.viewport.height;
-  const font =
-    '-apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+  const sans = '"Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif';
+  const mono = 'ui-monospace, "SF Mono", Menlo, "DejaVu Sans Mono", "Liberation Mono", monospace';
   const color = {
-    stage: '#ffffff',
-    text: '#1d1d1f',
-    muted: '#6e6e73',
-    faint: 'rgba(0, 0, 0, 0.16)',
-    hairline: 'rgba(0, 0, 0, 0.1)',
-    drawn: '#34c759',
-    blank: '#ff3b30',
+    paper: '#ffffff',
+    ink: '#111111',
+    graphite: '#6b6b6b',
+    rule: '#d9d9d9',
+    future: '#e4e4e4',
+    blank: '#d92d20',
   };
 
   const canvas = new OffscreenCanvas(width, height);
@@ -72,22 +71,34 @@ async function renderInPage(
     s: string,
     x: number,
     y: number,
+    face: string,
     size: number,
     weight: number,
     fill: string,
     align: CanvasTextAlign = 'left',
+    tracking = 0,
   ) => {
-    g.font = `${weight} ${size}px ${font}`;
+    g.font = `${weight} ${size}px ${face}`;
+    g.letterSpacing = `${tracking}px`;
     g.fillStyle = fill;
     g.textAlign = align;
     g.fillText(s, x, y);
+    g.letterSpacing = '0px';
   };
   const fit = (s: string, max: number) => {
     if (g.measureText(s).width <= max) return s;
     while (s.length > 1 && g.measureText(s + '…').width > max) s = s.slice(0, -1);
     return s + '…';
   };
-  const seconds = (ms: number) => `${(ms / 1000).toFixed(2)} s`;
+  const secs = (ms: number) => `${(ms / 1000).toFixed(2)}s`;
+  const hline = (x0: number, x1: number, y: number, stroke: string) => {
+    g.strokeStyle = stroke;
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(x0, Math.round(y) + 0.5);
+    g.lineTo(x1, Math.round(y) + 0.5);
+    g.stroke();
+  };
 
   const chunks: Chunk[] = [];
   let failure = '';
@@ -112,128 +123,163 @@ async function renderInPage(
     const img = await decode(args.jpegs[i]!);
     const drawn = args.drawn[i]!;
     const blank = drawn < args.blankShare;
-    g.fillStyle = color.stage;
+    g.fillStyle = color.paper;
     g.fillRect(0, 0, width, height);
-
-    // The screenshot, with rounded corners, a soft shadow and a hairline edge.
-    g.save();
-    g.shadowColor = 'rgba(0, 0, 0, 0.10)';
-    g.shadowBlur = 24;
-    g.shadowOffsetY = 6;
-    g.fillStyle = color.stage;
-    g.beginPath();
-    g.roundRect(pad, pad, imgW, imgH, 12);
-    g.fill();
-    g.restore();
-    g.save();
-    g.beginPath();
-    g.roundRect(pad, pad, imgW, imgH, 12);
-    g.clip();
     g.drawImage(img, pad, pad);
     img.close();
+    g.strokeStyle = color.ink;
+    g.lineWidth = 1;
+    g.strokeRect(pad - 0.5, pad - 0.5, imgW + 1, imgH + 1);
 
-    // The list: a hairline when drawn; tinted and outlined in red when blank.
+    // The list: a hairline when drawn; hatched and outlined in red when blank, the way a
+    // technical drawing marks an empty space.
     const x = pad + args.rect.x * sx;
     const y = pad + args.rect.y * sy;
     const w = args.rect.width * sx;
     const h = args.rect.height * sy;
     if (blank) {
-      g.fillStyle = 'rgba(255, 59, 48, 0.08)';
-      g.fillRect(x, y, w, h);
-    }
-    g.lineWidth = blank ? 3 : 1.5;
-    g.strokeStyle = blank ? color.blank : 'rgba(0, 0, 0, 0.35)';
-    g.beginPath();
-    g.roundRect(x + g.lineWidth / 2, y + g.lineWidth / 2, w - g.lineWidth, h - g.lineWidth, 8);
-    g.stroke();
-    if (blank) {
-      g.font = `700 11px ${font}`;
-      g.letterSpacing = '1.5px';
-      const label = 'BLANK';
-      const pillW = g.measureText(label).width + 20;
-      g.fillStyle = color.blank;
+      g.save();
       g.beginPath();
-      g.roundRect(x + 12, y + 12, pillW, 22, 11);
-      g.fill();
-      text(label, x + 22, y + 27, 11, 700, '#fff');
+      g.rect(x, y, w, h);
+      g.clip();
+      g.strokeStyle = 'rgba(217, 45, 32, 0.28)';
+      g.lineWidth = 1;
+      g.beginPath();
+      for (let d = -h; d < w; d += 9) {
+        g.moveTo(x + d, y + h);
+        g.lineTo(x + d + h, y);
+      }
+      g.stroke();
+      g.restore();
+      g.strokeStyle = color.blank;
+      g.lineWidth = 2;
+      g.strokeRect(x + 1, y + 1, w - 2, h - 2);
+      g.font = `700 10px ${sans}`;
+      g.letterSpacing = '1.2px';
+      const tagW = g.measureText('BLANK').width + 12;
       g.letterSpacing = '0px';
+      g.fillStyle = color.blank;
+      g.fillRect(x + 2, y + 2, tagW, 18);
+      text('BLANK', x + 8, y + 15, sans, 10, 700, color.paper, 'left', 1.2);
+    } else {
+      g.strokeStyle = 'rgba(17, 17, 17, 0.35)';
+      g.lineWidth = 1;
+      g.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
     }
-    g.restore();
-    g.strokeStyle = color.hairline;
-    g.lineWidth = 1;
-    g.beginPath();
-    g.roundRect(pad + 0.5, pad + 0.5, imgW - 1, imgH - 1, 12);
-    g.stroke();
 
-    // Panel: the check's name, then this frame's drawn share, position and time.
+    // Panel header: the check, and the replay speed.
     const left = pad;
     const right = width - pad;
-    let py = pad + imgH + 34;
-    g.font = `500 12px ${font}`;
-    const speed = `${args.slowdown}× slower`;
+    let py = pad + imgH + 30;
+    g.font = `500 12px ${sans}`;
+    const speed = `REPLAY · ${args.slowdown}× SLOWER`;
+    g.letterSpacing = '1px';
+    g.font = `500 10px ${sans}`;
     const speedW = g.measureText(speed).width;
-    text(fit(args.title, right - left - speedW - 24), left, py, 12, 500, color.muted);
-    text(speed, right, py, 12, 500, color.muted, 'right');
+    g.letterSpacing = '0px';
+    g.font = `500 12px ${sans}`;
+    text(fit(args.title, right - left - speedW - 24), left, py, sans, 12, 500, color.ink);
+    text(speed, right, py, sans, 10, 500, color.graphite, 'right', 1);
+    hline(left, right, py + 12, color.rule);
 
-    py += 46;
-    const pct = `${Math.round(drawn * 100)}%`;
-    text(pct, left, py, 34, 600, blank ? color.blank : color.text);
-    g.font = `600 34px ${font}`;
-    const pctW = g.measureText(pct).width;
-    text(blank ? 'drawn · blank frame' : 'drawn', left + pctW + 8, py, 13, 500, color.muted);
-    text(`Frame ${i + 1} of ${n}`, right, py - 16, 13, 600, color.text, 'right');
-    text(`${seconds(args.timesMs[i]!)} of ${seconds(total)}`, right, py, 12, 500, color.muted, 'right');
+    // Readouts: drawn share, frame, time.
+    py += 36;
+    const col = (right - left) / 3;
+    const readout = (i: number, label: string, value: string, fill: string) => {
+      const cx = left + col * i;
+      text(label, cx, py, sans, 9, 600, color.graphite, 'left', 1.2);
+      text(value, cx, py + 22, mono, 17, 500, fill);
+    };
+    readout(0, 'DRAWN', `${Math.round(drawn * 100)}%`, blank ? color.blank : color.ink);
+    readout(1, 'FRAME', `${String(i + 1).padStart(String(n).length, '0')} / ${n}`, color.ink);
+    readout(2, 'TIME', `${secs(args.timesMs[i]!)} / ${secs(total)}`, color.ink);
 
-    // Timeline: one bar per frame, as tall as the frame was drawn, green or red; frames still
-    // to come are dimmed. A dashed line marks the blank threshold.
-    const trackTop = py + 26;
-    const trackH = 44;
+    // Strip chart: one column per frame, as tall as the frame was drawn; ink, red when blank,
+    // pale grey for frames still to come. A hairline marks the blank threshold.
+    const trackTop = py + 44;
+    const trackH = 40;
+    const base = trackTop + trackH;
     const trackW = right - left;
-    const step = trackW / n;
-    const barW = Math.max(1, step - (step > 3 ? 1 : 0));
-    g.fillStyle = 'rgba(0, 0, 0, 0.035)';
-    g.beginPath();
-    g.roundRect(left - 6, trackTop - 6, trackW + 12, trackH + 12, 8);
-    g.fill();
+    const xAt = (ms: number) => left + (ms / (total || 1)) * (trackW - 1);
+    const barW = Math.max(1, (trackW / n) * 0.6);
     for (let j = 0; j < n; j++) {
       const d = args.drawn[j]!;
-      const barH = Math.max(4, d * trackH);
-      g.globalAlpha = j <= i ? 1 : 0.28;
-      g.fillStyle = d < args.blankShare ? color.blank : color.drawn;
-      g.beginPath();
-      g.roundRect(left + j * step, trackTop + trackH - barH, barW, barH, Math.min(1.5, barW / 2));
-      g.fill();
+      const barH = Math.max(1, d * trackH);
+      g.fillStyle = j > i ? color.future : d < args.blankShare ? color.blank : color.ink;
+      g.fillRect(xAt(args.timesMs[j]!), base - barH, barW, barH);
     }
-    g.globalAlpha = 1;
-    g.strokeStyle = color.faint;
+    hline(left, right, base, color.ink);
+    hline(left, right, base - args.blankShare * trackH, color.rule);
+    text(
+      `${Math.round(args.blankShare * 100)}%`,
+      left - 4,
+      base - args.blankShare * trackH + 3,
+      mono,
+      9,
+      400,
+      color.graphite,
+      'right',
+    );
+
+    // Time ruler under the strip.
+    const niceSteps = [0.1, 0.2, 0.25, 0.5, 1, 2, 5];
+    const tickS = niceSteps.find((t) => total / 1000 / t <= 6) ?? 5;
+    g.strokeStyle = color.ink;
     g.lineWidth = 1;
-    g.setLineDash([3, 4]);
+    for (let t = 0; t <= total / 1000 + 1e-9; t += tickS) {
+      const tx = Math.round(left + ((t * 1000) / (total || 1)) * trackW) + 0.5;
+      g.beginPath();
+      g.moveTo(tx, base);
+      g.lineTo(tx, base + 4);
+      g.stroke();
+      text(
+        `${Number(t.toFixed(2))}s`,
+        tx,
+        base + 16,
+        mono,
+        9,
+        400,
+        color.graphite,
+        t === 0 ? 'left' : 'center',
+      );
+    }
+
+    // Playhead: a line with a downward triangle, as in a video editor.
+    const headX = Math.round(xAt(args.timesMs[i]!) + barW / 2) + 0.5;
+    g.strokeStyle = color.ink;
     g.beginPath();
-    const thresholdY = trackTop + trackH - args.blankShare * trackH;
-    g.moveTo(left, thresholdY);
-    g.lineTo(right, thresholdY);
+    g.moveTo(headX, trackTop - 4);
+    g.lineTo(headX, base);
     g.stroke();
-    g.setLineDash([]);
-    const headX = left + (i + 0.5) * step;
-    g.fillStyle = color.text;
-    g.fillRect(headX - 1, trackTop - 6, 2, trackH + 8);
+    g.fillStyle = color.ink;
     g.beginPath();
-    g.arc(headX, trackTop - 7, 4, 0, Math.PI * 2);
+    g.moveTo(headX - 4, trackTop - 9);
+    g.lineTo(headX + 4, trackTop - 9);
+    g.lineTo(headX, trackTop - 3);
+    g.closePath();
     g.fill();
 
-    const footY = trackTop + trackH + 30;
-    text(`${blankCount} of ${n} frames blank`, left, footY, 11, 500, color.muted);
-    const legend = `blank below ${Math.round(args.blankShare * 100)}% drawn`;
-    g.font = `500 11px ${font}`;
-    const legendX = right - g.measureText(legend).width;
-    g.strokeStyle = 'rgba(0, 0, 0, 0.3)';
-    g.setLineDash([3, 4]);
-    g.beginPath();
-    g.moveTo(legendX - 26, footY - 4);
-    g.lineTo(legendX - 8, footY - 4);
-    g.stroke();
-    g.setLineDash([]);
-    text(legend, right, footY, 11, 500, color.muted, 'right');
+    const footY = base + 36;
+    hline(left, right, footY - 14, color.rule);
+    text(
+      `${blankCount} of ${n} frames blank`,
+      left,
+      footY,
+      sans,
+      11,
+      500,
+      blankCount ? color.blank : color.graphite,
+    );
+    text(
+      `frames under the ${Math.round(args.blankShare * 100)}% line are blank`,
+      right,
+      footY,
+      sans,
+      11,
+      400,
+      color.graphite,
+      'right',
+    );
 
     const frame = new VideoFrame(canvas, { timestamp: Math.round(args.timesMs[i]! * args.slowdown * 1000) });
     encoder.encode(frame, { keyFrame: i % args.keyEvery === 0 });
