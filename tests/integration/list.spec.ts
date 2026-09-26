@@ -287,3 +287,15 @@ test.describe('replays', () => {
     expect(files.some((f) => f.endsWith('.replay.webm'))).toBe(false);
   });
 });
+
+test('a scrolling document starts each run from the same place', async ({ page, smoothness }) => {
+  // Chrome restores a document's scroll position on reload. Without putting it back, every run
+  // after the warm-up would start at the end of the page and scroll nothing.
+  await page.goto('/scroll.html');
+  const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  const r = await smoothness.scroll(page.locator('html'), { mode: 'quick', runs: 2 });
+  const expected = Math.min(max, 20_000); // 'end' stops at 20,000px
+  expect(r.scroll!.requestedPx).toBe(expected);
+  expect(r.scroll!.scrolledPx).toBeGreaterThanOrEqual(expected - 1);
+  expect(r.notes.join(' ')).not.toContain('already at its end');
+});

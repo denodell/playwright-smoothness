@@ -164,6 +164,23 @@ export function scrollDistance(
  * Scrolls the target once. Returns the pixels requested and actually scrolled (a fling can
  * overshoot a pixel distance; the end of the list stops it short).
  */
+/** Where the scroller is along the scroll direction, in pixels. */
+export async function scrollPosition(target: Locator, s: ResolvedScroll): Promise<number> {
+  return position(await listGeometry(target), s);
+}
+
+/** Moves the scroller straight to `px` along the scroll direction, with no smooth scrolling. */
+export async function restoreScroll(target: Locator, s: ResolvedScroll, px: number): Promise<void> {
+  await target.evaluate(
+    (el, [to, vertical]) => {
+      const doc = el === document.scrollingElement || el === document.documentElement || el === document.body;
+      const scroller = doc ? (document.scrollingElement ?? document.documentElement) : el;
+      scroller.scrollTo({ [vertical ? 'top' : 'left']: to, behavior: 'instant' });
+    },
+    [px, s.direction === 'vertical'] as const,
+  );
+}
+
 export async function performScroll(
   page: Page,
   cdp: CDPSession,

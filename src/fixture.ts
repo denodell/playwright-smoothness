@@ -12,6 +12,8 @@ import { listMeasurement } from './list/measure.js';
 import {
   defaultScrollLabel,
   performScroll,
+  restoreScroll,
+  scrollPosition,
   resolveScroll,
   END_CAP_PX,
   MAX_KEY_PRESSES,
@@ -128,12 +130,20 @@ async function createSmoothness(
         const cdp = await page.context().newCDPSession(page);
         const browser = page.context().browser();
         try {
+          let origin: number | null = null;
           const result = await measure(
             {
               ...ctx,
               ...(browser
                 ? { list: listMeasurement(page, browser, target, s.direction, ctx.options.list) }
                 : {}),
+              // Chrome restores a document's scroll position on reload, so without this each run
+              // would start where the last one stopped. With reset: 'none', runs carry on instead.
+              beforeRun: async (run) => {
+                if (run === 0) origin = await scrollPosition(target, s);
+                else if (ctx.options.reset !== 'none' && origin !== null)
+                  await restoreScroll(target, s, origin);
+              },
             },
             async () => {
               done.push(await performScroll(page, cdp, target, s));
