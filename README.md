@@ -87,13 +87,13 @@ await smoothness.measure('add to cart', action, {
 
 If the list never moves (for example, the locator isn't the element that scrolls), its blank-frame numbers are reported as unavailable, not as 0%.
 
-In full mode it also finds **blank frames**. It screenshots the list at rest, then compares each frame the compositor produced during the scroll with it. A frame drawn to less than half of the resting list is blank. Skeleton rows should count as blank too, and `list.placeholders` names them:
+In full mode it also finds blank frames. It screenshots the list at rest, then compares each frame the compositor produced during the scroll with it. A frame drawn to less than half of the resting list is blank. Skeleton rows should count as blank too, and `list.placeholders` names them:
 
 ```ts
 await smoothness.scroll(list, { mode: 'full', list: { placeholders: ['.skeleton-row', '#e5e7eb'] } });
 ```
 
-**Replays.** When a full-mode `scroll()` check gets worse, a video of the measured scroll is attached to the test in the Playwright report. It plays 4× slower than real time. Each frame shows how drawn the list was, blank frames are marked in red, and a timeline shows where they happened. `replay: 'on'` attaches one every time, and `'off'` never. The video is built from the frames the measurement already recorded, so making it doesn't change the numbers.
+When a full-mode `scroll()` check gets worse, a video of the measured scroll is attached to the test in the Playwright report. It plays 4× slower than real time. Each frame shows how drawn the list was, blank frames are marked in red, and a timeline shows where they happened. `replay: 'on'` attaches one every time, and `'off'` never. The video is built from the frames the measurement already recorded, so making it doesn't change the numbers.
 
 [docs/list-detection.md](docs/list-detection.md) explains how blank frames are detected, and what the detection can't see.
 
@@ -205,17 +205,15 @@ This runs your suite 5 times on unchanged code, with `toBeSmooth()` neither comp
 
 ## Run it in CI
 
-The short version of [docs/ci.md](docs/ci.md), with a workflow ready to copy in [examples/github-actions](examples/github-actions):
+[docs/ci.md](docs/ci.md) has the full recipe, and [examples/github-actions](examples/github-actions) has the workflow ready to copy.
 
-- **Gating works best on a machine you control.** Numbers depend on the CPU, and GitHub's hosted runners vary up to 1.5x between jobs (see below). A dedicated or self-hosted runner gives steady baselines. On hosted runners, some checks are skipped when a job lands on a CPU model with no baseline yet.
-- **Baselines come from main, as artifacts.** Main re-records them with `--update-snapshots=all` and uploads them; pull requests download them and point `baselineDir` at them.
-- **Quick mode on pull requests, full mode on a schedule.** Quick mode is the default. Scheduled runs switch to full mode by themselves, adding dropped frames, blank rows and the CPU profile.
-- **Warnings come first.** A check stays on `enforce: 'warn'` until `calibrate` shows it's steady on your runner, and then moves to `'fail'`.
-- **The reporter summarizes each pull request**, and a `gh pr comment` step can post it as a comment.
+The main branch re-records its baselines with `--update-snapshots=all` and uploads them as an artifact. Pull requests download that artifact and point `baselineDir` at it, so every check compares against main. Numbers depend on the CPU, and GitHub's hosted runners vary by up to 1.5x between jobs, so a dedicated or self-hosted runner gives the steadiest baselines. On hosted runners, a job that lands on a CPU model with no baseline yet skips its checks.
+
+Pull requests run in quick mode, which is the default. Scheduled runs switch to full mode by themselves and add dropped frames, blank rows and the CPU profile. A check stays on `enforce: 'warn'` until `calibrate` shows it's steady on your runner, and then moves to `'fail'`. The reporter summarizes each run, and a `gh pr comment` step can post that summary on the pull request.
 
 ## Baselines and CI machines
 
-Baselines are keyed by label, test, project, platform, mode, refresh rate, CPU throttling, and **CPU model**. On GitHub's hosted runners the same job lands on different CPUs, and the same work took 150ms, 197ms, or 226ms depending on which one ([measurements](docs/measurements.md)). A baseline from one CPU model is never compared with a run on another. The result says which machines have baselines instead. Stable gating needs a dedicated runner, or baselines for each CPU model your hosted runners use.
+Baselines are keyed by label, test, project, platform, mode, refresh rate, CPU throttling, and CPU model. On GitHub's hosted runners the same job lands on different CPUs, and the same work took 150ms, 197ms, or 226ms depending on which one ([measurements](docs/measurements.md)). A baseline from one CPU model is never compared with a run on another. The result says which machines have baselines instead. Stable gating needs a dedicated runner, or baselines for each CPU model your hosted runners use.
 
 ## Frameworks
 
@@ -227,13 +225,13 @@ Every result is written as JSON (`schemaVersion: 1`) under `test-results/smoothn
 
 ## Limitations
 
-- **Chromium only.** In Firefox and WebKit, measurements are skipped with a `smoothness-skipped` annotation and `null` results.
-- **Main-thread attribution.** Long frames and scripts come from the main thread. Compositor-only jank isn't attributed.
-- **Noise.** Results within one CI job are steady (about ±2% on GitHub's runners), but runner hardware varies between jobs; see above.
-- **Headless.** New headless (`channel: 'chromium'`) is the one to run. The older headless shell is detected and warned about.
-- **120Hz is a prediction.** Headless Chrome runs at 60Hz; `budget120` counts main-thread frames over 8.33ms, and is never gated.
-- **Fast interactions are invisible to Event Timing.** Interactions under 16ms aren't reported by the browser, so `input.interactions` counts slower ones only.
-- **Navigation.** An action that navigates to a new document can't be measured; the result says so.
+- It only measures in Chromium. In Firefox and WebKit, measurements are skipped with a `smoothness-skipped` annotation and `null` results.
+- Long frames and scripts come from the main thread, so jank on the compositor thread isn't attributed to any script.
+- Results within one CI job are steady (about ±2% on GitHub's runners), but runner hardware varies between jobs, as described above.
+- It's built for new headless (`channel: 'chromium'`). The older headless shell is detected and warned about.
+- Headless Chrome runs at 60Hz, so the 120Hz numbers are a prediction: `budget120` counts main-thread frames over 8.33ms and is never gated.
+- The browser doesn't report interactions under 16ms to Event Timing, so `input.interactions` only counts slower ones.
+- An action that navigates to a new document can't be measured, and the result says so.
 
 ## Examples
 

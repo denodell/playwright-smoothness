@@ -4,9 +4,9 @@
 
 The first rule that applies wins:
 
-1. **The `mode` option**, from `test.use({ smoothnessOptions: { mode } })`, the config's `use`, or a per-call override such as `smoothness.measure(label, fn, { mode: 'full' })`.
-2. **`SMOOTHNESS_MODE`**, set to `quick` or `full` (case-insensitive). Any other value is an error, so a typo can't silently pick a mode.
-3. **A scheduled CI run** gets `full`:
+1. The `mode` option, from `test.use({ smoothnessOptions: { mode } })`, the config's `use`, or a per-call override such as `smoothness.measure(label, fn, { mode: 'full' })`.
+2. `SMOOTHNESS_MODE`, set to `quick` or `full` (case-insensitive). Any other value is an error, so a typo can't silently pick a mode.
+3. A scheduled CI run gets `full`:
 
    | CI provider     | Variable                         | Value                |
    | --------------- | -------------------------------- | -------------------- |
@@ -15,7 +15,7 @@ The first rule that applies wins:
    | Azure Pipelines | `BUILD_REASON`                   | `Schedule`           |
    | CircleCI        | `CIRCLE_PIPELINE_TRIGGER_SOURCE` | `scheduled_pipeline` |
 
-4. **Otherwise `quick`.**
+4. Otherwise `quick`.
 
 The chosen mode is in every result as `mode`. The rule that chose it is in `settings.modeSource`.
 
