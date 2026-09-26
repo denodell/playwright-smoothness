@@ -51,6 +51,7 @@ The spike counted every `STATE_DROPPED` frame in the trace from one run. Reprodu
 - 25ms: median trace drops > 0. LoAF 0. rAF timestamps 0 late.
 - 40ms and 70ms: median trace drops > 0; LoAF and rAF timestamps flag at least 8 of 10.
 - Across rows: 25ms > 0ms, 70ms > 12ms, and 70ms ≥ 25ms, all on medians.
+- The LoAF column counts only long frames in which the scroll handler ran. On 2026-09-26 a 12ms run on the fastest runner model (EPYC 9V45) saw two unrelated long frames during the scrolls; they're recorded as `loafOther`, not counted as the handler.
 
 ## Event Timing and LoAF
 
