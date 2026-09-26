@@ -102,7 +102,8 @@ test('switching the fixtures file to withSmoothness', () => {
   expect(leave.notes.join(' ')).toContain(
     "The last input before a navigation (pointerdown on http://localhost:4175/click.html?ms=80) wasn't measured",
   );
-  expect(result.frameClasses.load).toBe(0); // load work isn't the test's interactions
+  // Load frames can happen on a slow machine, but they never count as the test's work.
+  expect(result.longFrames!.count).toBe(result.frameClasses.interaction);
   expect(result.comparison!.status).toBe('not-compared');
   expect(result.comparison!.notes.join(' ')).toMatch(/Building history: 0 of 2/);
   expect(r.histories).toHaveLength(2);
