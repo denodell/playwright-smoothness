@@ -70,7 +70,7 @@ test('lines that count as blank', () => {
   ).toBe(1);
 });
 
-test('placeholder colours count as blank', () => {
+test('placeholder colors count as blank', () => {
   const skeleton = image(100, 10, () => [221, 221, 221]);
   expect(lineCoverage(skeleton, 100, 10, opts())).toBe(1);
   expect(lineCoverage(skeleton, 100, 10, opts({ blank: [WHITE, [221, 221, 221]] }))).toBe(0);

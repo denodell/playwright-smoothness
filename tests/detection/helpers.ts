@@ -1,5 +1,5 @@
 // Helpers for the detection suite. Deliberately independent of src/: these tests check
-// the browser's behaviour, not the library's, so they must keep working if src/ is wrong.
+// the browser's behavior, not the library's, so they must keep working if src/ is wrong.
 import { test, type Browser, type Page, type CDPSession } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -191,7 +191,7 @@ export async function warmUpWheel(page: Page): Promise<void> {
   await page.waitForTimeout(300);
 }
 
-/** Ten wheel scrolls of 150px, 80ms apart, over the page centre: the recipe the scroll tables in
+/** Ten wheel scrolls of 150px, 80ms apart, over the page center: the recipe the scroll tables in
  * docs/measurements.md were measured with. */
 export async function tenWheelScrolls(page: Page): Promise<void> {
   await page.mouse.move(400, 400);

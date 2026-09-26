@@ -4,7 +4,7 @@
 //   ?rows=      number of rows (default 5000)
 //   ?axis=      'y' (default) or 'x' for a horizontal list
 //   ?skeleton=  if set, each new row shows a grey skeleton first and its content this many ms later
-//   ?bg=        list background colour (default white)
+//   ?bg=        list background color (default white)
 const ROW = 80;
 const rows = param('rows', 5000);
 const costPerRow = param('cost', 0);

@@ -74,7 +74,7 @@ test('placeholders: skeleton rows count as blank only when named', async ({ page
   expect(named.list!.blankFramePercent).toBeGreaterThan(without.list!.blankFramePercent + 20);
 });
 
-test("background 'auto' reads the list's own colour (a dark list)", async ({ page, smoothness }) => {
+test("background 'auto' reads the list's own color (a dark list)", async ({ page, smoothness }) => {
   await page.goto('/list.html?cost=15&overscan=0&bg=%23202020');
   const r = await smoothness.scroll(list(page), FLING);
   expect(r.list!.blankFramePercent).toBeGreaterThan(50);
@@ -163,7 +163,7 @@ test('quick mode has no list data', async ({ page, smoothness }) => {
   expect(r.notes.join(' ')).toMatch(/Blank rows in lists are measured in full mode only/);
 });
 
-test('200 frames are analysed in under 2 seconds', async ({ page, browser }) => {
+test('200 frames are analyzed in under 2 seconds', async ({ page, browser }) => {
   await page.goto('/list.html?cost=15&overscan=0');
   await page.waitForTimeout(500);
   const target = list(page);

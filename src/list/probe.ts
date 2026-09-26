@@ -42,8 +42,8 @@ export async function listGeometry(target: Locator): Promise<ListGeometry> {
 }
 
 /**
- * Resolves the colours that count as blank: the list's background (`'auto'` walks up to the
- * first ancestor with an opaque background) and each placeholder, which is a CSS colour or a
+ * Resolves the colors that count as blank: the list's background (`'auto'` walks up to the
+ * first ancestor with an opaque background) and each placeholder, which is a CSS color or a
  * selector whose element's background is used. Anything unresolvable is reported, not guessed.
  */
 export async function blankColors(
@@ -54,7 +54,7 @@ export async function blankColors(
     (el, opts) => {
       const notes: string[] = [];
       const ctx = new OffscreenCanvas(1, 1).getContext('2d')!;
-      // Normalises any CSS colour via the canvas; returns null for invalid or mostly transparent ones.
+      // Normalizes any CSS color via the canvas; returns null for invalid or mostly transparent ones.
       const parse = (c: string): [number, number, number] | null => {
         if (!CSS.supports('color', c)) return null;
         ctx.clearRect(0, 0, 1, 1);
@@ -73,12 +73,12 @@ export async function blankColors(
         }
         if (!found)
           notes.push(
-            "The list and its ancestors have no background colour, so white (the browser's default) is used.",
+            "The list and its ancestors have no background color, so white (the browser's default) is used.",
           );
         colors.push(found ?? [255, 255, 255]);
       } else {
         const c = parse(opts.background);
-        if (!c) notes.push(`list.background '${opts.background}' isn't a CSS colour; white is used.`);
+        if (!c) notes.push(`list.background '${opts.background}' isn't a CSS color; white is used.`);
         colors.push(c ?? [255, 255, 255]);
       }
       for (const p of opts.placeholders) {
@@ -91,14 +91,14 @@ export async function blankColors(
         try {
           match = document.querySelector(p);
         } catch {
-          notes.push(`list.placeholders '${p}' is neither a colour nor a valid selector; ignored.`);
+          notes.push(`list.placeholders '${p}' is neither a color nor a valid selector; ignored.`);
           continue;
         }
         const c = match ? parse(getComputedStyle(match).backgroundColor) : null;
         if (c) colors.push(c);
         else
           notes.push(
-            `list.placeholders '${p}' matched no element with a background colour at the start of the run; ignored.`,
+            `list.placeholders '${p}' matched no element with a background color at the start of the run; ignored.`,
           );
       }
       return { colors, notes };
