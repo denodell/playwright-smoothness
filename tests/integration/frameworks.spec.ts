@@ -65,7 +65,8 @@ for (const name of PAGES) {
       mode: 'full',
       runs: 2,
     });
-    const top = result.profile!.hotFunctions[0]!;
+    // busyWait spins on performance.now(), so `now` itself can be the hottest function.
+    const top = result.profile!.hotFunctions.find((f) => f.fn !== 'now')!;
     save(`framework-profile-${name}`, { profile: result.profile, notes: result.notes });
     // The handler spins for 150ms, but samples taken inside performance.now() count as its own,
     // so busyWait's self time is only part of that; on a slow runner it came in at 79.9ms.
