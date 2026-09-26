@@ -40,6 +40,8 @@ Within one CI job, results on GitHub's runners varied by about ±2% from run to 
 
 Linux, macOS and Windows. CI runs the unit and integration suites on Ubuntu and Windows, and development happens on macOS.
 
+On Windows, Chrome's CPU throttling spaces timers irregularly: a 100ms `setInterval` fired at gaps of up to 588ms on a GitHub Actions runner, where Linux kept to within a few milliseconds. Pages driven by timers measure less steadily there, so Linux is the steadier choice for the machine that gates.
+
 ## Chromium only
 
 The signals it relies on (Long Animation Frames, the Event Timing details it needs, Chrome's frame-level trace, and `Emulation.setCPUThrottlingRate`) come from Chromium. In Firefox and WebKit projects, checks are skipped with a `smoothness-skipped` annotation and `null` results. They're never reported as zero or as passing.
