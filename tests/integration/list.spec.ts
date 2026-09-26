@@ -106,12 +106,27 @@ test('horizontal lists', async ({ page, smoothness }) => {
 test.describe('touch', () => {
   test.use({ hasTouch: true });
   test('touch input flings, and distance end scrolls to the end', async ({ page, smoothness }) => {
-    await page.goto('/list.html?rows=300&cost=0');
+    await page.goto('/list.html?rows=200&cost=0'); // about 16,000px: within the 'end' cap
     const r = await smoothness.scroll(list(page), { input: 'touch', speed: 'fast', runs: 2 });
     const max = await list(page).evaluate((el) => el.scrollHeight - el.clientHeight);
     expect(r.scroll).toMatchObject({ input: 'touch', requestedPx: max, scrolledPx: max });
     expect(r.label).toBe("scroll locator('#list') touch 6000px/s");
   });
+});
+
+test("distance 'end' on a long list stops at 20,000px and says how far the end was", async ({
+  page,
+  smoothness,
+}) => {
+  await page.goto('/list.html?cost=0');
+  const r = await smoothness.scroll(list(page), { speed: 'fast', mode: 'quick', runs: 1 });
+  const max = await list(page).evaluate((el) => el.scrollHeight - el.clientHeight);
+  expect(max).toBeGreaterThan(100_000);
+  expect(r.scroll!.requestedPx).toBe(20_000);
+  expect(r.scroll!.scrolledPx).toBeGreaterThanOrEqual(19_000);
+  expect(r.notes.join(' ')).toContain(
+    `distance: 'end' stopped at 20,000px; the end of the list was ${max.toLocaleString('en-US')}px away.`,
+  );
 });
 
 test("touch input without a touch-enabled context is an error, not a scroll that doesn't happen", async ({

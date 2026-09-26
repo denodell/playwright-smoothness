@@ -13,6 +13,7 @@ import {
   defaultScrollLabel,
   performScroll,
   resolveScroll,
+  END_CAP_PX,
   MAX_KEY_PRESSES,
   PX_PER_ARROW_KEY,
   type ScrollOptions,
@@ -115,7 +116,7 @@ async function createSmoothness(
       const { distance, direction, input, speed, label: givenLabel, ...overrides } = all;
       const s = resolveScroll({ distance, direction, input, speed });
       const label = givenLabel ?? defaultScrollLabel(target, s);
-      const done: { requested: number; scrolled: number; presses?: number }[] = [];
+      const done: Awaited<ReturnType<typeof performScroll>>[] = [];
       return record(label, overrides, async (ctx) => {
         if (s.input === 'touch' && (await page.evaluate(() => navigator.maxTouchPoints)) === 0) {
           // Touch events on a page that reports no touch support aren't what a phone does:
@@ -160,6 +161,12 @@ async function createSmoothness(
             if (measured.every((d) => d.requested === 0)) {
               result.notes.push(
                 "The list was already at its end, so nothing scrolled. With reset: 'none', later runs start where the last one stopped.",
+              );
+            }
+            const toEnd = measured.find((d) => d.toEnd !== undefined)?.toEnd;
+            if (toEnd !== undefined) {
+              result.notes.push(
+                `distance: 'end' stopped at ${END_CAP_PX.toLocaleString('en-US')}px; the end of the list was ${toEnd.toLocaleString('en-US')}px away. Pass a number of pixels to scroll further.`,
               );
             }
             if (

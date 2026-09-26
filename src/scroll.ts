@@ -8,6 +8,12 @@ export const SPEEDS = { slow: 1500, normal: 3000, fast: 6000 } as const;
 const KEY_INTERVAL_MS = 100;
 /** Most arrow-key presses one run makes; `distance: 'end'` with keys can otherwise take minutes. */
 export const MAX_KEY_PRESSES = 100;
+/**
+ * The furthest `distance: 'end'` goes. A long virtualized list's end can be hundreds of thousands
+ * of pixels away: minutes per run, a trace of hundreds of MB, and a baseline that moves whenever
+ * the data grows. About 7 seconds at the default speed. An explicit pixel distance isn't capped.
+ */
+export const END_CAP_PX = 20_000;
 /** Chrome scrolls about 40px per arrow key; used to turn a pixel distance into presses. */
 export const PX_PER_ARROW_KEY = 40;
 /** The scroll has ended when the position is unchanged for this many polls in a row (a fling coasts). */
@@ -18,7 +24,7 @@ const REST_POLL_MS = 32;
 const REST_TIMEOUT_MS = 3_000;
 
 export interface ScrollOptions {
-  /** `'end'` (default) scrolls to the end of the list; a number scrolls that many pixels. */
+  /** `'end'` (default) scrolls to the end of the list, at most 20,000px; a number scrolls that many pixels. */
   distance?: 'end' | number;
   /** Default `'vertical'`. */
   direction?: 'vertical' | 'horizontal';
@@ -142,6 +148,19 @@ async function flick(
 }
 
 /**
+/**
+ * How far one run scrolls, given the pixels left to the end of the list. `toEnd` is set when
+ * `'end'` was capped, so the result can say how far the end really was.
+ */
+export function scrollDistance(
+  s: Pick<ResolvedScroll, 'distance'>,
+  remaining: number,
+): { px: number; toEnd?: number } {
+  if (s.distance !== 'end') return { px: s.distance };
+  return remaining > END_CAP_PX ? { px: END_CAP_PX, toEnd: remaining } : { px: remaining };
+}
+
+/**
  * Scrolls the target once. Returns the pixels requested and actually scrolled (a fling can
  * overshoot a pixel distance; the end of the list stops it short).
  */
@@ -150,12 +169,11 @@ export async function performScroll(
   cdp: CDPSession,
   target: Locator,
   s: ResolvedScroll,
-): Promise<{ requested: number; scrolled: number; presses?: number }> {
+): Promise<{ requested: number; scrolled: number; presses?: number; toEnd?: number }> {
   await target.scrollIntoViewIfNeeded();
   const g = await listGeometry(target);
   const start = position(g, s);
-  const remaining = maximum(g, s) - start;
-  const requested = s.distance === 'end' ? remaining : s.distance;
+  const { px: requested, toEnd } = scrollDistance(s, maximum(g, s) - start);
   if (requested <= 0) return { requested: 0, scrolled: 0 };
 
   let presses = 0;
@@ -203,5 +221,6 @@ export async function performScroll(
     requested,
     scrolled: end - start,
     ...(presses ? { presses } : {}),
+    ...(toEnd !== undefined ? { toEnd } : {}),
   };
 }

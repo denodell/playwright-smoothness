@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { lineCoverage, type CoverageOptions } from '../../src/list/coverage.js';
 import { summarizeList, BLANK_FRAME_SHARE } from '../../src/list/summarize.js';
-import { defaultScrollLabel, resolveScroll, SPEEDS } from '../../src/scroll.js';
+import { defaultScrollLabel, END_CAP_PX, resolveScroll, scrollDistance, SPEEDS } from '../../src/scroll.js';
 
 const WHITE: [number, number, number] = [255, 255, 255];
 const opts = (o: Partial<CoverageOptions> = {}): CoverageOptions => ({
@@ -117,4 +117,11 @@ test('default labels name the list and only the options that differ', () => {
   expect(defaultScrollLabel(target, resolveScroll({ input: 'keys', speed: 'fast' }))).toBe(
     "scroll getByRole('list', { name: 'Trending' }) keys",
   );
+});
+
+test("scrollDistance: 'end' is the real end up to the cap; pixel distances aren't capped", () => {
+  expect(scrollDistance({ distance: 'end' }, 16_000)).toEqual({ px: 16_000 });
+  expect(scrollDistance({ distance: 'end' }, END_CAP_PX)).toEqual({ px: END_CAP_PX });
+  expect(scrollDistance({ distance: 'end' }, 399_400)).toEqual({ px: END_CAP_PX, toEnd: 399_400 });
+  expect(scrollDistance({ distance: 100_000 }, 399_400)).toEqual({ px: 100_000 });
 });
