@@ -32,7 +32,10 @@ interface Row {
   traceDroppedRuns: number[];
   tracePresentedMedian: number;
   traceKB: number;
+  /** Long frames in which the scroll handler ran. */
   loaf: number;
+  /** Other long frames in the same window (GC, the runner): noise, not the handler. */
+  loafOther: number;
   rafTimestampLate: number;
   rafNowLate: number;
 }
@@ -65,7 +68,7 @@ for (const wait of BLOCKING_MS) {
     }
 
     // rAF columns, with LoAF collected alongside.
-    const raf = { timestamp: { late: 0, loaf: 0 }, now: { late: 0, loaf: 0 } };
+    const raf = { timestamp: { late: 0, loaf: 0, other: 0 }, now: { late: 0, loaf: 0, other: 0 } };
     for (const mode of ['timestamp', 'now'] as const) {
       await page.goto(`/scroll.html?wait=${wait}`);
       await page.waitForTimeout(PAGE_SETTLE_MS);
@@ -82,7 +85,13 @@ for (const wait of BLOCKING_MS) {
       );
       await page.waitForTimeout(ENTRY_DELIVERY_MS);
       const { loaf } = await collected(page);
-      raf[mode] = { late: gaps.filter((g) => g > LATE_GAP_MS).length, loaf: loaf.length };
+      // The column is about the scroll handler, so count only frames it ran in.
+      const handler = loaf.filter((f) => f.scripts.some((s) => s.fn === 'onWindowScroll')).length;
+      raf[mode] = {
+        late: gaps.filter((g) => g > LATE_GAP_MS).length,
+        loaf: handler,
+        other: loaf.length - handler,
+      };
     }
 
     const row: Row = {
@@ -92,6 +101,7 @@ for (const wait of BLOCKING_MS) {
       tracePresentedMedian: median(presented),
       traceKB,
       loaf: Math.max(raf.timestamp.loaf, raf.now.loaf),
+      loafOther: Math.max(raf.timestamp.other, raf.now.other),
       rafTimestampLate: raf.timestamp.late,
       rafNowLate: raf.now.late,
     };
