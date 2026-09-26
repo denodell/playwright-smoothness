@@ -1,5 +1,6 @@
-// Section 3: trace AnimationFrame events give every main-thread frame's duration with no
-// 50ms cutoff (used for the 120Hz prediction). Also: headless is fixed at ~60fps.
+// docs/measurements.md, Refresh rate and AnimationFrame: trace AnimationFrame events give every
+// main-thread frame's duration with no 50ms cutoff (used for the 120Hz prediction). Also:
+// headless is fixed at ~60fps.
 import { test, expect, chromium } from '@playwright/test';
 import {
   save,
@@ -51,7 +52,6 @@ test('headless Chrome runs at ~60fps and the frame-rate flags do not change it',
     try {
       const page = await browser.newPage();
       await page.goto(`${baseURL}/scroll.html`);
-      await page.addScriptTag({ url: '/lib/frame-sampler.js' }).catch(() => undefined);
       await page.waitForTimeout(300);
       await page.evaluate(() =>
         (window as unknown as { startFrameSampler(m: string): void }).startFrameSampler('now'),

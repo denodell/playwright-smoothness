@@ -73,6 +73,7 @@
     "test:detection": "playwright test --project=detection",
     "test:headless-modes": "playwright test --project=mode-headless-shell --project=mode-new-headless --project=mode-headed",
     "changeset": "changeset",
+    "prepublishOnly": "npm run build",
     "release:check": "npm run build && npm publish --dry-run",
     "release": "npm run build && changeset publish"
   },

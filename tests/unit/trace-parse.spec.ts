@@ -127,6 +127,22 @@ test('PipelineReporter without a state field (a format change): unavailable', ()
   expect(out.unavailable[0]!.reason).toMatch(/no args\.frame_reporter\.state/);
 });
 
+test('Chrome 131 names the field chrome_frame_reporter: counted the same', () => {
+  const older = (e: TraceEvent): TraceEvent => ({
+    ...e,
+    args: { chrome_frame_reporter: e.args!.frame_reporter },
+  });
+  const events = [
+    mark(MARK_START, 0),
+    older(reporter(10, 'STATE_PRESENTED_ALL', 1)),
+    older(reporter(20, 'STATE_DROPPED', 2)),
+    mark(MARK_END, 100),
+  ];
+  const out = parseTrace(events, { ...opts, browserVersion: '131.0.6778.33' });
+  expect(out.unavailable).toEqual([]);
+  expect(out.frames).toMatchObject({ onTime: 1, dropped: 1 });
+});
+
 test('unknown states are excluded and noted; several compositors are noted', () => {
   const out = parseTrace(
     [

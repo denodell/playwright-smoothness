@@ -78,9 +78,8 @@ export async function blankColors(
         colors.push(found ?? [255, 255, 255]);
       } else {
         const c = parse(opts.background);
-        if (c) colors.push(c);
-        else notes.push(`list.background '${opts.background}' isn't a CSS colour; white is used.`);
-        if (!c) colors.push([255, 255, 255]);
+        if (!c) notes.push(`list.background '${opts.background}' isn't a CSS colour; white is used.`);
+        colors.push(c ?? [255, 255, 255]);
       }
       for (const p of opts.placeholders) {
         const asColour = parse(p);

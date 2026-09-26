@@ -80,7 +80,7 @@ test('floors: one extra long frame over a zero baseline, or one Event Timing ste
   expect(two.find((c) => c.metric === 'longFrames.count')!.status).toBe('worse');
 });
 
-test('10ms to 60ms click work fails (the M2 acceptance change, as numbers)', () => {
+test('10ms to 60ms click work fails (the end-to-end baseline scenario, as numbers)', () => {
   const before = metricsOf(makeResult({ input: { p95ToPaintMs: 24 }, longFrames: { count: 0 } }));
   const after = compareMetrics(
     makeResult({ input: { p95ToPaintMs: 72 }, longFrames: { count: 1 } }),

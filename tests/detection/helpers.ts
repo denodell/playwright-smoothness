@@ -4,8 +4,8 @@ import { test, type Browser, type Page, type CDPSession } from '@playwright/test
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** Trace categories used by the spike's trace.spec.ts. M3 trims this to the minimum. */
-export const TRACE_CATEGORIES = [
+/** Default categories for traced(): broad, since these tests look beyond what the library records. */
+const TRACE_CATEGORIES = [
   'devtools.timeline',
   'disabled-by-default-devtools.timeline',
   'disabled-by-default-devtools.timeline.frame',
@@ -15,13 +15,13 @@ export const TRACE_CATEGORIES = [
   'gpu',
 ];
 
-/** Frame budget at 60Hz, and the "late frame" cut-off the spike used for rAF gaps (1.5 frames). */
-export const FRAME_MS = 1000 / 60;
+/** Frame budget at 60Hz, and the "late frame" cut-off for rAF gaps (1.5 frames). */
+const FRAME_MS = 1000 / 60;
 export const LATE_GAP_MS = FRAME_MS * 1.5;
 
 /**
  * Time for a page to finish its own start-up work before measuring. The detection pages
- * do at most ~120ms of load work, so 500ms is comfortably past it (same value as the spike).
+ * do at most ~120ms of load work, so 500ms is comfortably past it.
  */
 export const PAGE_SETTLE_MS = 500;
 
@@ -38,6 +38,13 @@ export function save(name: string, data: unknown): void {
   writeFileSync(join(dir, `${test.info().project.name}--${name}.json`), JSON.stringify(data, null, 1));
 }
 
+/** Attaches a result to the test's report as JSON. */
+export function attach(result: unknown): Promise<void> {
+  return test
+    .info()
+    .attach('result', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+}
+
 export interface LoafRecord {
   start: number;
   duration: number;
@@ -52,7 +59,7 @@ export interface LoafRecord {
   }[];
 }
 
-export interface EventRecord {
+interface EventRecord {
   name: string;
   interactionId: number;
   start: number;
@@ -62,7 +69,7 @@ export interface EventRecord {
 
 /**
  * In-page observers for LoAF, Event Timing (threshold 16) and scroll timestamps.
- * Each callback and each entry is wrapped in its own try/catch (brief principle 6):
+ * Each callback and each entry is wrapped in its own try/catch:
  * an exception inside a batch would otherwise silently drop the rest of the batch.
  */
 export function installObservers(): void {
@@ -145,7 +152,7 @@ export function installObservers(): void {
   );
 }
 
-export interface Collected {
+interface Collected {
   loaf: LoafRecord[];
   events: EventRecord[];
   scrolls: number[];
@@ -184,7 +191,8 @@ export async function warmUpWheel(page: Page): Promise<void> {
   await page.waitForTimeout(300);
 }
 
-/** Ten wheel scrolls of 150px, 80ms apart, over the page centre. The spike's scroll recipe. */
+/** Ten wheel scrolls of 150px, 80ms apart, over the page centre: the recipe the scroll tables in
+ * docs/measurements.md were measured with. */
 export async function tenWheelScrolls(page: Page): Promise<void> {
   await page.mouse.move(400, 400);
   for (let i = 0; i < 10; i++) {
@@ -193,7 +201,7 @@ export async function tenWheelScrolls(page: Page): Promise<void> {
   }
 }
 
-// ---- trace parsing (minimal; the real parser is M3) ----
+// ---- trace parsing (minimal, and independent of src/trace/parse.ts) ----
 
 export interface TraceEvent {
   name: string;
@@ -247,7 +255,7 @@ export function inputWindow(events: TraceEvent[]): [number, number] | null {
   return [Math.min(...ts), Math.max(...ts) + INPUT_TAIL_MS * 1000];
 }
 
-/** Counts PipelineReporter frame states (async begin events only, as in the spike), optionally within a window. */
+/** Counts PipelineReporter frame states (async begin events only), optionally within a window. */
 export function pipelineStates(
   events: TraceEvent[],
   window?: [number, number] | null,
@@ -256,7 +264,7 @@ export function pipelineStates(
   for (const e of events) {
     if (e.name !== 'PipelineReporter' || e.ph !== 'b') continue;
     if (window && (e.ts < window[0] || e.ts > window[1])) continue;
-    const state = e.args?.frame_reporter?.state ?? 'MISSING_STATE';
+    const state = (e.args?.frame_reporter ?? e.args?.chrome_frame_reporter)?.state ?? 'MISSING_STATE';
     states[state] = (states[state] ?? 0) + 1;
   }
   return states;

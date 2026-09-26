@@ -1,9 +1,9 @@
 import type { ResolvedOptions, SmoothnessMode, SmoothnessOptions } from './types.js';
 
-export const DEFAULT_RUNS = 5;
-export const DEFAULT_CPU_THROTTLING = 4;
+const DEFAULT_RUNS = 5;
+const DEFAULT_CPU_THROTTLING = 4;
 export const DEFAULT_MAX_INCREASE = 0.15;
-export const DEFAULT_REFRESH_RATE = 60;
+const DEFAULT_REFRESH_RATE = 60;
 
 type Env = Record<string, string | undefined>;
 

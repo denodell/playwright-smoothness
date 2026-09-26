@@ -43,13 +43,6 @@ const ID = {
   CueClusterPosition: 0xf1,
 } as const;
 
-/** An element ID's bytes (IDs already include their length marker). */
-function idBytes(id: number): number[] {
-  const out: number[] = [];
-  for (let v = id; v > 0; v = Math.floor(v / 256)) out.unshift(v % 256);
-  return out;
-}
-
 /** An EBML variable-length size. */
 export function vint(n: number): number[] {
   for (let len = 1; len <= 8; len++) {
@@ -67,6 +60,7 @@ export function vint(n: number): number[] {
   throw new Error(`size too large for EBML: ${n}`);
 }
 
+/** Big-endian bytes, at least one. Element IDs already include their length marker. */
 function uint(n: number): number[] {
   const out: number[] = [];
   for (let v = n; v > 0; v = Math.floor(v / 256)) out.unshift(v % 256);
@@ -84,7 +78,7 @@ const text = (s: string) => [...new TextEncoder().encode(s)];
 type Part = number[] | Uint8Array;
 function element(id: number, ...body: Part[]): Uint8Array {
   const size = body.reduce((a, p) => a + p.length, 0);
-  const head = [...idBytes(id), ...vint(size)];
+  const head = [...uint(id), ...vint(size)];
   const out = new Uint8Array(head.length + size);
   out.set(head, 0);
   let o = head.length;

@@ -1,6 +1,6 @@
-// Section 3, "Long lists": Input.synthesizeScrollGesture produces a compositor fling;
+// docs/measurements.md, Long-list fling: Input.synthesizeScrollGesture produces a compositor fling;
 // dropped frames barely move for a list that is mostly blank; has_missing_content fires
-// even on a cheap list; trace screenshots are available for blank-frame analysis (M4).
+// even on a cheap list; trace screenshots are available for blank-frame analysis.
 import { test, expect } from '@playwright/test';
 import { save, traced, PAGE_SETTLE_MS } from './helpers.js';
 
@@ -69,14 +69,15 @@ for (const s of SCENARIOS) {
     expect(out.scrolledPx, 'the gesture scrolled the list').toBeGreaterThan(5000);
     expect(out.scrollStates, 'scrolling ran on the compositor').toContain('SCROLL_COMPOSITOR_THREAD');
     expect(out.screenshots, 'trace screenshots for blank-frame analysis').toBeGreaterThanOrEqual(100);
-    // Dropped frames stay a small share even for the costly list, which is why M4 needs screenshots.
+    // Dropped frames stay a small share even for the costly list, which is why scroll() uses
+    // screenshots.
     expect(out.dropped / out.frames).toBeLessThan(0.1);
     missingContentRate[s.name] = out.hasMissingContent / out.frames;
   });
 }
 
 test('has_missing_content does not separate a drawn list from a blank one', () => {
-  // Chrome 141 (spike): fired on ~78% of frames for every list. Chrome 153: 0% for every list.
+  // Chrome 141: fired on ~78% of frames for every list. Chrome 153: 0% for every list.
   // Either way it says nothing about blank rows, so the library must not use it.
   test.skip(Object.keys(missingContentRate).length !== SCENARIOS.length, 'needs every fling from this file');
   save('list-fling-missing-content', missingContentRate);

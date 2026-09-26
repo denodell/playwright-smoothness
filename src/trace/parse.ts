@@ -25,7 +25,7 @@ const PRESENTED = new Set(['STATE_PRESENTED_ALL', 'STATE_PRESENTED_PARTIAL']);
 const DROPPED = 'STATE_DROPPED';
 const NO_UPDATE = 'STATE_NO_UPDATE_DESIRED';
 /** The 120Hz frame budget, ms. */
-export const BUDGET_120_MS = 1000 / 120;
+const BUDGET_120_MS = 1000 / 120;
 
 export interface ParseOptions {
   browserVersion: string;
@@ -172,6 +172,11 @@ function processNames(events: TraceEvent[]): Map<number, string> {
   return names;
 }
 
+/** A PipelineReporter's frame fields: `frame_reporter`, or `chrome_frame_reporter` in older Chrome (131). */
+function frameReporter(e: TraceEvent): FrameReporter | undefined {
+  return (e.args?.frame_reporter ?? e.args?.chrome_frame_reporter) as FrameReporter | undefined;
+}
+
 /**
  * Counts the page's frames. Only the renderer process the start mark came from counts: the
  * browser's own compositor also presents frames (after a reload it presents one inside the
@@ -185,9 +190,7 @@ function parseFrames(events: TraceEvent[], marks: Marks, chrome: string, out: Pa
   };
   const reporters = events.filter((e) => e.name === 'PipelineReporter' && e.ph === 'b');
   if (reporters.length === 0) return unavailable('the trace has no PipelineReporter events');
-  const withState = reporters.filter(
-    (e) => typeof (e.args?.frame_reporter as FrameReporter | undefined)?.state === 'string',
-  );
+  const withState = reporters.filter((e) => typeof frameReporter(e)?.state === 'string');
   if (withState.length === 0) return unavailable('PipelineReporter events have no args.frame_reporter.state');
 
   // Each frame can be reported more than once. Exact repeats (same host, source, sequence and
@@ -206,7 +209,7 @@ function parseFrames(events: TraceEvent[], marks: Marks, chrome: string, out: Pa
       if (/renderer/i.test(names.get(e.pid) ?? '')) otherRenderers.add(e.pid);
       continue;
     }
-    const f = e.args!.frame_reporter as FrameReporter;
+    const f = frameReporter(e)!;
     const state = f.state as string;
     const key = [f.layer_tree_host_id, f.frame_source, f.frame_sequence, state].join('/');
     if (seen.has(key)) continue;
@@ -282,8 +285,9 @@ function parseAnimationFrames(
   };
 }
 
-export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedTrace {
-  const out: ParsedTrace = {
+/** A trace with nothing in it yet. */
+export function emptyTrace(): ParsedTrace {
+  return {
     frames: null,
     budget120: null,
     profile: null,
@@ -292,6 +296,10 @@ export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedT
     unavailable: [],
     notes: [],
   };
+}
+
+export function parseTrace(events: TraceEvent[], options: ParseOptions): ParsedTrace {
+  const out = emptyTrace();
   const marks = findMarks(events);
   if (!marks) {
     out.unavailable.push({

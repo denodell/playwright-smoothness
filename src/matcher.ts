@@ -1,18 +1,20 @@
 import { expect as baseExpect, test } from '@playwright/test';
-import { relative } from 'node:path';
 import type { SmoothnessResult } from './types.js';
+import { CALIBRATE_ENV, SCHEMA_VERSION } from './constants.js';
 import { evaluate, type MatcherOptions } from './baseline/evaluate.js';
 import { formatMessage, formatSummary } from './baseline/message.js';
 import { resultPath, writeResult, writtenPath } from './output.js';
-import { githubWarning, inGitHubActions } from './ci.js';
+import { warnInGitHubActions } from './ci.js';
 
 function isResult(v: unknown): v is SmoothnessResult {
-  return !!v && typeof v === 'object' && (v as SmoothnessResult).schemaVersion === 1 && 'label' in v;
+  return (
+    !!v && typeof v === 'object' && (v as SmoothnessResult).schemaVersion === SCHEMA_VERSION && 'label' in v
+  );
 }
 
 export const expect = baseExpect.extend({
   /**
-   * Compares a result from `smoothness.measure()` with its stored baseline. With
+   * Compares a result from `smoothness.measure()` or `smoothness.scroll()` with its stored baseline. With
    * `enforce: 'fail'` a regression fails the test; with `'warn'` (the default) it adds an
    * annotation and, in GitHub Actions, a `::warning` on the pull request.
    */
@@ -24,11 +26,12 @@ export const expect = baseExpect.extend({
       return {
         pass: false,
         name: 'toBeSmooth',
-        message: () => 'toBeSmooth() expects a result from smoothness.measure() (schemaVersion 1).',
+        message: () =>
+          `toBeSmooth() expects a result from smoothness.measure() or scroll() (schemaVersion ${SCHEMA_VERSION}).`,
       };
     }
     const testInfo = test.info();
-    const comparison = process.env.SMOOTHNESS_CALIBRATE
+    const comparison = process.env[CALIBRATE_ENV]
       ? {
           status: 'not-compared' as const,
           checks: [],
@@ -49,11 +52,7 @@ export const expect = baseExpect.extend({
       case 'warn':
         annotate('smoothness-warning', summary);
         console.warn(message);
-        if (inGitHubActions()) {
-          console.log(
-            githubWarning(summary, { file: relative(process.cwd(), testInfo.file), line: testInfo.line }),
-          );
-        }
+        warnInGitHubActions(summary, testInfo);
         break;
       case 'baseline-created':
         annotate(
@@ -68,7 +67,7 @@ export const expect = baseExpect.extend({
         );
         break;
       case 'not-compared':
-        if (process.env.SMOOTHNESS_CALIBRATE) break;
+        if (process.env[CALIBRATE_ENV]) break;
         annotate('smoothness-not-compared', `"${received.label}": ${comparison.notes.join(' ')}`);
         break;
       case 'pass':

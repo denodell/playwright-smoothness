@@ -2,13 +2,12 @@
 // does the running and file reading.
 import type { SmoothnessResult } from '../types.js';
 import { METRICS } from '../baseline/compare.js';
+import { table } from '../baseline/message.js';
+import { median } from '../analysis/stats.js';
+import { DEFAULT_MAX_INCREASE } from '../options.js';
 
-/** Suggestions are multiples of this, so small wobbles don't change the advice. */
-export const SUGGESTION_STEP = 0.05;
-/** Never suggest less than one step. */
-export const MIN_SUGGESTION = SUGGESTION_STEP;
-/** The default maxIncrease; suggestions above it get a warning. */
-export const DEFAULT_MAX_INCREASE = 0.15;
+/** Suggestions are multiples of this, so small wobbles don't change the advice, and never less than one step. */
+const SUGGESTION_STEP = 0.05;
 
 export interface MetricCalibration {
   metric: string;
@@ -37,17 +36,12 @@ export interface CheckCalibration {
   suggestedMaxIncrease: number;
 }
 
-const median = (xs: number[]) => {
-  const s = [...xs].sort((a, b) => a - b);
-  const m = Math.floor(s.length / 2);
-  return s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
-};
 const round = (x: number, d = 1) => Math.round(x * 10 ** d) / 10 ** d;
 
 /** The smallest multiple of SUGGESTION_STEP strictly above `fraction`. */
 export function stepAbove(fraction: number): number {
   const steps = Math.floor(fraction / SUGGESTION_STEP + 1e-9) + 1;
-  return round(Math.max(MIN_SUGGESTION, steps * SUGGESTION_STEP), 2);
+  return round(steps * SUGGESTION_STEP, 2);
 }
 
 /** `runs` is one map per invocation of the suite, from result id to result. */
@@ -91,12 +85,12 @@ export function calibrate(runs: Map<string, SmoothnessResult>[]): CheckCalibrati
     }
     const gatedSuggestions = metrics
       .filter((c) => c.gated)
-      .map((c) => c.suggestedMaxIncrease ?? MIN_SUGGESTION);
+      .map((c) => c.suggestedMaxIncrease ?? SUGGESTION_STEP);
     out.push({
       id,
       label: results[0]!.label,
       metrics,
-      suggestedMaxIncrease: gatedSuggestions.length ? Math.max(...gatedSuggestions) : MIN_SUGGESTION,
+      suggestedMaxIncrease: gatedSuggestions.length ? Math.max(...gatedSuggestions) : SUGGESTION_STEP,
     });
   }
   return out;
@@ -122,21 +116,13 @@ export function formatCalibration(checks: CheckCalibration[], invocations: numbe
         m.suggestedMaxIncrease === null ? '-' : String(m.suggestedMaxIncrease),
       ]);
     }
-    const w = rows[0]!.map((_, i) => Math.max(...rows.map((r) => r[i]!.length)));
-    for (const r of rows)
-      lines.push(
-        '  ' +
-          r
-            .map((x, i) => x.padEnd(w[i]!))
-            .join('  ')
-            .trimEnd(),
-      );
+    lines.push(...table(rows));
     for (const m of c.metrics) if (m.warning) lines.push(`  Warning: ${m.warning}`);
     const gated = c.metrics.filter((m) => m.gated);
     if (gated.length && gated.every((m) => m.withinFloor)) {
       lines.push(
-        "  Every change between runs was within the checks' floors, so noise alone can't fail this check. Keep the default maxIncrease (0.15), or anything above " +
-          `${c.suggestedMaxIncrease}.`,
+        "  Every change between runs was within the checks' floors, so noise alone can't fail this check. Keep the default maxIncrease " +
+          `(${DEFAULT_MAX_INCREASE}), or anything above ${c.suggestedMaxIncrease}.`,
         '',
       );
     } else {

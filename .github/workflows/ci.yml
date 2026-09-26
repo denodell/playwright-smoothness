@@ -51,6 +51,33 @@ jobs:
             playwright-report
           retention-days: 30
 
+  oldest-playwright:
+    name: Integration suite on the oldest supported Playwright (1.49)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # Keep in step with peerDependencies in package.json.
+      - run: npm install --no-save @playwright/test@1.49.0
+      - run: npx playwright --version
+      - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium firefox
+      - run: npm run build
+      - run: npm run test:unit
+      - run: npm run test:integration
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: oldest-playwright-results
+          path: |
+            test-results
+            playwright-report
+          retention-days: 30
+
   detection:
     name: Detection suite (Chromium pinned by the locked Playwright version)
     runs-on: ubuntu-latest
@@ -61,7 +88,7 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium chromium-headless-shell
+      - run: npx playwright install --with-deps chromium
       - run: npm run test:detection
       - name: Runner details
         if: always()

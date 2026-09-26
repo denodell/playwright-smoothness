@@ -17,6 +17,6 @@ The first rule that applies wins:
 
 4. **Otherwise `quick`.**
 
-The chosen mode is in every result as `mode`. The rule that chose it is available as `modeSource` on the resolved options. It's written into the JSON output from M2.
+The chosen mode is in every result as `mode`. The rule that chose it is in `settings.modeSource`.
 
 The rules are implemented in `src/options.ts` (`detectMode`) and tested in `tests/unit/options.spec.ts`.

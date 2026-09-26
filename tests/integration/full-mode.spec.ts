@@ -1,8 +1,8 @@
-// M3 acceptance: full mode reproduces the trace column of the section 3 table through the
-// library (12ms blocking: no dropped frames; 25ms: some). Unthrottled, as the table was measured.
+// Full mode reproduces the trace column of the scroll-blocking table (docs/measurements.md)
+// through the library (12ms blocking: no dropped frames; 25ms: some). Unthrottled, as the table
+// was measured.
 // With RECORD_FIXTURES=1, trimmed traces are saved for the parser's unit tests.
 import { test, expect } from '../../src/index.js';
-import type { Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
 import {
   FRAME_CATEGORIES,
@@ -10,19 +10,9 @@ import {
   PROFILE_CATEGORIES,
 } from '../../src/trace/categories.js';
 import { MARK_END, MARK_START } from '../../src/trace/parse.js';
+import { attach, tenWheelScrolls } from '../detection/helpers.js';
 
 test.use({ smoothnessOptions: { mode: 'full', cpuThrottling: 1, runs: 5 } });
-
-async function tenWheelScrolls(page: Page) {
-  await page.mouse.move(400, 400);
-  for (let i = 0; i < 10; i++) {
-    await page.mouse.wheel(0, 150);
-    await page.waitForTimeout(80);
-  }
-}
-
-const attach = (result: unknown) =>
-  test.info().attach('result', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
 
 for (const wait of [12, 25]) {
   test(`scroll handler blocking ${wait}ms`, async ({ page, smoothness }) => {

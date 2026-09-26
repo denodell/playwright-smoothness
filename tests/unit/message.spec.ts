@@ -1,4 +1,4 @@
-// Snapshot tests for toBeSmooth() messages (brief M2 and M5). Update with --update-snapshots.
+// Snapshot tests for toBeSmooth() messages. Update with --update-snapshots.
 import { test, expect } from '@playwright/test';
 import { formatChange, formatMessage, formatSummary, shortSource } from '../../src/baseline/message.js';
 import type { Comparison } from '../../src/types.js';

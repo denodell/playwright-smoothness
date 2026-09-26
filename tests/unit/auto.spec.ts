@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { appendHistory, historyPath, medianMetrics, readHistory, specHash } from '../../src/auto/history.js';
-import { analyse, type DocData } from '../../src/auto/withSmoothness.js';
+import { analyzeDocs, type DocData } from '../../src/auto/withSmoothness.js';
 import { onMainBranch } from '../../src/ci.js';
 import { makeResult } from './result-factory.js';
 
@@ -122,29 +122,38 @@ const click = (start: number, duration: number) => ({
   rawTarget: 'button#go',
 });
 
-test('analyse: an input the page navigated away from before painting is reported', () => {
+test('analyzeDocs: an input the page navigated away from before painting is reported', () => {
   // Input at 900ms on the first document; the next document on the same page started 60ms later.
   const docs = new Map([
     [1_000_000, doc({ lastInput: { at: 900, type: 'pointerdown' } })],
     [1_000_960, doc({ url: 'http://x/b', timeOrigin: 1_000_960 })],
   ]);
-  expect(analyse(docs).unmeasured).toEqual(['pointerdown on http://x/a']);
+  expect(analyzeDocs(docs).unmeasured).toEqual(['pointerdown on http://x/a']);
 });
 
-test('analyse: not reported when the input was measured, when the page stayed, or when another tab navigated', () => {
+test("analyzeDocs: an earlier click's entry still running when the input arrived doesn't count as measuring it", () => {
+  // A slow click at 780ms is measured until 910ms; the navigating click at 900ms never paints.
+  const docs = new Map([
+    [1_000_000, doc({ lastInput: { at: 900, type: 'pointerdown' }, events: [click(780, 130)] })],
+    [1_000_960, doc({ url: 'http://x/b', timeOrigin: 1_000_960 })],
+  ]);
+  expect(analyzeDocs(docs).unmeasured).toEqual(['pointerdown on http://x/a']);
+});
+
+test('analyzeDocs: not reported when the input was measured, when the page stayed, or when another tab navigated', () => {
   const measured = new Map([
     [1_000_000, doc({ lastInput: { at: 900, type: 'pointerdown' }, events: [click(899, 40)] })],
     [1_000_960, doc({ timeOrigin: 1_000_960 })],
   ]);
-  expect(analyse(measured).unmeasured).toEqual([]);
+  expect(analyzeDocs(measured).unmeasured).toEqual([]);
   const later = new Map([
     [1_000_000, doc({ lastInput: { at: 900, type: 'keydown' } })],
     [1_002_000, doc({ timeOrigin: 1_002_000 })], // 1.1s later: plenty of time to paint
   ]);
-  expect(analyse(later).unmeasured).toEqual([]);
+  expect(analyzeDocs(later).unmeasured).toEqual([]);
   const otherTab = new Map([
     [1_000_000, doc({ lastInput: { at: 900, type: 'keydown' } })],
     [1_000_960, doc({ timeOrigin: 1_000_960, page: 1 })],
   ]);
-  expect(analyse(otherTab).unmeasured).toEqual([]);
+  expect(analyzeDocs(otherTab).unmeasured).toEqual([]);
 });

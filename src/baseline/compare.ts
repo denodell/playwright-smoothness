@@ -1,4 +1,5 @@
 import type { Check, SmoothnessResult } from '../types.js';
+import { round1 } from '../analysis/stats.js';
 
 /** The metrics a baseline stores, keyed by result field. Null means "not measured". */
 export type BaselineMetrics = Record<string, number | null>;
@@ -12,7 +13,7 @@ interface MetricDef {
   source: string;
   /**
    * Smallest change that can count as worse, in the metric's unit, so a zero or tiny baseline
-   * doesn't turn one extra frame into an infinite increase (plan decision 8).
+   * doesn't turn one extra frame into an infinite increase.
    */
   floor: number;
   /**
@@ -28,10 +29,10 @@ interface MetricDef {
  * steps, so an 8ms floor would trip on a single rounding step.
  */
 export const INPUT_FLOOR_MS = 16;
-export const LONG_FRAME_FLOOR = 1;
-export const PERCENT_FLOOR_POINTS = 1;
+const LONG_FRAME_FLOOR = 1;
+const PERCENT_FLOOR_POINTS = 1;
 /** Total blocking time floor: one LoAF's worth of blocking beyond the 50ms budget. */
-export const BLOCKING_FLOOR_MS = 50;
+const BLOCKING_FLOOR_MS = 50;
 
 export const METRICS: MetricDef[] = [
   {
@@ -92,8 +93,6 @@ export function metricsOf(result: SmoothnessResult): BaselineMetrics {
   return out;
 }
 
-const round1 = (x: number) => Math.round(x * 10) / 10;
-
 /** (max − min) / median across runs, as a percentage; undefined when unknown. */
 function spreadPercent(result: SmoothnessResult, metric: string): number | undefined {
   const s = result.spread[metric];
@@ -113,8 +112,7 @@ export function compareMetrics(
   const checks: Check[] = [];
   for (const m of METRICS) {
     if (!m.gated(result)) continue;
-    const currentRaw = m.read(result);
-    const current = currentRaw === undefined ? null : currentRaw;
+    const current = m.read(result) ?? null;
     const baseValue = m.metric in baseline ? baseline[m.metric]! : null;
     // A metric neither side measured (full-mode fields in quick mode, or p95 on a scroll with
     // no clicks) isn't a check at all.

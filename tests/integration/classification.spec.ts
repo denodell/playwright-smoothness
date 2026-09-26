@@ -1,4 +1,4 @@
-// M1 acceptance: load, interaction and background frames classified correctly on the mixed
+// Load, interaction and background frames classified correctly on the mixed
 // page in at least 19 of 20 runs, using the library's collector and classifier.
 // With RECORD_FIXTURES=1, the first run is saved as a unit-test fixture.
 import { test, expect } from '@playwright/test';
@@ -80,7 +80,6 @@ test(`classification is correct in at least ${REQUIRED} of ${RUNS} runs`, async 
     .info()
     .attach('outcomes', { body: JSON.stringify(outcomes, null, 1), contentType: 'application/json' });
   const correct = outcomes.filter((o) => o.correct).length;
-  console.log(`classification: ${correct}/${RUNS} runs fully correct`);
   expect(
     correct,
     JSON.stringify(

@@ -1,4 +1,4 @@
-// M5 acceptance, end to end through the built package (npm run build first):
+// End to end through the built package (npm run build first):
 // the reporter loaded by package name, and calibrate's stability over two invocations.
 import { test, expect } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
@@ -13,7 +13,7 @@ const clean = () => Object.fromEntries(Object.entries(process.env).filter(([k]) 
 
 let work: string;
 test.beforeAll(() => {
-  work = mkdtempSync(join(tmpdir(), 'smoothness-m5-'));
+  work = mkdtempSync(join(tmpdir(), 'smoothness-reporter-'));
 });
 test.afterAll(() => rmSync(work, { recursive: true, force: true }));
 test.describe.configure({ mode: 'serial' });

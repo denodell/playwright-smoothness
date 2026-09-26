@@ -125,7 +125,7 @@ export class SourceMap {
   }
 
   /** The segment covering a generated position (the last one at or before the column). */
-  segmentAt(line: number, column: number): Segment | undefined {
+  private segmentAt(line: number, column: number): Segment | undefined {
     const segs = this.segments(line);
     let lo = 0;
     let hi = segs.length - 1;

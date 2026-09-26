@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { FetchText } from './resolve.js';
 
 /** How long one script or map fetch may take. */
-export const FETCH_TIMEOUT_MS = 10_000;
+const FETCH_TIMEOUT_MS = 10_000;
 
 /**
  * Fetches scripts and source maps the way the page would: through the browser context's request

@@ -1,7 +1,8 @@
 // The pull-request summary: every check's change against its baseline, the scripts behind
 // anything that got worse, and everything that couldn't be measured or compared.
 import type { Check, SmoothnessResult } from '../types.js';
-import { describeHotFunction, describeScript, formatDelta, formatValue } from '../baseline/message.js';
+import { PACKAGE_NAME } from '../constants.js';
+import { describeHotFunction, describeScript, formatChange, formatValue } from '../baseline/message.js';
 
 export interface ReportEntry {
   /** Test title path without the file, such as `filters › opens quickly`. */
@@ -12,18 +13,14 @@ export interface ReportEntry {
 }
 
 /** How many scripts and profile functions to name for each check that got worse. */
-export const REPORT_SCRIPTS = 3;
+const REPORT_SCRIPTS = 3;
 
 const cell = (s: string) => s.replace(/\|/g, '\\|').replace(/\n/g, ' ');
 const code = (s: string) => '`' + s.replace(/`/g, "'") + '`';
 
-/** `129ms (+20ms, +18%)`, the style the brief asks for; or just the value when not compared. */
+/** `129ms (+20ms, +18%)`, `129ms (no change)`, or just the value when not compared. */
 export function changeCell(c: Check): string {
-  if (c.change === 0) return `${formatValue(c.current, c.unit)} (no change)`;
-  const delta = formatDelta(c);
-  return delta
-    ? `${formatValue(c.current, c.unit)} (${delta.replace(' (', ', ').replace(/\)$/, '')})`
-    : formatValue(c.current, c.unit);
+  return c.change === 0 ? `${formatValue(c.current, c.unit)} (no change)` : formatChange(c);
 }
 
 type Status = 'worse' | 'ok' | 'new' | 'not compared';
@@ -118,7 +115,7 @@ export function buildMarkdown(entries: ReportEntry[], title = 'Smoothness'): str
       for (const c of noisy) {
         lines.push(
           '',
-          `> ${c.name} varied ${c.spreadPercent}% across runs, more than the allowed ${Math.round(r.settings.maxIncrease * 100)}%. Run \`npx playwright-smoothness calibrate\`.`,
+          `> ${c.name} varied ${c.spreadPercent}% across runs, more than the allowed ${Math.round(r.settings.maxIncrease * 100)}%. Run \`npx ${PACKAGE_NAME} calibrate\`.`,
         );
       }
       lines.push('');

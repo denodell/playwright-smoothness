@@ -18,8 +18,7 @@ import {
   summarizeInput,
   summarizeLongFrames,
 } from './analysis/aggregate.js';
-import { median, spread } from './analysis/stats.js';
-import { medianOf } from './analysis/aggregate.js';
+import { median, medianOf, spread } from './analysis/stats.js';
 import { traceRun } from './trace/tracer.js';
 import {
   ANIMATION_FRAME_CATEGORIES,
@@ -64,16 +63,15 @@ export const COLLECTOR_CONFIG: CollectorConfig = {
 
 /**
  * Quiet period required after load before a run starts: no long animation frame may end
- * within it. Long enough to cover a timer fired shortly after load (the mixed test page's
- * background job fires 300ms after load) and the delay before its LoAF entry is delivered.
+ * within it. Long enough to cover a timer fired a few hundred ms after load, and the delay before
+ * its LoAF entry is delivered.
  */
-export const SETTLE_QUIET_MS = 500;
+const SETTLE_QUIET_MS = 500;
 
 /** Longest we wait for the page to go quiet. If it never does, the run continues with a note. */
-export const SETTLE_TIMEOUT_MS = 5_000;
+const SETTLE_TIMEOUT_MS = 5_000;
 
 interface RunData {
-  snapshot: CollectorSnapshot;
   classes: FrameClass[];
   interactionFrames: AttributedFrame[];
   input: InputResult;
@@ -347,7 +345,6 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
         snapshot.scrolls,
       );
       runs.push({
-        snapshot,
         classes,
         interactionFrames,
         input: summarizeInput(interactions),
@@ -501,9 +498,9 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
     }
 
     if (ctx.list) {
-      const perRun = runs.map((r) => r.list);
-      const ok = perRun.filter((l): l is ListResult => l !== null && !('unavailable' in l));
-      const why = [...new Set(perRun.flatMap((l) => (l && 'unavailable' in l ? [l.unavailable] : [])))];
+      const lists = runs.map((r) => r.list);
+      const ok = lists.filter((l): l is ListResult => l !== null && !('unavailable' in l));
+      const why = [...new Set(lists.flatMap((l) => (l && 'unavailable' in l ? [l.unavailable] : [])))];
       if (ok.length === 0) {
         list = null;
         for (const reason of why.length ? why : ['no run produced list data'])
@@ -561,7 +558,6 @@ export async function measure(ctx: MeasureContext, action: () => Promise<void>):
       }
     }
   }
-  for (const r of runs) r.replay = null;
 
   const result: SmoothnessResult = {
     schemaVersion: SCHEMA_VERSION,

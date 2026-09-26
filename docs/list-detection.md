@@ -17,7 +17,7 @@ For each measured run:
 
 A drawn list is still mostly background: padding, gaps, and each row's own fill. So counting background pixels says little. Instead the library counts **lines**: pixel rows for vertical scrolling, pixel columns for horizontal. A line has content when at least 1% of its pixels (and at least 2) differ from every blank colour by more than 24 per channel. The tolerance absorbs JPEG noise.
 
-A drawn row of the test list has content on 70 of its 80 lines: its 70px poster. So a fully drawn test list measures 87.5%, which matches the spike's "at least 87% drawn". Comparing each frame with the list's own reference means sparse layouts aren't penalised for their whitespace.
+A drawn row of the test list has content on 70 of its 80 lines: its 70px poster. So a fully drawn test list measures 87.5%. Comparing each frame with the list's own reference means sparse layouts aren't penalised for their whitespace.
 
 ### Blank colours
 
@@ -29,7 +29,7 @@ A drawn row of the test list has content on 70 of its 80 lines: its 70px poster.
 Trace screenshots are JPEGs. The options were a JPEG decoder in Node (a dependency such as `jpeg-js`, a pure-JavaScript decoder), or the browser that's already running. The library decodes in a **throwaway page of the same Chromium**, with `createImageBitmap` and `OffscreenCanvas`, after tracing has stopped:
 
 - no dependency;
-- Chrome's native decoder: 200 frames decode and measure in about 0.5s locally and 1.2s on a 4-vCPU GitHub Actions runner, inside the brief's 2-second budget (asserted in `tests/integration/list.spec.ts`);
+- Chrome's native decoder: 200 frames decode and measure in about 0.5s locally and 1.2s on a 4-vCPU GitHub Actions runner, inside a 2-second budget (asserted in `tests/integration/list.spec.ts`);
 - the throwaway page is in its own browser context, so it can't affect the page being measured.
 
 The line-counting function (`src/list/coverage.ts`) is plain code with no dependencies. It runs in that page, and unit tests call it directly in Node.
@@ -58,8 +58,6 @@ The test list (`test-pages/list.html`), 600×600, flung 20,000px at 6,000px/s wi
 | Skeleton rows (grey for 250ms), not named / named as a placeholder | –              | –       | **0% / 97.5%**   | 89.6% / 0%  |
 
 On GitHub Actions (AMD EPYC 9V74, 4 vCPU, PR #5): cheap 0%, costly **92.2%** (188 of 204 frames, with 97.2% of frames on time), horizontal 0% / 92.6%, skeleton rows 0% / 97.5%. Analysing 200 frames took 1.2s, inside the 2-second budget but with less room than locally (0.5s).
-
-The spike's costly list was blank in 188 of 203 frames (93%). The moderate list dipped to 72% drawn in the spike, which ran in a single-CPU sandbox; on these machines the 4ms rows keep up.
 
 ## Limitations
 

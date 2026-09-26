@@ -17,16 +17,15 @@ import {
   PX_PER_ARROW_KEY,
   type ScrollOptions,
 } from './scroll.js';
-import type { MeasureContext } from './runner.js';
-import { basename, relative } from 'node:path';
+import { basename } from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { encodeReplay } from './replay/encode.js';
 import { takeReplaySource } from './replay/source.js';
 import { installCollector } from './collector/collector.js';
 import { browserEnvironment } from './environment.js';
 import { resolveOptions } from './options.js';
-import { COLLECTOR_CONFIG, emptyResult, measure } from './runner.js';
-import { githubWarning, inGitHubActions } from './ci.js';
+import { COLLECTOR_CONFIG, emptyResult, measure, type MeasureContext } from './runner.js';
+import { warnInGitHubActions } from './ci.js';
 import { resultPath, writeResult } from './output.js';
 import type { SmoothnessOptions, SmoothnessResult } from './types.js';
 
@@ -66,11 +65,7 @@ function annotateOnce(testInfo: TestInfo, type: string, description: string): vo
 
 function warn(testInfo: TestInfo, message: string): void {
   annotateOnce(testInfo, 'smoothness-warning', message);
-  if (inGitHubActions()) {
-    console.log(
-      githubWarning(message, { file: relative(process.cwd(), testInfo.file), line: testInfo.line }),
-    );
-  }
+  warnInGitHubActions(message, testInfo);
 }
 
 async function createSmoothness(
@@ -185,7 +180,6 @@ async function createSmoothness(
   };
 }
 
-/** The fixture definitions, shared by `test` and `withSmoothness()`. */
 /**
  * Encodes and attaches a scroll() replay when the result asks for one: always with
  * `replay: 'on'`, and when a check got worse with `'on-regression'` (the default).
@@ -217,6 +211,7 @@ async function attachReplay(
   writeResult(result, path);
 }
 
+/** The fixture definitions, shared by `test` and `withSmoothness()`. */
 export const smoothnessFixtures: Fixtures<
   SmoothnessFixtures,
   object,

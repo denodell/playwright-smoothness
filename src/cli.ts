@@ -6,10 +6,7 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import type { SmoothnessResult } from './types.js';
 import { calibrate, formatCalibration } from './calibrate/analyze.js';
-import { PACKAGE_NAME } from './constants.js';
-
-/** Tells toBeSmooth() not to compare or write baselines while calibrating. */
-export const CALIBRATE_ENV = 'SMOOTHNESS_CALIBRATE';
+import { CALIBRATE_ENV, PACKAGE_NAME } from './constants.js';
 
 const HELP = `Usage: npx ${PACKAGE_NAME} calibrate [options] [-- <playwright test arguments>]
 

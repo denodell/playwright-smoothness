@@ -1,4 +1,4 @@
-// Framework check (M1): what LoAF attribution looks like when a framework sits between the
+// Framework check: what LoAF attribution looks like when a framework sits between the
 // browser and the app's handler. React delegates events to its root; Angular with Zone.js
 // wraps every listener. Findings are written up in docs/frameworks.md.
 import { test, expect } from '../../src/index.js';
@@ -67,7 +67,7 @@ for (const name of PAGES) {
     });
     const top = result.profile!.hotFunctions[0]!;
     save(`framework-profile-${name}`, { profile: result.profile, notes: result.notes });
-    // The handlers spin for 210ms, but samples taken inside performance.now() count as its own,
+    // The handler spins for 150ms, but samples taken inside performance.now() count as its own,
     // so busyWait's self time is only part of that; on a slow runner it came in at 79.9ms.
     expect(top.selfMs).toBeGreaterThan(50);
     expect(top.fn).toBe('busyWait');

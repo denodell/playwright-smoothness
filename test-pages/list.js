@@ -1,6 +1,5 @@
 // A virtualized list: only rows near the viewport exist in the DOM.
-//   ?cost=      work to build each row (default 0)
-//   ?costmode=  'wall' (cost is ms, default) or 'iter' (cost is thousands of iterations)
+//   ?cost=      wall-clock ms of work to build each row (default 0)
 //   ?overscan=  extra rows rendered beyond the viewport (default 2)
 //   ?rows=      number of rows (default 5000)
 //   ?axis=      'y' (default) or 'x' for a horizontal list
@@ -10,7 +9,6 @@ const ROW = 80;
 const rows = param('rows', 5000);
 const costPerRow = param('cost', 0);
 const query = new URLSearchParams(location.search);
-const costMode = query.get('costmode') || 'wall';
 const overscan = param('overscan', 2);
 const horizontal = query.get('axis') === 'x';
 const skeletonMs = query.has('skeleton') ? param('skeleton', 0) : -1;
@@ -33,10 +31,7 @@ function fillRow(row, i) {
 }
 
 function buildRow(i) {
-  if (costPerRow) {
-    if (costMode === 'iter') doWork(costPerRow * 1000);
-    else busyWait(costPerRow);
-  }
+  if (costPerRow) busyWait(costPerRow);
   const row = document.createElement('div');
   row.className = 'row';
   row.setAttribute('role', 'listitem');

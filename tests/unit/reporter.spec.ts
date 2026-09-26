@@ -1,4 +1,4 @@
-// Snapshot tests for the reporter's markdown (brief M5). Update with --update-snapshots.
+// Snapshot tests for the reporter's markdown. Update with --update-snapshots.
 import { test, expect } from '@playwright/test';
 import { buildMarkdown, changeCell, type ReportEntry } from '../../src/reporter/markdown.js';
 import { compareMetrics, metricsOf } from '../../src/baseline/compare.js';
@@ -38,7 +38,7 @@ const entry = (test: string, result: SmoothnessResult, project = 'chromium'): Re
 
 const before = makeResult({ input: { p95ToPaintMs: 109 }, longFrames: { count: 1 } });
 
-test('changeCell: the brief’s style', () => {
+test('changeCell: value, then absolute and relative change', () => {
   const [c] = compareMetrics(makeResult({ input: { p95ToPaintMs: 129 } }), metricsOf(before), 0.15);
   expect(changeCell(c!)).toBe('129ms (+20ms, +18.3%)');
 });

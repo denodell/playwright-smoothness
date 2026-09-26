@@ -6,8 +6,6 @@ Fail the build when a web UI stops being smooth. `playwright-smoothness` measure
 
 Dropped frames don't show a list going blank. On the right, 97% of frames arrive on time, but the rows aren't there. `smoothness.scroll()` measures both.
 
-> **0.x.** The API may change before 1.0. Reports of noise on your CI runners are especially welcome.
-
 ## Quick start
 
 ```bash
@@ -50,7 +48,7 @@ Use new headless Chromium, which is closer to real Chrome than the default headl
 use: { browserName: 'chromium', channel: 'chromium' },
 ```
 
-The first run records a baseline next to your test, the way `toMatchSnapshot()` does, and passes. Later runs compare with it. Re-record with `npx playwright test --update-snapshots`.
+The first run records a baseline next to your test, the way `toMatchSnapshot()` does, and passes. Later runs compare with it. Re-record with `npx playwright test --update-snapshots`: `=all` replaces every baseline, `=changed` only those that got worse, and `=none` never writes (a missing baseline is then reported as not compared). Renaming a test starts a fresh baseline, because the test title is part of its key.
 
 Baselines are per machine (see [Baselines and CI machines](#baselines-and-ci-machines)), so baselines from your laptop aren't used in CI. In CI, record baselines on your main branch and give them to pull-request runs with `baselineDir`. [docs/ci.md](docs/ci.md) has a GitHub Actions recipe.
 
@@ -92,7 +90,7 @@ In full mode it also finds **blank frames**. It screenshots the list at rest, th
 await smoothness.scroll(list, { mode: 'full', list: { placeholders: ['.skeleton-row', '#e5e7eb'] } });
 ```
 
-**Replays.** When a `scroll()` check gets worse, a video of the measured scroll is attached to the test in the Playwright report. It plays 4× slower than real time. Each frame shows how drawn the list was, blank frames are marked in red, and a timeline shows where they happened. `replay: 'on'` attaches one every time, and `'off'` never. The video is built from the frames the measurement already recorded, so making it doesn't change the numbers.
+**Replays.** When a full-mode `scroll()` check gets worse, a video of the measured scroll is attached to the test in the Playwright report. It plays 4× slower than real time. Each frame shows how drawn the list was, blank frames are marked in red, and a timeline shows where they happened. `replay: 'on'` attaches one every time, and `'off'` never. The video is built from the frames the measurement already recorded, so making it doesn't change the numbers.
 
 How it works, and its limits: [docs/list-detection.md](docs/list-detection.md).
 

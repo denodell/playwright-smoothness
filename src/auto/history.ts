@@ -1,15 +1,16 @@
 // Automatic mode's baseline: a rolling history of recent passing runs on the main branch,
 // compared by median. One file per test, project, platform, CPU model and throttling rate.
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { SmoothnessResult } from '../types.js';
-import type { BaselineMetrics } from '../baseline/compare.js';
-import { metricsOf } from '../baseline/compare.js';
+import { metricsOf, type BaselineMetrics } from '../baseline/compare.js';
+import { median } from '../analysis/stats.js';
+import { writeJsonAtomic } from '../output.js';
 import { machineSlug, slug } from '../baseline/key.js';
 import { PACKAGE_NAME } from '../constants.js';
 
-export const HISTORY_KIND = `${PACKAGE_NAME}-history`;
+const HISTORY_KIND = `${PACKAGE_NAME}-history`;
 
 export interface HistoryEntry {
   recordedAt: string;
@@ -26,7 +27,7 @@ export interface HistoryFile {
   project: string;
   machine: string;
   cpuThrottling: number;
-  /** Hash of the whole spec file the entries were recorded with (plan decision 10). */
+  /** Hash of the whole spec file the entries were recorded with; a change restarts the history. */
   specHash: string;
   entries: HistoryEntry[];
 }
@@ -76,15 +77,13 @@ export function medianMetrics(entries: HistoryEntry[]): BaselineMetrics {
       out[n] = null;
       continue;
     }
-    const s = [...vals].sort((a, b) => a - b);
-    const m = Math.floor(s.length / 2);
-    out[n] = s.length % 2 ? s[m]! : (s[m - 1]! + s[m]!) / 2;
+    out[n] = median(vals);
   }
   return out;
 }
 
-export function commitFromEnv(env: Record<string, string | undefined> = process.env): string | undefined {
-  return env.GITHUB_SHA ?? env.CI_COMMIT_SHA ?? env.BUILD_SOURCEVERSION ?? env.CIRCLE_SHA1 ?? undefined;
+function commitFromEnv(env: Record<string, string | undefined> = process.env): string | undefined {
+  return env.GITHUB_SHA ?? env.CI_COMMIT_SHA ?? env.BUILD_SOURCEVERSION ?? env.CIRCLE_SHA1;
 }
 
 /** Appends a run, keeping the newest `keep` entries. Written atomically. */
@@ -108,9 +107,6 @@ export function appendHistory(
     ...base,
     entries: [...previous, entry].slice(-keep),
   };
-  mkdirSync(dirname(path), { recursive: true });
-  const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify(file, null, 2) + '\n');
-  renameSync(tmp, path);
+  writeJsonAtomic(path, file);
   return file;
 }

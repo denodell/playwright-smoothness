@@ -3,7 +3,7 @@
 // imports, no references to anything outside its own body, and only syntax the target
 // browser runs natively.
 //
-// Rules (brief principles 5 and 6):
+// Rules:
 // - Every observer callback and every per-entry operation has its own try/catch, because an
 //   exception inside a callback silently drops the rest of that batch.
 // - Records are plain numbers and strings. No DOM node survives a callback; targets are
@@ -91,12 +91,10 @@ export interface CollectorSnapshot {
 
 export interface SettleOutcome {
   settled: boolean;
-  waitedMs: number;
 }
 
 /** The collector's in-page API, reachable at window[COLLECTOR_KEY]. */
 export interface CollectorApi {
-  version: 1;
   now(): number;
   snapshot(from: number, to: number): CollectorSnapshot;
   settle(quietMs: number, timeoutMs: number): Promise<SettleOutcome>;
@@ -104,6 +102,7 @@ export interface CollectorApi {
 }
 
 export function installCollector(config: CollectorConfig): void {
+  // Same as COLLECTOR_KEY: this function is serialized, so it can't reference module scope.
   const KEY = '__playwrightSmoothness';
   const w = window as unknown as Record<string, unknown>;
   if (w[KEY]) return;
@@ -131,7 +130,7 @@ export function installCollector(config: CollectorConfig): void {
       if (errors.length < 50) {
         errors.push(where + ': ' + String(err));
         if (where !== 'stream' && config.stream) {
-          const binding = (w as Record<string, unknown>)[config.stream];
+          const binding = w[config.stream];
           if (typeof binding === 'function') {
             (binding as (b: unknown) => unknown)({
               doc: performance.timeOrigin,
@@ -184,13 +183,13 @@ export function installCollector(config: CollectorConfig): void {
     outbox = null;
     if (!batch || !config.stream) return;
     try {
-      const binding = (w as Record<string, unknown>)[config.stream];
+      const binding = w[config.stream];
       if (typeof binding === 'function') (binding as (b: StreamBatch) => unknown)(batch);
     } catch (err) {
       fail('stream', err);
     }
   };
-  const stream = (kind: 'loaf' | 'events' | 'scrolls' | 'load' | 'input' | 'errors', record: unknown) => {
+  const stream = (kind: 'loaf' | 'events' | 'scrolls' | 'load' | 'input', record: unknown) => {
     if (!config.stream) return;
     try {
       if (!outbox) {
@@ -385,7 +384,6 @@ export function installCollector(config: CollectorConfig): void {
   const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
   const api: CollectorApi = {
-    version: 1,
     now: () => performance.now(),
     snapshot(from, to) {
       const overlaps = (start: number, end: number) => start <= to && end >= from;
@@ -409,8 +407,8 @@ export function installCollector(config: CollectorConfig): void {
           const now = performance.now();
           const loaded = document.readyState === 'complete' && loadEventEnd() > 0;
           const quietSince = Math.max(loadEventEnd(), lastLongFrameEnd);
-          if (loaded && now - quietSince >= quietMs) resolve({ settled: true, waitedMs: now - began });
-          else if (now - began >= timeoutMs) resolve({ settled: false, waitedMs: now - began });
+          if (loaded && now - quietSince >= quietMs) resolve({ settled: true });
+          else if (now - began >= timeoutMs) resolve({ settled: false });
           else setTimeout(check, 50);
         };
         check();

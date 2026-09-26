@@ -1,9 +1,7 @@
 import { test, expect } from '../../src/index.js';
+import { attach } from '../detection/helpers.js';
 
 test.use({ smoothnessOptions: { runs: 3 } });
-
-const attach = (result: unknown) =>
-  test.info().attach('result', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
 
 test('a 150ms click handler: one long interaction frame per run, attributed to the handler', async ({
   page,

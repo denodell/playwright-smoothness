@@ -1,10 +1,13 @@
-// Section 3, "Interactions and classification": load, interaction and background frames,
-// classified with no labels from the test. Ported from the spike's auto.spec.ts.
-// M1 turns this into the library's classifier and requires 19/20 runs correct.
+// Load, interaction and background frames, classified with no labels from the test, from
+// raw LoAF and Event Timing entries. The library's classifier (src/analysis/classify.ts) refines
+// this rule; tests/integration/classification.spec.ts checks it over 20 runs.
 import { test, expect } from '@playwright/test';
 import { installObservers, collected, save, type LoafRecord } from './helpers.js';
 
-/** Frames starting before loadEventEnd + this are load frames (spike rule). */
+/**
+ * Frames starting before loadEventEnd + this are load frames. The same value as LOAD_GRACE_MS in
+ * src/analysis/classify.ts, not imported because this suite is independent of src/.
+ */
 const LOAD_GRACE_MS = 50;
 
 test('load, interaction and background frames are classified correctly', async ({ page }) => {

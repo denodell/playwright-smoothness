@@ -31,7 +31,8 @@ test('expensive rows go blank, and the profile names them', async ({ page, smoot
   });
   expect(result.scroll!.scrolledPx).toBeGreaterThan(19_000);
   expect(result.list!.blankFramePercent).toBeGreaterThan(50);
-  const top = result.profile!.hotFunctions[0]!;
+  // The slow rows spin on performance.now(), so `now` itself can be the hottest function.
+  const top = result.profile!.hotFunctions.find((f) => f.fn !== 'now')!;
   // V8 may inline the small expensiveFormat() into Row, and then the time is Row's.
   expect(['expensiveFormat', 'Row']).toContain(top.fn);
   expect(top.url).toMatch(/src\/main\.jsx$/);

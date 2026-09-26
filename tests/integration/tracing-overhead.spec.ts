@@ -1,4 +1,4 @@
-// M3: does tracing change what's measured? The same interactions in quick and full mode, at the
+// Does tracing change what's measured? The same interactions in quick and full mode, at the
 // default 4x throttling. Numbers are saved for docs/trace-categories.md.
 import { test, expect } from '../../src/index.js';
 import type { Page } from '@playwright/test';

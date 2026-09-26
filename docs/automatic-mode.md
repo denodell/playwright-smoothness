@@ -36,7 +36,7 @@ Each test's baseline is the **median of its last 10 passing runs on the main bra
 
 ### When a test changes
 
-When a spec file changes, the histories of the tests in it **start again** instead of failing: the test may now do different things. The whole spec file is hashed, so editing one test resets its neighbours too. That's conservative but simple (plan decision 10). The result notes it, and the test gets a `smoothness-baseline-reset` annotation.
+When a spec file changes, the histories of the tests in it **start again** instead of failing: the test may now do different things. The whole spec file is hashed, so editing one test resets its neighbours too. That's conservative but simple. The result notes it, and the test gets a `smoothness-baseline-reset` annotation.
 
 ## Keeping the history in CI
 
@@ -65,7 +65,7 @@ The history must outlive each CI run, so keep `historyDir` as an artifact. The p
 ## Limitations
 
 - **An input followed straight away by a navigation isn't measured.** The browser only measures an input (in Event Timing and in Long Animation Frames) once the next frame paints. A test that clicks and then immediately calls `page.goto()` navigates before that paint, so there's no data to collect. The result says so: "The last input before a navigation (pointerdown on …) wasn't measured". This is reported when the next document on the same page started within 250ms of the input and nothing measured it.
-- **Measured once.** There's no warm-up and no median across runs; the rolling median across main-branch runs takes their place. On a developer Mac, the first interaction on a page read about twice as long as later ones. On GitHub's runners it didn't (docs/measurements.md), so CI histories aren't affected.
+- **Measured once.** There's no warm-up and no median across runs; the rolling median across main-branch runs takes their place. On a developer Mac, the first interaction on a page read about twice as long as later ones. On GitHub's runners it didn't ([measurements.md](measurements.md)), so CI histories aren't affected.
 - **Quick mode only.** Full mode (tracing, screenshots, the CPU profile) is for explicit `measure()` and `scroll()` calls.
 - **Interactions under 16ms aren't reported by the browser** (Event Timing's minimum threshold), so `input.interactions` counts slower ones.
 - **Chromium only**, as elsewhere. Other browsers get a `smoothness-skipped` annotation.

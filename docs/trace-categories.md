@@ -6,15 +6,15 @@ Full mode records a Chrome trace for each run. This page records which categorie
 
 The same interaction was traced with different category sets: ten wheel scrolls over a page whose scroll handler blocks for 25ms, with a `performance.mark()` before and after.
 
-| Categories                                                                                                                                               | Trace size | Events | PipelineReporter | AnimationFrame | EventLatency | Marks |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ---------------- | -------------- | ------------ | ----- |
-| The spike's set (`devtools.timeline`, `disabled-by-default-devtools.timeline`, `…timeline.frame`, `benchmark`, `cc`, `viz`, `gpu`) + `blink.user_timing` | 2,148KB    | 11,048 | ✓                | ✓              | ✓            | ✓     |
-| `disabled-by-default-devtools.timeline.frame` + `blink.user_timing`                                                                                      | **240KB**  | 749    | ✓                | –              | –            | ✓     |
-| `benchmark` + `blink.user_timing`                                                                                                                        | 974KB      | 4,194  | ✓                | –              | ✓            | ✓     |
-| `cc` + `blink.user_timing`                                                                                                                               | 851KB      | 3,888  | ✓                | –              | ✓            | ✓     |
-| `…timeline.frame` + `input` + `blink.user_timing`                                                                                                        | 633KB      | 2,928  | ✓                | –              | ✓            | ✓     |
-| `…timeline.frame` + `devtools.timeline` + `blink.user_timing`                                                                                            | **368KB**  | 1,350  | ✓                | ✓              | –            | ✓     |
-| `devtools.timeline` + `blink.user_timing`                                                                                                                | 188KB      | 604    | –                | ✓              | –            | ✓     |
+| Categories                                                                                                                                                    | Trace size | Events | PipelineReporter | AnimationFrame | EventLatency | Marks |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ------ | ---------------- | -------------- | ------------ | ----- |
+| A broad DevTools set (`devtools.timeline`, `disabled-by-default-devtools.timeline`, `…timeline.frame`, `benchmark`, `cc`, `viz`, `gpu`) + `blink.user_timing` | 2,148KB    | 11,048 | ✓                | ✓              | ✓            | ✓     |
+| `disabled-by-default-devtools.timeline.frame` + `blink.user_timing`                                                                                           | **240KB**  | 749    | ✓                | –              | –            | ✓     |
+| `benchmark` + `blink.user_timing`                                                                                                                             | 974KB      | 4,194  | ✓                | –              | ✓            | ✓     |
+| `cc` + `blink.user_timing`                                                                                                                                    | 851KB      | 3,888  | ✓                | –              | ✓            | ✓     |
+| `…timeline.frame` + `input` + `blink.user_timing`                                                                                                             | 633KB      | 2,928  | ✓                | –              | ✓            | ✓     |
+| `…timeline.frame` + `devtools.timeline` + `blink.user_timing`                                                                                                 | **368KB**  | 1,350  | ✓                | ✓              | –            | ✓     |
+| `devtools.timeline` + `blink.user_timing`                                                                                                                     | 188KB      | 604    | –                | ✓              | –            | ✓     |
 
 Where each event lives:
 
@@ -30,15 +30,15 @@ Where each event lives:
 | Frame states (always in full mode)             | `disabled-by-default-devtools.timeline.frame`, `blink.user_timing` | 240KB                                             |
 | Plus the 120Hz prediction (`refreshRate: 120`) | + `devtools.timeline`                                              | 368KB                                             |
 | Plus the CPU profile (always in full mode)     | + `disabled-by-default-v8.cpu_profiler`                            | a click: 147KB in total with the frame categories |
-| Plus list screenshots (`scroll()`, M4)         | + `disabled-by-default-devtools.screenshot`                        | measured in M4                                    |
+| Plus list screenshots (`scroll()`)             | + `disabled-by-default-devtools.screenshot`                        | 12–22MB per 3.3s fling (measurements.md)          |
 
-That's about 9x smaller than the spike's set, with the same frame states.
+That's about 9x smaller than the broad set, with the same frame states.
 
 ## Windowing, and the "tracing start" drop explained
 
 The library puts `playwright-smoothness:start` and `:end` marks around the measured action and counts only frames between them. The start mark is placed two animation frames after tracing starts.
 
-In M0 the detection suite found a dropped frame about 550ms before the first input in most traces, and worked around it with an input window. The M3 probe found the cause. That frame comes from a **different compositor** (`layer_tree_host_id` 1, frame sequence 5): Playwright's initial `about:blank` document. The page under test is `layer_tree_host_id` 2. The mark window excludes it naturally.
+The detection suite found a dropped frame about 550ms before the first input in most traces, and works around it with an input window. That frame comes from a **different compositor** (`layer_tree_host_id` 1, frame sequence 5): Playwright's initial `about:blank` document. The page under test is `layer_tree_host_id` 2. The mark window excludes it naturally.
 
 Each frame can appear in more than one `PipelineReporter` event:
 

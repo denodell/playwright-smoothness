@@ -5,12 +5,12 @@ import { PACKAGE_NAME } from '../constants.js';
 import { muxWebM, type EncodedFrame } from './webm.js';
 
 /** Replays play this many times slower than real time: at 60fps, blank frames flash past unseen. */
-export const REPLAY_SLOWDOWN = 4;
+const REPLAY_SLOWDOWN = 4;
 /** Height of the panel under each frame. */
-export const PANEL_HEIGHT = 76;
+const PANEL_HEIGHT = 76;
 /** A key frame this often, so the report's player can seek. */
-export const KEY_FRAME_EVERY = 30;
-export const REPLAY_BITRATE = 2_000_000;
+const KEY_FRAME_EVERY = 30;
+const REPLAY_BITRATE = 2_000_000;
 
 /** WebCodecs needs a secure context; http://localhost is one, and Playwright serves it itself. */
 const REPLAY_URL = 'http://localhost/__playwright-smoothness-replay';

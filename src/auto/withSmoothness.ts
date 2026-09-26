@@ -15,15 +15,15 @@ import type {
   TestType,
 } from '@playwright/test';
 import { dirname, relative, resolve as resolvePath } from 'node:path';
-import { cpus, platform } from 'node:os';
 import {
+  COLLECTOR_KEY,
   installCollector,
   type EventRecord,
   type LoafRecord,
   type ScrollRecord,
   type StreamBatch,
 } from '../collector/collector.js';
-import { COLLECTOR_CONFIG, settingsOf } from '../runner.js';
+import { COLLECTOR_CONFIG, machine, settingsOf } from '../runner.js';
 import { groupInteractions, type Interaction } from '../analysis/interactions.js';
 import { classifyFrames, type FrameClass } from '../analysis/classify.js';
 import {
@@ -36,9 +36,9 @@ import { compareMetrics } from '../baseline/compare.js';
 import { formatMessage, formatSummary } from '../baseline/message.js';
 import { resolveOptions } from '../options.js';
 import { browserEnvironment } from '../environment.js';
-import { githubWarning, inGitHubActions, onMainBranch } from '../ci.js';
+import { onMainBranch, warnInGitHubActions } from '../ci.js';
 import { resultPath, writeResult } from '../output.js';
-import { SCHEMA_VERSION } from '../constants.js';
+import { CALIBRATE_ENV, SCHEMA_VERSION } from '../constants.js';
 import { smoothnessFixtures, type SmoothnessFixtures } from '../fixture.js';
 import {
   appendHistory,
@@ -67,19 +67,19 @@ export interface AutoOptions extends SmoothnessOptions {
 }
 
 /** Binding the in-page collector streams records to, so they survive navigation. */
-export const STREAM_BINDING = '__playwrightSmoothnessStream';
+const STREAM_BINDING = '__playwrightSmoothnessStream';
 /** After the test body, how long to wait for the last streamed batches to arrive. */
-export const STREAM_DRAIN_MS = 100;
-export const DEFAULT_HISTORY = 10;
-export const DEFAULT_MIN_HISTORY = 3;
+const STREAM_DRAIN_MS = 100;
+const DEFAULT_HISTORY = 10;
+const DEFAULT_MIN_HISTORY = 3;
 /** Automatic mode doesn't throttle by default: it would slow every test and could break timeouts. */
-export const AUTO_CPU_THROTTLING = 1;
+const AUTO_CPU_THROTTLING = 1;
 /**
  * An input this close before the page's next navigation started, with no Event Timing entry,
  * was probably never painted: Event Timing and LoAF only record an input once the next frame
  * paints. Measured from the input to the next document's timeOrigin.
  */
-export const UNPAINTED_INPUT_MS = 250;
+const UNPAINTED_INPUT_MS = 250;
 
 export interface DocData {
   url: string;
@@ -116,7 +116,7 @@ async function drain(context: BrowserContext): Promise<void> {
         .evaluate(async (key) => {
           const api = (window as unknown as Record<string, { flush(): Promise<void> } | undefined>)[key];
           if (api) await api.flush();
-        }, '__playwrightSmoothness')
+        }, COLLECTOR_KEY)
         .catch(() => undefined),
     ),
   );
@@ -124,7 +124,7 @@ async function drain(context: BrowserContext): Promise<void> {
 }
 
 /** Analyses streamed documents: interactions, classified frames, and inputs never measured. */
-export function analyse(docs: Map<number, DocData>) {
+export function analyzeDocs(docs: Map<number, DocData>) {
   const interactions: (Interaction & { url: string })[] = [];
   const frames: AttributedFrame[] = [];
   const classes: FrameClass[] = [];
@@ -138,9 +138,9 @@ export function analyse(docs: Map<number, DocData>) {
       .sort((a, b) => a.timeOrigin - b.timeOrigin)[0];
     const input = d.lastInput;
     if (next && input && next.timeOrigin - (d.timeOrigin + input.at) <= UNPAINTED_INPUT_MS) {
-      const covered = d.events.some(
-        (e) => e.interactionId > 0 && e.start <= input.at + 1 && e.start + e.duration >= input.at - 1,
-      );
+      // An Event Timing entry's startTime is its event's timeStamp. Overlap isn't enough: an
+      // earlier input's entry can still be running when this one arrives.
+      const covered = d.events.some((e) => e.interactionId > 0 && Math.abs(e.start - input.at) <= 1);
       if (!covered) unmeasured.push(`${input.type} on ${d.url}`);
     }
     const di = groupInteractions(d.events, d.loaf);
@@ -259,9 +259,8 @@ export function withSmoothness<T extends object, W extends object>(
         await drain(context);
         if (docs.size === 0) return; // the test never loaded a page: nothing to measure
 
-        const { interactions, frames, classes, errors, unmeasured } = analyse(docs);
+        const { interactions, frames, classes, errors, unmeasured } = analyzeDocs(docs);
         const count = (k: FrameClass) => classes.filter((c) => c === k).length;
-        const list = cpus();
         const result: SmoothnessResult = {
           schemaVersion: SCHEMA_VERSION,
           label,
@@ -270,7 +269,7 @@ export function withSmoothness<T extends object, W extends object>(
           browserName: environment.browserName,
           browserVersion: environment.browserVersion,
           headlessMode: environment.headlessMode,
-          machine: { cpuModel: list[0]?.model.trim() ?? 'unknown', cpus: list.length, platform: platform() },
+          machine: machine(),
           cpuThrottling: resolved.cpuThrottling,
           refreshRate: resolved.refreshRate,
           settings: settingsOf(resolved),
@@ -338,7 +337,8 @@ export function withSmoothness<T extends object, W extends object>(
         }
 
         let comparison: Comparison;
-        if (process.env.SMOOTHNESS_CALIBRATE) {
+        const calibrating = !!process.env[CALIBRATE_ENV];
+        if (calibrating) {
           comparison = {
             status: 'not-compared',
             checks: [],
@@ -374,11 +374,7 @@ export function withSmoothness<T extends object, W extends object>(
         }
 
         const shouldRecord = record ?? (process.env.SMOOTHNESS_RECORD === '1' || onMainBranch());
-        if (
-          shouldRecord &&
-          testInfo.status === testInfo.expectedStatus &&
-          !process.env.SMOOTHNESS_CALIBRATE
-        ) {
+        if (shouldRecord && testInfo.status === testInfo.expectedStatus && !calibrating) {
           appendHistory(
             path,
             {
@@ -407,11 +403,7 @@ export function withSmoothness<T extends object, W extends object>(
             throw new Error(message);
           annotate(testInfo, 'smoothness-warning', summary);
           console.warn(message);
-          if (inGitHubActions()) {
-            console.log(
-              githubWarning(summary, { file: relative(process.cwd(), testInfo.file), line: testInfo.line }),
-            );
-          }
+          warnInGitHubActions(summary, testInfo);
         } else if (comparison.status === 'not-compared') {
           annotate(testInfo, 'smoothness-not-compared', `${label}: ${comparison.notes.join(' ')}`);
         }
