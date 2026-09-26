@@ -264,7 +264,7 @@ export function pipelineStates(
   for (const e of events) {
     if (e.name !== 'PipelineReporter' || e.ph !== 'b') continue;
     if (window && (e.ts < window[0] || e.ts > window[1])) continue;
-    const state = e.args?.frame_reporter?.state ?? 'MISSING_STATE';
+    const state = (e.args?.frame_reporter ?? e.args?.chrome_frame_reporter)?.state ?? 'MISSING_STATE';
     states[state] = (states[state] ?? 0) + 1;
   }
   return states;
