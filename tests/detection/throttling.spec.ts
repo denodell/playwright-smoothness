@@ -76,7 +76,7 @@ test('iteration-based scroll work: 4x throttling produces long frames, five runs
     'every 4x run has long frames',
   ).toBe(true);
   // Throttling makes the same work take longer. The long-frame count needn't rise: on a slow
-  // runner the unthrottled work already crosses 50ms, as the noise workflow showed.
+  // runner the unthrottled work already crosses 50ms, as measured on GitHub Actions (docs/measurements.md, Noise on GitHub Actions).
   expect(median(at4.map((r) => r.count))).toBeGreaterThanOrEqual(median(at1.map((r) => r.count)));
   expect(median(at4.map((r) => r.totalBlockingMs))).toBeGreaterThan(
     2 * median(at1.map((r) => r.totalBlockingMs)),

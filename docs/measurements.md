@@ -91,9 +91,9 @@ Wall clock versus iterations, measured from the click handler's LoAF script dura
 | `busyWait(100)`, GHA       | 100.1ms | 100.0ms (not slowed) |
 | `doWork(6,000,000)`, GHA   | 150.3ms | 608.1ms (4.0x)       |
 
-## Noise on GitHub Actions (noise workflow)
+## Noise on GitHub Actions
 
-`.github/workflows/noise.yml` ran the whole detection suite five times in one job on `main` (run 35943204024).
+A noise workflow (since removed; `calibrate` now does this job) ran the whole detection suite five times in one job on `main` (run 35943204024).
 
 **Within one job, noise is very low.** Every scroll-table number was identical across all five runs (0 / 0 / 2 / 4 / 8 dropped; LoAF and rAF columns exact). Throttled long-frame counts didn't move (10 / 10 / 10). Throttled total blocking time varied ±1–2%. The spike's single-CPU sandbox saw ±25–40%. List fling dropped-frame counts were the least steady (cheap: 2–3; costly: 7–9).
 
