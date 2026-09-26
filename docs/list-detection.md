@@ -36,9 +36,9 @@ The line-counting function (`src/list/coverage.ts`) is plain code with no depend
 
 ## Replays
 
-A replay turns a measured run's screenshots into a WebM video attached to the test (`smoothness replay: <label>`). The run chosen is the one whose blank-frame share is closest to the reported median. Each frame shows the list outlined, which turns red and says **BLANK** when the frame is blank. A panel below gives the frame number, its time, how drawn the list was, and a timeline of every frame in the run with a playhead. It plays 4× slower than real time (`REPLAY_SLOWDOWN`), because at 60 frames a second a blank frame lasts 16ms.
+A replay turns a measured run's screenshots into a WebM video attached to the test (`smoothness replay: <label>`). The run chosen is the one whose blank-frame share is closest to the reported median. Each frame shows the list outlined; on a blank frame it's covered with an orange halftone screen and tagged **BLANK**. Underneath, a small display reads out how drawn the list was (with a ten-segment meter), the frame number and the time, over a waveform of the whole run: one column of dots per frame, placed by time and as tall as the frame was drawn, orange when blank, with a dotted line at the blank threshold. It plays 4× slower than real time (`REPLAY_SLOWDOWN`), because at 60 frames a second a blank frame lasts 16ms.
 
-![A frame from a replay: the list blank and marked in red, with frame 112 of 203 at 0% drawn, and the timeline below](replay-frame.png)
+![A frame from a replay: the list covered in an orange halftone and tagged BLANK, 0% drawn on frame 123 of 204, over a dot waveform of the run](replay-frame.png)
 
 - `replay: 'on-regression'` (the default) attaches one when a check got worse. `'on'` attaches one for every full-mode `scroll()`, and `'off'` never.
 - It's made after the test body, from frames the measurement already recorded, so it doesn't affect the numbers. When no replay is wanted, nothing is encoded.
