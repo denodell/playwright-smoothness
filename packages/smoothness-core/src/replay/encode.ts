@@ -241,13 +241,22 @@ async function renderInPage(
     const right = width - pad;
     let y = pad + imgH + 34;
     g.font = `500 13px ${sans}`;
-    // The video's own speed: the recording is slowed down so dropped and blank frames can be seen.
-    const speed = `Playback speed: ${1 / args.slowdown}×`;
+    // The video's own speed, as a play icon and a multiplier: the recording is slowed down so
+    // dropped and blank frames can be seen.
+    const speed = `${1 / args.slowdown}×`;
     g.font = `400 12px ${sans}`;
-    const speedW = g.measureText(speed).width;
+    const speedW = g.measureText(speed).width + 13;
     g.font = `500 13px ${sans}`;
     text(fit(args.title, right - left - speedW - 24), left, y, { size: 13, weight: 500, fill: c.ink });
     text(speed, right, y, { fill: c.faint, align: 'right' });
+    const px = right - speedW;
+    g.fillStyle = c.faint;
+    g.beginPath();
+    g.moveTo(px, y - 9);
+    g.lineTo(px + 8, y - 4.5);
+    g.lineTo(px, y);
+    g.closePath();
+    g.fill();
     y += 14;
     hline(left, right, y);
 
