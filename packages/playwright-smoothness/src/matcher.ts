@@ -1,6 +1,8 @@
 import { expect as baseExpect, test } from '@playwright/test';
 import {
   CALIBRATE_ENV,
+  RECORD_ENV,
+  recordingBaselines,
   SCHEMA_VERSION,
   evaluate,
   formatMessage,
@@ -74,7 +76,7 @@ export const expect = baseExpect.extend({
       case 'baseline-updated':
         annotate(
           'smoothness-baseline-updated',
-          `"${received.label}": baseline replaced (--update-snapshots)`,
+          `"${received.label}": baseline replaced (${recordingBaselines() ? RECORD_ENV : '--update-snapshots'})`,
         );
         break;
       case 'not-compared':

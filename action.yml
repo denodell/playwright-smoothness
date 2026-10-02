@@ -1,5 +1,5 @@
 name: playwright-smoothness
-description: Smoothness checks for Playwright in CI. Compares pull requests with main's baselines, posts the summary, and records baselines on main.
+description: Visual smoothness checks for Playwright in CI. Flags PRs that make scrolling or interacting less smooth than previous runs.
 author: Den Odell
 branding:
   icon: activity
@@ -13,8 +13,9 @@ inputs:
     description: The folder to run in, for a monorepo.
     default: .
   snapshot-dir:
-    description: Where the tests' baselines live, relative to the working directory. Playwright's default is the test directory.
-    default: tests
+    description: No longer used. Baselines are recorded straight into the folder that's published.
+    deprecationMessage: snapshot-dir is no longer used and can be removed.
+    default: ''
   results-dir:
     description: Playwright's output directory, relative to the working directory.
     default: test-results
@@ -45,14 +46,15 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Plan
-      id: plan
+    - name: Set up
+      id: setup
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
         DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
         RESULTS_ARTIFACT: ${{ inputs.results-artifact-name }}
-      run: bash "$GITHUB_ACTION_PATH/action/plan.sh"
+      run: bash "$GITHUB_ACTION_PATH/action/setup.sh"
 
     - name: Install Chromium
       if: inputs.install-browsers == 'true'
@@ -66,50 +68,42 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
         ARTIFACT_NAME: ${{ inputs.artifact-name }}
         DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        BASELINES: ${{ steps.plan.outputs.baselines }}
+        BASELINES: ${{ steps.setup.outputs.baselines }}
       run: bash "$GITHUB_ACTION_PATH/action/fetch-baselines.sh"
 
-    - name: Compare with main
-      id: compare
-      if: steps.plan.outputs.compare == 'true'
+    - name: Run the tests
+      id: run
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
         COMMAND: ${{ inputs.command }}
-        SMOOTHNESS_BASELINE_DIR: ${{ steps.plan.outputs.baselines }}
-        STARTED: ${{ steps.plan.outputs.started }}
-      run: bash "$GITHUB_ACTION_PATH/action/run.sh" compare
+      run: bash "$GITHUB_ACTION_PATH/action/run.sh"
 
     - name: Summary
       id: report
-      if: always() && steps.plan.outputs.compare == 'true'
+      if: always()
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       env:
         GH_TOKEN: ${{ inputs.token }}
         RESULTS_DIR: ${{ inputs.results-dir }}
-        STARTED: ${{ steps.plan.outputs.started }}
+        STARTED: ${{ steps.setup.outputs.started }}
         COMMENT: ${{ inputs.comment }}
         PR_NUMBER: ${{ github.event.pull_request.number }}
       run: bash "$GITHUB_ACTION_PATH/action/report.sh"
 
-    - name: Record baselines
-      id: record
-      if: steps.plan.outputs.record == 'true'
+    - name: Collect baselines
+      id: collect
+      if: steps.setup.outputs.record == 'true'
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
-      env:
-        COMMAND: ${{ inputs.command }}
-        SMOOTHNESS_BASELINE_DIR: ${{ steps.plan.outputs.baselines }}
-        SNAPSHOT_DIR: ${{ inputs.snapshot-dir }}
-      run: bash "$GITHUB_ACTION_PATH/action/run.sh" record
+      run: bash "$GITHUB_ACTION_PATH/action/collect.sh"
 
     - name: Publish baselines
-      if: steps.plan.outputs.record == 'true' && steps.record.outputs.collected == 'true'
+      if: steps.collect.outputs.collected == 'true'
       uses: actions/upload-artifact@v4
       with:
         name: ${{ inputs.artifact-name }}
-        path: ${{ steps.plan.outputs.baselines }}
+        path: ${{ steps.setup.outputs.baselines }}
         include-hidden-files: true
         retention-days: 90
 
@@ -117,7 +111,7 @@ runs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: ${{ steps.plan.outputs.results-artifact }}
+        name: ${{ steps.setup.outputs.results-artifact }}
         path: ${{ inputs.working-directory }}/${{ inputs.results-dir }}
         if-no-files-found: ignore
         retention-days: 14
@@ -127,6 +121,5 @@ runs:
       if: always()
       shell: bash
       env:
-        COMPARE_CODE: ${{ steps.compare.outputs.code }}
-        RECORD_CODE: ${{ steps.record.outputs.code }}
+        RUN_CODE: ${{ steps.run.outputs.code }}
       run: bash "$GITHUB_ACTION_PATH/action/finish.sh"

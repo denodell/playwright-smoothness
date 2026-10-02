@@ -1,0 +1,52 @@
+name: playwright-smoothness report
+description: 'Goes after your Playwright step, with `if: always()`. Writes the smoothness summary, comments on pull requests, and on main publishes the recorded baselines.'
+author: Den Odell
+
+inputs:
+  working-directory:
+    description: The folder your tests run in, for a monorepo.
+    default: .
+  results-dir:
+    description: Playwright's output directory, relative to the working directory.
+    default: test-results
+  comment:
+    description: Post the summary on the pull request, as one comment that each run updates.
+    default: 'true'
+  token:
+    description: 'Token for posting the comment. Needs `pull-requests: write`.'
+    default: ${{ github.token }}
+
+outputs:
+  summary:
+    description: Path to the Markdown summary.
+    value: ${{ steps.report.outputs.summary }}
+
+runs:
+  using: composite
+  steps:
+    - name: Summary
+      id: report
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        RESULTS_DIR: ${{ inputs.results-dir }}
+        STARTED: ${{ env.SMOOTHNESS_ACTION_STARTED }}
+        COMMENT: ${{ inputs.comment }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: bash "$GITHUB_ACTION_PATH/../action/report.sh"
+
+    - name: Collect baselines
+      id: collect
+      if: env.SMOOTHNESS_RECORD_BASELINES == '1'
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/../action/collect.sh"
+
+    - name: Publish baselines
+      if: steps.collect.outputs.collected == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ env.SMOOTHNESS_ACTION_ARTIFACT }}
+        path: ${{ env.SMOOTHNESS_BASELINE_DIR }}
+        include-hidden-files: true
+        retention-days: 90

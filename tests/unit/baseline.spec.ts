@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -16,6 +16,7 @@ import {
 } from '../../packages/smoothness-core/src/baseline/compare.js';
 import { evaluate } from '../../packages/smoothness-core/src/baseline/evaluate.js';
 import { formatChange } from '../../packages/smoothness-core/src/baseline/message.js';
+import { recordingBaselines } from '../../packages/smoothness-core/src/constants.js';
 import type { BaselineTarget, UpdateMode } from '../../packages/smoothness-core/src/baseline/store.js';
 import { writeBaseline } from '../../packages/smoothness-core/src/baseline/store.js';
 import { makeResult } from './result-factory.js';
@@ -290,6 +291,27 @@ test.describe('evaluate', () => {
     );
   });
 
+  test('recording for CI: compares with main, then writes the result next to the test and under baselineDir', () => {
+    const ci = join(dir, 'from-main');
+    const recording = { ...fakeInfo(dir, 'all'), mirrorToBaselineDir: true };
+    const first = evaluate(makeResult({ settings: { baselineDir: ci } }), recording);
+    expect(first.status).toBe('baseline-created');
+    const mirrored = join(ci, first.baseline!.path.slice(dir.length + 1));
+    expect(JSON.parse(readFileSync(mirrored, 'utf8')).metrics['input.p95ToPaintMs']).toBe(112);
+
+    const slower = evaluate(
+      makeResult({ input: { p95ToPaintMs: 200 }, settings: { baselineDir: ci } }),
+      recording,
+    );
+    expect(slower.status).toBe('baseline-updated');
+    expect(slower.checks.find((c) => c.metric === 'input.p95ToPaintMs')!.status).toBe('worse');
+    expect(JSON.parse(readFileSync(mirrored, 'utf8')).metrics['input.p95ToPaintMs']).toBe(200);
+
+    const elsewhere = join(dir, 'not-mirrored');
+    evaluate(makeResult({ settings: { baselineDir: elsewhere } }), fakeInfo(dir, 'all'));
+    expect(existsSync(elsewhere)).toBe(false);
+  });
+
   test('a different browser version is compared, with a note', () => {
     evaluate(makeResult({ browserVersion: '152.0.1' }), fakeInfo(dir));
     const c = evaluate(makeResult(), fakeInfo(dir));
@@ -345,4 +367,13 @@ test('blank frames are only gated on a virtualized list', () => {
   expect(gated(true)).toBe(true);
   expect(gated(undefined)).toBe(true); // results from before detection existed
   expect(gated(false)).toBe(false);
+});
+
+test('SMOOTHNESS_RECORD_BASELINES turns recording on unless it is empty, 0 or false', () => {
+  expect(recordingBaselines({})).toBe(false);
+  expect(recordingBaselines({ SMOOTHNESS_RECORD_BASELINES: '' })).toBe(false);
+  expect(recordingBaselines({ SMOOTHNESS_RECORD_BASELINES: '0' })).toBe(false);
+  expect(recordingBaselines({ SMOOTHNESS_RECORD_BASELINES: 'False' })).toBe(false);
+  expect(recordingBaselines({ SMOOTHNESS_RECORD_BASELINES: '1' })).toBe(true);
+  expect(recordingBaselines({ SMOOTHNESS_RECORD_BASELINES: 'true' })).toBe(true);
 });

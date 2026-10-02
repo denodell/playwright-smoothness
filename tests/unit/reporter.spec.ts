@@ -114,7 +114,7 @@ test('summary: re-recorded baselines are counted as such, not as within baseline
   ]);
   expect(md).toContain('1 within baseline, 1 baseline re-recorded');
   expect(md).toContain(
-    '- list › "scroll": baseline re-recorded by `--update-snapshots`; compared with the one it replaced: long frames 4 (+3, +300%)',
+    '- list › "scroll": baseline re-recorded; compared with the one it replaced: long frames 4 (+3, +300%)',
   );
   expect(md).not.toContain('**Worse**');
 });

@@ -10,3 +10,10 @@ export const SCHEMA_VERSION = 1;
 
 /** Tells toBeSmooth() and automatic mode not to compare or write baselines while calibrating. */
 export const CALIBRATE_ENV = 'SMOOTHNESS_CALIBRATE';
+
+export const RECORD_ENV = 'SMOOTHNESS_RECORD_BASELINES';
+
+export function recordingBaselines(env: Record<string, string | undefined> = process.env): boolean {
+  const v = env[RECORD_ENV]?.trim().toLowerCase();
+  return !!v && v !== '0' && v !== 'false';
+}

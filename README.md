@@ -250,13 +250,18 @@ npx playwright-smoothness calibrate --runs 5 -- --project=chromium
 
 ## CI
 
-On GitHub, the Action does it all in one step: pull requests compare against baselines recorded on main and get the summary as a comment, pushes to main record and publish the baselines, and scheduled runs switch to full mode.
+On GitHub, two steps go around the step that already runs your Playwright tests, and that step stays as it is:
 
 ```yaml
-- uses: denodell/playwright-smoothness@v1
+- uses: denodell/playwright-smoothness/setup@v1
+- run: npx playwright test
+- uses: denodell/playwright-smoothness/report@v1
+  if: always()
 ```
 
-The [CI guide](docs/ci.md) has the whole workflow, the Action's inputs, and the steps it takes for other CI systems. [`examples/github-actions`](examples/github-actions) has workflows ready to copy, with and without the Action.
+Pull requests compare against baselines recorded on main and get the summary as a comment. Pushes to main compare with the previous baselines, then record and publish new ones, and scheduled runs switch to full mode. For a new workflow, `uses: denodell/playwright-smoothness@v1` does the same in one step and runs the tests itself. On other CI systems, setting `SMOOTHNESS_RECORD_BASELINES=1` on main makes each check record its result into `baselineDir` after comparing, ready to upload.
+
+The [CI guide](docs/ci.md) has the whole workflow, the Action's inputs, and the steps it takes for other CI systems. [`examples/github-actions`](examples/github-actions) has workflows ready to copy: the two steps added to an existing workflow, the Action on its own, and the steps by hand.
 
 ## Limitations
 

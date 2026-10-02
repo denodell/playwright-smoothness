@@ -3,7 +3,9 @@ import type { TestInfo } from '@playwright/test';
 import { createHash } from 'node:crypto';
 import { join, relative } from 'node:path';
 import {
+  RECORD_ENV,
   forwardSlashes,
+  recordingBaselines,
   slug,
   type BaselineTarget,
   type SmoothnessResult,
@@ -19,12 +21,14 @@ const titleOf = (testInfo: TestInfo) => slug(testInfo.titlePath.slice(1).join(' 
  * in one file that use the same label apart; renaming a test starts a new baseline.
  */
 export function baselineTarget(testInfo: TestInfo): BaselineTarget {
+  const record = recordingBaselines();
   return {
     path: (fileName) => testInfo.snapshotPath('smoothness', titleOf(testInfo), fileName),
     root: testInfo.project.snapshotDir,
     project: testInfo.project.name,
-    update: testInfo.config.updateSnapshots as UpdateMode,
-    describeUpdate: (mode) => `--update-snapshots=${mode}`,
+    update: record ? 'all' : (testInfo.config.updateSnapshots as UpdateMode),
+    describeUpdate: (mode) => (record ? `${RECORD_ENV} is set` : `--update-snapshots=${mode}`),
+    mirrorToBaselineDir: record,
   };
 }
 

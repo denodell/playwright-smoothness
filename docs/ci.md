@@ -2,14 +2,40 @@
 
 A baseline only means something on the machine that gates, so in CI the baselines come from CI runs on your main branch, never from developer laptops:
 
-1. On the main branch, the suite runs with `--update-snapshots=all`, so every baseline is re-recorded from main, and the snapshot files are uploaded as an artifact.
-2. On pull requests, the latest artifact from main is downloaded into a directory, and `baselineDir` points at it. Each check then compares against main.
+1. On the main branch, the suite runs with `SMOOTHNESS_RECORD_BASELINES=1`. Each check still compares with the baselines main had, then records this run's result as the new baseline, into the folder `baselineDir` points at. That folder is uploaded as an artifact.
+2. On pull requests, the latest artifact from main is downloaded into a folder, and `baselineDir` points at it. Each check then compares against main.
 
-`baselineDir` mirrors your snapshot layout: a baseline at `<snapshotDir>/<path>` is looked for at `<baselineDir>/<path>` first. Baselines are matched on CPU model, so an artifact built on one hosted-runner CPU won't be used on another. The recipe below keeps each CPU model's files by merging them, and a dedicated runner avoids the problem.
+`baselineDir` mirrors your snapshot layout: a baseline at `<snapshotDir>/<path>` is looked for at `<baselineDir>/<path>` first. Baselines are matched on CPU model, so an artifact built on one hosted-runner CPU won't be used on another. Main starts from the previous artifact before recording, so each CPU model's files are kept, and a dedicated runner avoids the problem.
 
-## The GitHub Action
+## The GitHub Action, around your test step
 
-The Action does all of this for you. A workflow is the steps you already have, plus one:
+Most projects already have a workflow that runs Playwright. Two steps go around the step that runs it, and that step stays as it is:
+
+```yaml
+- uses: denodell/playwright-smoothness/setup@v1
+- run: npx playwright test # your step, unchanged
+- uses: denodell/playwright-smoothness/report@v1
+  if: always()
+```
+
+The job needs `permissions: { contents: read, pull-requests: write, actions: read }`, and the workflow needs to run on pushes to main as well as pull requests, so main records the baselines pull requests compare with. [`examples/github-actions/add-to-existing.yml`](../examples/github-actions/add-to-existing.yml) is a whole workflow.
+
+`setup` downloads main's baselines and sets `SMOOTHNESS_BASELINE_DIR` for the rest of the job, so your config needs no changes. On a push, a schedule or a manual run on the default branch, it also sets `SMOOTHNESS_RECORD_BASELINES=1`. `report` adds the summary to the job summary, posts it on pull requests as one comment that each push updates, with any [fix briefs](../README.md#fix-briefs) folded underneath, and on the default branch publishes the recorded baselines.
+
+| Step     | Input               | Default                | Description                                                                                |
+| -------- | ------------------- | ---------------------- | ------------------------------------------------------------------------------------------ |
+| `setup`  | `artifact-name`     | `smoothness-baselines` | The name baselines are published under. Two suites in one repository need different names. |
+| `setup`  | `token`             | `github.token`         | Needs `actions: read` to fetch baselines.                                                  |
+| `report` | `working-directory` | `.`                    | The folder your tests run in, for a monorepo.                                              |
+| `report` | `results-dir`       | `test-results`         | Playwright's output directory, relative to the working directory.                          |
+| `report` | `comment`           | `true`                 | Post the summary on the pull request.                                                      |
+| `report` | `token`             | `github.token`         | Needs `pull-requests: write` to comment.                                                   |
+
+`setup` has a `record` output, `true` when the run records baselines, and `report` has a `summary` output with the summary's path. Uploading results and replays is left to your workflow, since most already upload `test-results` or the Playwright report.
+
+## The GitHub Action on its own
+
+For a new workflow, the Action can run the suite too, in one step:
 
 ```yaml
 # .github/workflows/smoothness.yml
@@ -30,28 +56,25 @@ jobs:
       - uses: denodell/playwright-smoothness@v1
 ```
 
-Your config needs no changes: the reporter is optional, and `baselineDir` comes from the `SMOOTHNESS_BASELINE_DIR` variable the Action sets.
-
-- **Pull requests** fetch the newest baselines published from your default branch, run the suite against them, and post the summary as one comment that each push updates. When a check got worse, the comment also carries its [fix brief](../README.md#fix-briefs), folded away, for pasting into a coding agent.
-- **Pushes to the default branch** record this machine's baselines and publish them, keeping the ones recorded on other CPU models.
-- **Scheduled runs** use full mode, compare with the last scheduled run, then record.
+- **Pull requests** compare with the newest baselines published from your default branch, and get the summary as a comment.
+- **Pushes to the default branch** compare with the previous baselines, then record and publish this run's, keeping the ones recorded on other CPU models.
+- **Scheduled runs** use full mode, and compare and record the same way.
 - **Every run** installs Chromium, adds the summary to the job summary, and uploads results and replays as an artifact. The job fails when the Playwright run fails.
 
-Automatic mode's history is kept in the same artifact, so tests wrapped with `withSmoothness()` need nothing extra either.
+Automatic mode's history is kept in the same artifact, so tests wrapped with `withSmoothness()` need nothing extra either way.
 
-| Input                   | Default                  | Description                                                                                                                                            |
-| ----------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `command`               | `npx playwright test`    | How to run the suite. With `npm run`, end it with `--`, such as `npm run test:e2e --`, so the Action can add `--update-snapshots=all` when it records. |
-| `working-directory`     | `.`                      | The folder to run in, for a monorepo.                                                                                                                  |
-| `snapshot-dir`          | `tests`                  | Where the tests' baselines live, relative to the working directory. Playwright's default is the test directory.                                        |
-| `results-dir`           | `test-results`           | Playwright's output directory.                                                                                                                         |
-| `comment`               | `true`                   | Post the summary on the pull request.                                                                                                                  |
-| `install-browsers`      | `true`                   | Install Chromium and its system dependencies first.                                                                                                    |
-| `artifact-name`         | `smoothness-baselines`   | The name baselines are published under. Two suites in one repository need different names.                                                             |
-| `results-artifact-name` | a name unique to the job | The name results and replays are uploaded under.                                                                                                       |
-| `token`                 | `github.token`           | Needs `actions: read` to fetch baselines and `pull-requests: write` to comment.                                                                        |
+| Input                   | Default                  | Description                                                                                |
+| ----------------------- | ------------------------ | ------------------------------------------------------------------------------------------ |
+| `command`               | `npx playwright test`    | How to run the suite.                                                                      |
+| `working-directory`     | `.`                      | The folder to run in, for a monorepo.                                                      |
+| `results-dir`           | `test-results`           | Playwright's output directory.                                                             |
+| `comment`               | `true`                   | Post the summary on the pull request.                                                      |
+| `install-browsers`      | `true`                   | Install Chromium and its system dependencies first.                                        |
+| `artifact-name`         | `smoothness-baselines`   | The name baselines are published under. Two suites in one repository need different names. |
+| `results-artifact-name` | a name unique to the job | The name results and replays are uploaded under.                                           |
+| `token`                 | `github.token`           | Needs `actions: read` to fetch baselines and `pull-requests: write` to comment.            |
 
-The Action's outputs are `outcome` (`passed` or `failed`) and `summary` (the summary's path). Pull requests from forks get a read-only token, so they're compared but not commented on, and the summary is still in the job summary.
+The Action's outputs are `outcome` (`passed` or `failed`) and `summary` (the summary's path). Pull requests from forks get a read-only token, so they're compared but not commented on, and the summary is still in the job summary. The `snapshot-dir` input from 1.0.0 is no longer used.
 
 ## By hand
 
@@ -91,37 +114,23 @@ jobs:
         env:
           SMOOTHNESS_BASELINE_DIR: smoothness-baselines
 
-      - name: 'Main: re-record baselines'
+      - name: 'Main: compare, then record baselines'
         if: github.ref == 'refs/heads/main'
-        run: |
-          # Keep baselines for other CPU models, then re-record this machine's.
-          if [ -d smoothness-baselines ]; then cp -R smoothness-baselines/. tests/; fi
-          npx playwright test --update-snapshots=all
+        run: npx playwright test
+        env:
+          SMOOTHNESS_BASELINE_DIR: smoothness-baselines
+          SMOOTHNESS_RECORD_BASELINES: 1
 
-      # upload-artifact trims paths to the files' common directory, which would lose the
-      # <spec>-snapshots/ part. Copy the baselines into a staging directory with their paths
-      # relative to the snapshot directory intact.
-      - name: 'Main: collect baselines'
-        if: github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p baselines-out
-          # Portable: GNU cp --parents doesn't exist on macOS runners.
-          (cd tests && find . -path '*-snapshots/smoothness/*' -type f | while read -r f; do
-            mkdir -p "../baselines-out/$(dirname "$f")" && cp "$f" "../baselines-out/$f"
-          done)
-          test -n "$(find baselines-out -type f)" || { echo 'no baselines were collected'; exit 1; }
       - name: 'Main: publish baselines'
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: smoothness-baselines
-          path: baselines-out
+          path: smoothness-baselines
           retention-days: 90
 ```
 
-`SMOOTHNESS_BASELINE_DIR` sets `baselineDir` when the config doesn't, so the config needs no change.
-
-The workflow assumes `snapshotDir` is `tests`, which is the default when `testDir` is `tests`. `dawidd6/action-download-artifact` is a third-party action, used because GitHub's own `actions/download-artifact` can only read artifacts from the same workflow run.
+`SMOOTHNESS_BASELINE_DIR` sets `baselineDir` when the config doesn't, so the config needs no change. `dawidd6/action-download-artifact` is a third-party action, used because GitHub's own `actions/download-artifact` can only read artifacts from the same workflow run.
 
 ### Post the summary on the pull request
 
@@ -139,17 +148,7 @@ The job needs `permissions: pull-requests: write`. `--edit-last` updates the pre
 
 ### Run full mode on a schedule
 
-Scheduled runs use full mode automatically ([mode detection](mode-detection.md)), and full-mode baselines are kept separately from quick-mode ones. Gating them takes a `schedule:` trigger under `on:` and a step that compares before the main-branch steps re-record:
-
-```yaml
-- name: 'Scheduled: compare with the last scheduled run'
-  if: github.event_name == 'schedule'
-  run: npx playwright test
-  env:
-    SMOOTHNESS_BASELINE_DIR: smoothness-baselines
-```
-
-This step goes before the "Main" steps. A scheduled run on the default branch has `github.ref` set to `refs/heads/main`, so the "Main" steps run afterwards, re-record, and the artifact carries both quick-mode and full-mode baselines.
+Scheduled runs use full mode automatically ([mode detection](mode-detection.md)), and full-mode baselines are kept separately from quick-mode ones. Adding a `schedule:` trigger under `on:` is all it takes: a scheduled run on the default branch has `github.ref` set to `refs/heads/main`, so the "Main" step compares with the last scheduled run's baselines, then records, and the artifact carries both quick-mode and full-mode baselines.
 
 ## Use a dedicated runner if you can
 
@@ -159,4 +158,4 @@ A self-hosted or larger dedicated runner (`runs-on: [self-hosted, linux]`, or a 
 
 ## Recipe tests
 
-`scripts/verify-ci-recipe.sh` runs these steps against `examples/plain-site` on every pull request to this project, in the Examples workflow. It records on "main", collects the baselines as above, runs as a fresh pull request with `baselineDir`, checks that every result was compared against the collected baseline, and checks that a deliberate regression fails. The one step it can't exercise is downloading an artifact from a different workflow run. The same workflow also runs the Action itself against `examples/plain-site`, so pushes to main publish that example's baselines and pull requests fetch them from an earlier run.
+`scripts/verify-ci-recipe.sh` runs these steps against `examples/plain-site` on every pull request to this project, in the Examples workflow. It records on "main" with `SMOOTHNESS_RECORD_BASELINES`, runs as a fresh pull request with `baselineDir`, checks that every result was compared against the collected baseline, and checks that a deliberate regression fails. The one step it can't exercise is downloading an artifact from a different workflow run. The same workflow also runs the Action itself against `examples/plain-site`, so pushes to main publish that example's baselines and pull requests fetch them from an earlier run.

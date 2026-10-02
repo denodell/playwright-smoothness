@@ -46,6 +46,7 @@ export interface BaselineTarget {
   update?: UpdateMode;
   /** How the update mode is written in notes, such as `--update-snapshots=none`. Default `update: 'none'`. */
   describeUpdate?: (mode: UpdateMode) => string;
+  mirrorToBaselineDir?: boolean;
 }
 
 /** The baseline's path for this check, and the same file under baselineDir. */

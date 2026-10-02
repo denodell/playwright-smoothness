@@ -67,5 +67,5 @@ export { takeReplaySource } from './replay/source.js';
 // Files, CI and constants.
 export { forwardSlashes, resultPath, writeResult, writtenPath } from './output.js';
 export { onMainBranch, warnInGitHubActions } from './ci.js';
-export { CALIBRATE_ENV, FORMAT_NAME, SCHEMA_VERSION } from './constants.js';
+export { CALIBRATE_ENV, FORMAT_NAME, RECORD_ENV, SCHEMA_VERSION, recordingBaselines } from './constants.js';
 export type * from './types.js';
