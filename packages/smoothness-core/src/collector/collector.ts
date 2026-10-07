@@ -366,17 +366,10 @@ export function installCollector(config: CollectorConfig): void {
     // knowing when it happened lets that be reported rather than silently missing.
     for (const type of ['pointerdown', 'keydown']) {
       try {
-        addEventListener(
-          type,
-          (e) => {
-            try {
-              stream('input', { at: e.timeStamp, type: e.type });
-            } catch {
-              // never throw from the page
-            }
-          },
-          { capture: true, passive: true },
-        );
+        addEventListener(type, (e) => stream('input', { at: e.timeStamp, type: e.type }), {
+          capture: true,
+          passive: true,
+        });
       } catch (err) {
         fail('input listen', err);
       }
@@ -384,13 +377,7 @@ export function installCollector(config: CollectorConfig): void {
     try {
       addEventListener('load', () => {
         // loadEventEnd is set after load handlers finish.
-        setTimeout(() => {
-          try {
-            stream('load', loadEventEnd());
-          } catch (err) {
-            fail('load', err);
-          }
-        }, 0);
+        setTimeout(() => stream('load', loadEventEnd()), 0);
       });
     } catch (err) {
       fail('load listen', err);

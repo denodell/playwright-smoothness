@@ -325,3 +325,18 @@ test('frames from other processes', () => {
     expect.stringContaining("1 other renderer process(es), such as out-of-process iframes, weren't counted"),
   ]);
 });
+
+test('profile: a start mark with no page time cannot align the clocks', () => {
+  const out = parseTrace(
+    [
+      { ...mark(MARK_START, 1_000), ...MAIN },
+      profileHead('0x2', MAIN, 900),
+      { ...mark(MARK_END, 2_000), ...MAIN },
+    ],
+    { ...opts, profile: true },
+  );
+  expect(out.unavailable).toContainEqual({
+    measurement: 'profile',
+    reason: expect.stringMatching(/no startTime to align clocks with/),
+  });
+});

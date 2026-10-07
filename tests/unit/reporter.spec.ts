@@ -114,7 +114,7 @@ test('summary: re-recorded baselines are counted as such, not as within baseline
   ]);
   expect(md).toContain('1 within baseline, 1 baseline re-recorded');
   expect(md).toContain(
-    '- list › "scroll": baseline re-recorded by `--update-snapshots`; compared with the one it replaced: long frames 4 (+3, +300%)',
+    '- list › "scroll": baseline re-recorded; compared with the one it replaced: long frames 4 (+3, +300%)',
   );
   expect(md).not.toContain('**Worse**');
 });
@@ -240,4 +240,61 @@ test('summary: automatic mode at suite scale', () => {
   // Paths in notes are relative to the project.
   expect(md).toContain('No baseline exists at tests/x.json.');
   expect(md).not.toContain(cwd);
+});
+
+test('reporter: a result file that cannot be read is left out', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'smoothness-reporter-'));
+  try {
+    const reporter = new SmoothnessReporter({ outputFile: join(dir, 'summary.md') });
+    expect(reporter.printsToStdio()).toBe(false);
+    reporter.onBegin({ rootDir: dir, projects: [] } as never);
+    const resultFile = join(dir, 'r.json');
+    writeFileSync(resultFile, 'not json');
+    reporter.onTestEnd(
+      { title: 'a test' } as never,
+      {
+        attachments: [{ name: 'smoothness: x', path: resultFile, contentType: 'application/json' }],
+      } as never,
+    );
+    reporter.onEnd();
+    expect(readFileSync(join(dir, 'summary.md'), 'utf8')).not.toContain('a test');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('the full table: checks not compared or unavailable, the CPU profile, the replay and noisy checks', () => {
+  const result = makeResult({
+    label: 'scroll feed',
+    replay: 'scroll-feed.webm',
+    profile: {
+      sampledMs: 80,
+      hotFunctions: [
+        {
+          fn: 'layoutRows',
+          url: 'http://localhost/app.js',
+          line: 12,
+          column: 3,
+          selfMs: 40,
+          totalMs: 60,
+          callers: [],
+        },
+      ],
+    },
+  });
+  const [worse] = compareMetrics(makeResult({ input: { p95ToPaintMs: 176 } }), metricsOf(before), 0.15);
+  const checks = [
+    { ...worse!, noisy: true, spreadPercent: 40 },
+    { ...worse!, metric: 'frames.onTimePercent', name: 'on-time frames', status: 'not-compared' as const },
+    { ...worse!, metric: 'list.blankFramePercent', name: 'blank frames', status: 'unavailable' as const },
+  ];
+  const md = buildMarkdown([
+    entry('feed', { ...result, comparison: { status: 'warn', checks, baseline, notes: [] } }),
+  ]);
+  expect(md).toContain('| Not compared |');
+  expect(md).toContain('| Unavailable |');
+  expect(md).toContain('Where the time went (CPU profile):');
+  expect(md).toContain('1. layoutRows');
+  expect(md).toContain('A replay of the scroll is attached to the test as `smoothness replay: scroll feed`');
+  expect(md).toMatch(/varied 40% across runs, more than the allowed 15%/);
 });

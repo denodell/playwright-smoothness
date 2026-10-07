@@ -143,3 +143,13 @@ test('sourcePath', () => {
   expect(sourcePath('src/List.tsx')).toBe('src/List.tsx');
   expect(sourcePath('')).toBe('unknown source');
 });
+
+test('nothing pointed at specific code', () => {
+  const { result, comparison } = compared({
+    input: { p95ToPaintMs: 200, byTarget: [] },
+    longFrames: { count: 0, topScripts: [] },
+  });
+  expect(formatBrief(result, comparison, ctx)).toContain(
+    'Nothing pointed at specific code. Running it in full mode adds a CPU profile.',
+  );
+});

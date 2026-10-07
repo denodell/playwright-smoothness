@@ -15,3 +15,4 @@ tests/unit/__snapshots__
 demos/apps/kanban/dist
 demos/results
 demos/tests/*-snapshots
+coverage

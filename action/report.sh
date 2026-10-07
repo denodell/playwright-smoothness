@@ -2,7 +2,7 @@
 set -uo pipefail
 
 summary="$RESULTS_DIR/smoothness/summary.md"
-if [ -f "$summary" ] && [ "$summary" -nt "$STARTED" ]; then
+if [ -f "$summary" ] && [ -n "${STARTED:-}" ] && [ "$summary" -nt "$STARTED" ]; then
   echo "Using the reporter's summary."
 else
   npx playwright-smoothness summary --results "$RESULTS_DIR" --out "$summary" --github-summary

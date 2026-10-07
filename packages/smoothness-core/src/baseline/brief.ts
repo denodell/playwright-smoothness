@@ -41,12 +41,9 @@ function show(path: string, cwd: string): string {
 }
 
 function worseLine(c: Check): string {
+  const limit = c.allowed ?? 0;
   const allowed =
-    c.allowed === null
-      ? ''
-      : c.unit === '%'
-        ? `, allowed ${round1(c.allowed)} points`
-        : `, allowed +${formatValue(c.allowed, c.unit)}`;
+    c.unit === '%' ? `, allowed ${round1(limit)} points` : `, allowed +${formatValue(limit, c.unit)}`;
   return `- ${c.name}: ${formatChange(c)} against a baseline of ${formatValue(c.baseline, c.unit)}${allowed}`;
 }
 

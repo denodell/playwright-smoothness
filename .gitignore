@@ -11,3 +11,4 @@ blob-report/
 loaf-headless-spike.zip
 test-pages/frameworks/dist/
 .tmp-e2e/
+/coverage/

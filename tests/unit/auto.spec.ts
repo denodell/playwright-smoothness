@@ -116,6 +116,8 @@ test('history files', () => {
     expect(readHistory(path)).toEqual(file);
     writeFileSync(path, '{"kind":"other"}');
     expect(readHistory(path)).toMatch(/isn't a playwright-smoothness history file/);
+    writeFileSync(path, 'not json');
+    expect(readHistory(path)).toMatch(/couldn't be read: SyntaxError/);
     expect(readHistory(join(dir, 'missing.json'))).toBeNull();
   } finally {
     rmSync(dir, { recursive: true, force: true });

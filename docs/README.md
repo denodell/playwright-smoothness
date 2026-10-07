@@ -11,4 +11,5 @@
 | [mode-detection.md](mode-detection.md)     | How quick or full mode is chosen                                                                                    |
 | [trace-categories.md](trace-categories.md) | Which trace categories full mode records, and what tracing costs                                                    |
 | [measurements.md](measurements.md)         | The evidence behind the defaults: frame-drop sources, runner noise and hardware, touch on Linux, headless detection |
+| [testing.md](testing.md)                   | Running the tests, and measuring code coverage                                                                      |
 | [releasing.md](releasing.md)               | How a release is made                                                                                               |

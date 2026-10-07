@@ -43,3 +43,7 @@ test('muxWebM: header, one track, a cluster per key frame, cues', () => {
   const second = find(webm.subarray(find(webm, [0x1f, 0x43, 0xb6, 0x75]) + 4), [0x1f, 0x43, 0xb6, 0x75]);
   expect(second).toBeGreaterThan(0);
 });
+
+test('vint: sizes beyond eight bytes throw', () => {
+  expect(() => vint(2 ** 57)).toThrow(/size too large for EBML/);
+});

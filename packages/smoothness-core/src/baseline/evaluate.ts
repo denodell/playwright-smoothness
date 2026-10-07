@@ -47,6 +47,12 @@ function compareWithBaseline(
   const update = target.update ?? 'missing';
   const describe = target.describeUpdate ?? ((mode) => `update: '${mode}'`);
   const loaded = loadBaseline(key, where);
+  const record = () => {
+    const info = writeBaseline(where.snapshotPath, key, result);
+    if (target.mirrorToBaselineDir && where.baselineDirPath)
+      writeBaseline(where.baselineDirPath, key, result);
+    return info;
+  };
 
   if (!loaded.found) {
     notes.push(...loaded.notes);
@@ -56,7 +62,7 @@ function compareWithBaseline(
       );
       return { status: 'not-compared', checks: [], baseline: null, notes };
     }
-    const baseline = writeBaseline(where.snapshotPath, key, result);
+    const baseline = record();
     notes.push(
       `No baseline existed, so this result was recorded as the baseline (${where.snapshotPath}). Later runs compare against it.`,
     );
@@ -73,7 +79,7 @@ function compareWithBaseline(
   const worse = checks.some((c) => c.status === 'worse');
 
   if (update === 'all' || (update === 'changed' && worse)) {
-    const baseline = writeBaseline(where.snapshotPath, key, result);
+    const baseline = record();
     notes.push(`${describe(update)}: the baseline was replaced with this result.`);
     return { status: 'baseline-updated', checks, baseline, notes };
   }

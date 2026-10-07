@@ -11,7 +11,7 @@ export interface ListMeasurement {
   analyze(
     prepared: ListPrepared,
     jpegs: string[],
-  ): Promise<{ result: ListResult; drawn: number[] } | { unavailable: string }>;
+  ): Promise<{ result: ListResult; drawn: number[]; notes: string[] } | { unavailable: string }>;
 }
 
 export interface ListPrepared {
@@ -61,6 +61,11 @@ export function listMeasurement(
       return {
         result: summarizeList(a.frames, a.reference),
         drawn: a.frames.map((f) => Math.min(1, f / a.reference)),
+        notes: a.failed
+          ? [
+              `${a.failed} of ${jpegs.length} screenshots couldn't be decoded, so blank frames were judged from the rest.`,
+            ]
+          : [],
       };
     },
   };

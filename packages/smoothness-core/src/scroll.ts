@@ -136,8 +136,7 @@ async function swipe(
       y: Math.round(vertical ? cy + span / 2 - offset : cy),
     },
   ];
-  for (let i = 0; i < MAX_SWIPES; i++) {
-    if (position(await listGeometry(target), s) - start >= requested) return;
+  for (let i = 0; i < MAX_SWIPES && position(await listGeometry(target), s) - start < requested; i++) {
     // https://chromedevtools.github.io/devtools-protocol/tot/Input/#method-dispatchTouchEvent
     await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: point(0) });
     // Paced against the clock, not by fixed sleeps: each CDP round trip takes time too, so

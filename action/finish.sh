@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail
-failed=false
-for code in "${COMPARE_CODE:-}" "${RECORD_CODE:-}"; do
-  [ -n "$code" ] && [ "$code" != 0 ] && failed=true
-done
-if [ "$failed" = true ]; then
+if [ -n "${RUN_CODE:-}" ] && [ "$RUN_CODE" != 0 ]; then
   echo "outcome=failed" >> "$GITHUB_OUTPUT"
   echo "The Playwright run failed."
   exit 1

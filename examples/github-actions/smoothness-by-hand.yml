@@ -1,7 +1,7 @@
 # Copy to .github/workflows/smoothness.yml. The steps the Action takes, by hand. Explained in docs/ci.md.
 #
 # - Pull requests: quick mode, compared with baselines from main, summary on the PR.
-# - Pushes to main: baselines re-recorded and published as an artifact.
+# - Pushes to main: compared with the previous baselines, then re-recorded and published as an artifact.
 # - Nightly: full mode (dropped frames, blank rows, CPU profile), compared, then re-recorded.
 #
 # Needs the reporter in playwright.config.ts: reporter: [['list'], ['playwright-smoothness/reporter']]
@@ -39,8 +39,8 @@ jobs:
           name: smoothness-baselines
           path: smoothness-baselines
 
-      - name: 'Pull request or schedule: compare with main'
-        if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+      - name: 'Pull request: compare with main'
+        if: github.event_name == 'pull_request'
         run: npx playwright test
         env:
           SMOOTHNESS_BASELINE_DIR: smoothness-baselines
@@ -51,29 +51,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh pr comment ${{ github.event.pull_request.number }} --body-file test-results/smoothness/summary.md --edit-last --create-if-none
 
-      - name: 'Main: re-record baselines'
+      # On main, including the nightly run, each check compares with the previous baselines,
+      # then records this run's into smoothness-baselines, next to the other CPU models' files.
+      - name: 'Main: compare, then record baselines'
         if: github.ref == 'refs/heads/main'
-        run: |
-          # Keep baselines for other CPU models and modes, then re-record this machine's.
-          if [ -d smoothness-baselines ]; then cp -R smoothness-baselines/. tests/; fi
-          npx playwright test --update-snapshots=all
-
-      # upload-artifact trims paths to the files' common directory, which would lose the
-      # <spec>-snapshots/ part. Copy the baselines into a staging directory with their paths
-      # relative to the snapshot directory intact (portable: no GNU cp --parents).
-      - name: 'Main: collect baselines'
-        if: github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p baselines-out
-          (cd tests && find . -path '*-snapshots/smoothness/*' -type f | while read -r f; do
-            mkdir -p "../baselines-out/$(dirname "$f")" && cp "$f" "../baselines-out/$f"
-          done)
-          test -n "$(find baselines-out -type f)" || { echo 'no baselines were collected'; exit 1; }
+        run: npx playwright test
+        env:
+          SMOOTHNESS_BASELINE_DIR: smoothness-baselines
+          SMOOTHNESS_RECORD_BASELINES: 1
 
       - name: 'Main: publish baselines'
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: smoothness-baselines
-          path: baselines-out
+          path: smoothness-baselines
           retention-days: 90

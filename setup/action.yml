@@ -1,0 +1,36 @@
+name: playwright-smoothness setup
+description: Goes before your Playwright step. Fetches main's smoothness baselines and sets the run up to compare with them, and on main to record new ones.
+author: Den Odell
+
+inputs:
+  artifact-name:
+    description: The name main's baselines are published under. Two suites in one repository need different names.
+    default: smoothness-baselines
+  token:
+    description: "Token for reading main's baselines. Needs `actions: read`."
+    default: ${{ github.token }}
+
+outputs:
+  record:
+    description: '`true` when this run records baselines: a push, schedule or manual run on the default branch.'
+    value: ${{ steps.setup.outputs.record }}
+
+runs:
+  using: composite
+  steps:
+    - name: Set up
+      id: setup
+      shell: bash
+      env:
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+      run: bash "$GITHUB_ACTION_PATH/../action/setup.sh"
+
+    - name: Fetch main's baselines
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        ARTIFACT_NAME: ${{ inputs.artifact-name }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        BASELINES: ${{ steps.setup.outputs.baselines }}
+      run: bash "$GITHUB_ACTION_PATH/../action/fetch-baselines.sh"

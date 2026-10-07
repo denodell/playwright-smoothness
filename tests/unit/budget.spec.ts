@@ -127,3 +127,17 @@ test('a traced run with nothing to draw has no late frames', () => {
   const still = full({ frames: { total: 0, onTime: 0, dropped: 0, onTimePercent: null } });
   expect(checkBudget(still, { minOnTimePercent: 95 })[0]).toMatchObject({ status: 'pass', current: null });
 });
+
+test('a missed input budget names the slowest target; unrelated unavailable measurements are listed', () => {
+  const result = makeResult({ unavailable: [{ measurement: 'frames', reason: 'quick mode' }] });
+  const comparison = {
+    status: 'pass' as const,
+    checks: [],
+    baseline: null,
+    notes: [],
+    budget: checkBudget(result, { maxInputToPaintMs: 50 }),
+  };
+  const message = formatMessage(result, comparison, '/repo');
+  expect(message).toContain(', slowest: click on button#filters');
+  expect(message).toContain('Unavailable:\n  frames: quick mode');
+});

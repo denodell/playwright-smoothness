@@ -26,6 +26,8 @@ const withSmoothness = () => {
     `  enforce: process.env.SMOOTHNESS_ENFORCE === 'fail' ? 'fail' : 'warn',`,
     `  historyDir: process.env.HISTORY_DIR,`,
     `  record: process.env.RECORD === 'yes' ? true : process.env.RECORD === 'no' ? false : undefined,`,
+    `  ...(process.env.AUTO_MODE ? { mode: process.env.AUTO_MODE as 'full' } : {}),`,
+    `  ...(process.env.AUTO_CPU ? { cpuThrottling: Number(process.env.AUTO_CPU) } : {}),`,
     `});`,
     `export { expect } from '@playwright/test';`,
     '',
@@ -135,12 +137,36 @@ test('comparing against the history', () => {
   expect(buyHistory(r).entries).toHaveLength(2);
 });
 
-test("a regression fails with enforce: 'fail'", () => {
+test("a regression warns, or fails with enforce: 'fail'", () => {
+  const warned = run({ CLICK_MS: '400' });
+  expect(warned.code, warned.output).toBe(0);
+  expect(buy(warned).comparison!.status).toBe('warn');
+  expect(warned.output).toContain('"buy, then search" is less smooth than its baseline');
+
   const r = run({ CLICK_MS: '400', SMOOTHNESS_ENFORCE: 'fail' });
   expect(r.code, r.output).toBe(1);
   expect(r.output).toContain('"buy, then search" is less smooth than its baseline');
   expect(r.output).toContain('click on button#heavy');
   expect(r.output).toContain('onHeavyClick');
+});
+
+test('calibrating: measured, but not compared or recorded', () => {
+  const r = run({
+    CLICK_MS: '400',
+    SMOOTHNESS_ENFORCE: 'fail',
+    SMOOTHNESS_CALIBRATE: '1',
+    SMOOTHNESS_RECORD: '1',
+  });
+  expect(r.code, r.output).toBe(0);
+  expect(buy(r).comparison!.notes).toEqual(['Calibrating: not compared.']);
+  expect(buyHistory(r).entries).toHaveLength(2);
+});
+
+test('full mode and CPU throttling in the options', () => {
+  const r = run({ AUTO_MODE: 'full', AUTO_CPU: '2' });
+  expect(r.code, r.output).toBe(0);
+  expect(buy(r).cpuThrottling).toBe(2);
+  expect(buy(r).notes.join(' ')).toContain('Automatic mode measures in quick mode');
 });
 
 test('editing the spec file resets its history instead of failing', () => {

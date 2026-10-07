@@ -212,3 +212,20 @@ test('resolver: a Long Animation Frames script, by character offset', async () =
   const [unchanged] = await resolveScripts([{ ...script, charPosition: -1 }], resolver);
   expect(unchanged).toEqual({ ...script, charPosition: -1 });
 });
+
+test('source map: sources stay as written when the map URL cannot be joined', () => {
+  const map = SourceMap.parse(MAP, 'not a url') as SourceMap;
+  expect(map.sources).toEqual(['a.js', 'b.js']);
+});
+
+test('resolver: an inline map that cannot be decoded, and an offset past the end', async () => {
+  const bad = new NameResolver(async () => ({
+    text: 'function a(){}\n//# sourceMappingURL=data:application/json,%E0%A4%A',
+  }));
+  expect(await bad.resolve({ fn: 'a', url: 'http://x/a.js', line: 1, column: 10 })).toBeNull();
+  expect(await bad.failures()).toEqual(['http://x/a.js: its inline source map could not be decoded']);
+
+  const { js, map } = await minified();
+  const resolver = new NameResolver(async (url) => ({ text: url.endsWith('.map') ? map : js }));
+  expect(await resolver.resolveAt('http://x/dist/cart.js', js.length + 10)).toBeNull();
+});

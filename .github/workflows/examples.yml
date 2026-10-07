@@ -52,6 +52,43 @@ jobs:
           test "${{ steps.smoothness.outputs.outcome }}" = passed
           test -f "examples/plain-site/${{ steps.smoothness.outputs.summary || 'test-results/smoothness/summary.md' }}"
 
+  action-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read # fetch the example's baselines published from main
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm install --no-audit --no-fund
+        working-directory: examples/plain-site
+      - run: npx playwright install --with-deps chromium
+        working-directory: examples/plain-site
+      - uses: ./setup
+        id: setup
+        with:
+          artifact-name: plain-site-steps-smoothness-baselines
+      - run: npx playwright test
+        working-directory: examples/plain-site
+      - uses: ./report
+        id: report
+        if: always()
+        with:
+          working-directory: examples/plain-site
+          comment: 'false'
+      - name: Check the steps' outputs
+        run: |
+          test -n "$SMOOTHNESS_BASELINE_DIR"
+          test -f "examples/plain-site/${{ steps.report.outputs.summary }}"
+          if [ "${{ steps.setup.outputs.record }}" = true ]; then
+            test -n "$(find "$SMOOTHNESS_BASELINE_DIR" -type f)"
+          fi
+
   react-list:
     runs-on: ubuntu-latest
     steps:

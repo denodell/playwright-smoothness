@@ -467,7 +467,11 @@ async function analyzeListRun(
       : {
           unavailable: trace.unavailable.find((u) => u.measurement === 'list')?.reason ?? 'no screenshots',
         };
-    list = 'unavailable' in analyzed ? analyzed : analyzed.result;
+    if ('unavailable' in analyzed) list = analyzed;
+    else {
+      list = analyzed.result;
+      for (const n of analyzed.notes) if (!notes.includes(n)) notes.push(n);
+    }
     trace.screenshots = []; // several MB per run
     trace.screenshotTimes = [];
   }

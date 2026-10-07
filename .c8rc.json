@@ -1,0 +1,8 @@
+{
+  "all": true,
+  "include": ["packages/*/src/**"],
+  "exclude-after-remap": true,
+  "reporter": ["text-summary", "html", "json-summary"],
+  "report-dir": "coverage",
+  "exclude": ["packages/smoothness-core/src/types.ts", "packages/smoothness-core/src/driver.ts"]
+}

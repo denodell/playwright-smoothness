@@ -82,3 +82,7 @@ test('the printed advice when everything is within the floors', () => {
   );
   expect(text).not.toContain('Suggested maxIncrease for this check');
 });
+
+test('the printed table when no check ran twice', () => {
+  expect(formatCalibration([], 2)).toContain('No check produced results in at least two runs.');
+});

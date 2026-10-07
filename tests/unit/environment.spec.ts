@@ -20,6 +20,7 @@ test('headless mode from CDP Browser.getVersion', () => {
   );
   expect(detectHeadlessMode({ product: 'Edg/150.0' })).toBe('unknown');
   expect(detectHeadlessMode({})).toBe('unknown');
+  expect(detectHeadlessMode({ product: 'Chrome/153.0.8010.12', userAgent: 'Mozilla/5.0' })).toBe('unknown');
 });
 
 test('githubWarning escapes properties and data', () => {

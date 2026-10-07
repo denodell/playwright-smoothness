@@ -201,7 +201,7 @@ export function buildMarkdown(entries: ReportEntry[], title = 'Smoothness', cwd 
     } else if (r.comparison.status === 'baseline-updated') {
       const worse = r.comparison.checks.filter((c) => c.status === 'worse');
       gaps.push(
-        `- ${cell(name(e))}: baseline re-recorded by \`--update-snapshots\`` +
+        `- ${cell(name(e))}: baseline re-recorded` +
           (worse.length
             ? `; compared with the one it replaced: ${worse.map((c) => `${c.name} ${cell(changeCell(c))}`).join(', ')}`
             : ''),

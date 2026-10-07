@@ -8,6 +8,7 @@ export default tseslint.config(
       '.tmp-e2e/',
       'test-pages/frameworks/',
       'node_modules/',
+      'coverage/',
       'test-results/',
       'playwright-report/',
       'examples/**/node_modules/',
