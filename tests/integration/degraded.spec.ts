@@ -13,8 +13,8 @@ import {
   type ScratchPage,
   type SmoothnessOptions,
   type Tracer,
-} from '../../packages/smoothness-core/src/index.js';
-import { locatorTarget, playwrightDriver } from '../../packages/playwright-smoothness/src/driver.js';
+} from '../../packages/butter-core/src/index.js';
+import { locatorTarget, playwrightDriver } from '../../packages/playwright-butter/src/driver.js';
 
 test.setTimeout(120_000);
 

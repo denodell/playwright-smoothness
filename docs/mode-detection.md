@@ -6,7 +6,7 @@ Quick mode measures with Event Timing and Long Animation Frames. Full mode adds 
 
 The first rule that applies wins:
 
-1. The `mode` option, from `test.use({ smoothnessOptions: { mode } })`, the config's `use`, or a per-call override such as `smoothness.measure(label, fn, { mode: 'full' })`.
+1. The `mode` option, from `test.use({ butterOptions: { mode } })`, the config's `use`, or a per-call override such as `butter.measure(label, fn, { mode: 'full' })`.
 2. `SMOOTHNESS_MODE`, set to `quick` or `full` (case-insensitive). Any other value is an error, so a typo can't silently pick a mode.
 3. A scheduled CI run gets `full`:
 
@@ -21,4 +21,4 @@ The first rule that applies wins:
 
 Every result records the chosen mode as `mode`, and the rule that chose it as `settings.modeSource`.
 
-The rules are implemented in `packages/smoothness-core/src/options.ts` (`detectMode`) and tested in `tests/unit/options.spec.ts`.
+The rules are implemented in `packages/butter-core/src/options.ts` (`detectMode`) and tested in `tests/unit/options.spec.ts`.

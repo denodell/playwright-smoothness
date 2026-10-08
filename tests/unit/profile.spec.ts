@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { attributeProfile, combineProfiles } from '../../packages/smoothness-core/src/analysis/profile.js';
-import type { CpuProfile, ProfileNode } from '../../packages/smoothness-core/src/trace/parse.js';
+import { attributeProfile, combineProfiles } from '../../packages/butter-core/src/analysis/profile.js';
+import type { CpuProfile, ProfileNode } from '../../packages/butter-core/src/trace/parse.js';
 
 const n = (fn: string, parent?: number): ProfileNode => ({
   fn,

@@ -3,17 +3,17 @@
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const distEntry = new URL('../../packages/playwright-smoothness/dist/index.js', import.meta.url);
+const distEntry = new URL('../../packages/playwright-butter/dist/index.js', import.meta.url);
 const built = existsSync(fileURLToPath(distEntry));
 const mod = built
   ? await import(distEntry.href)
-  : await import('../../packages/playwright-smoothness/src/index.js');
-const { test, expect } = mod as typeof import('../../packages/playwright-smoothness/src/index.js');
+  : await import('../../packages/playwright-butter/src/index.js');
+const { test, expect } = mod as typeof import('../../packages/playwright-butter/src/index.js');
 
-test('the built package measures a click end to end', async ({ page, smoothness }) => {
+test('the built package measures a click end to end', async ({ page, butter }) => {
   test.skip(!built, 'dist/ not built; run npm run build');
   await page.goto('/click.html?ms=150');
-  const result = await smoothness.measure('dist click', () => page.click('#heavy'), { runs: 1 });
+  const result = await butter.measure('dist click', () => page.click('#heavy'), { runs: 1 });
   expect(result.unavailable).toEqual([]);
   expect(result.longFrames!.count).toBe(1);
   expect(result.input!.byTarget[0]!.target).toBe('button#heavy');

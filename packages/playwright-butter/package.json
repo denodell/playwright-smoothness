@@ -1,0 +1,78 @@
+{
+  "name": "playwright-butter",
+  "version": "1.0.0",
+  "description": "Fail the build when a web UI stops being smooth. Frame, input and long-list checks for Playwright, compared against a baseline.",
+  "license": "MIT",
+  "author": "Den Odell",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/denodell/playwright-butter.git",
+    "directory": "packages/playwright-butter"
+  },
+  "homepage": "https://github.com/denodell/playwright-butter#readme",
+  "bugs": {
+    "url": "https://github.com/denodell/playwright-butter/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "playwright",
+    "performance",
+    "jank",
+    "smoothness",
+    "long-animation-frames",
+    "event-timing",
+    "tanstack-intent"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./reporter": {
+      "import": {
+        "types": "./dist/reporter.d.ts",
+        "default": "./dist/reporter.js"
+      },
+      "require": {
+        "types": "./dist/reporter.d.cts",
+        "default": "./dist/reporter.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "playwright-butter": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepack": "node ../../scripts/copy-package-docs.mjs playwright-butter"
+  },
+  "dependencies": {
+    "butter-core": "1.0.0"
+  },
+  "peerDependencies": {
+    "@playwright/test": ">=1.49.0"
+  }
+}

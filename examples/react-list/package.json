@@ -1,5 +1,5 @@
 {
-  "name": "playwright-smoothness-example-react-list",
+  "name": "playwright-butter-example-react-list",
   "private": true,
   "type": "module",
   "scripts": {
@@ -13,7 +13,7 @@
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "esbuild": "0.28.2",
-    "playwright-smoothness": "file:../../packages/playwright-smoothness",
-    "smoothness-core": "file:../../packages/smoothness-core"
+    "playwright-butter": "file:../../packages/playwright-butter",
+    "butter-core": "file:../../packages/butter-core"
   }
 }

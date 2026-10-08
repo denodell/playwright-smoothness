@@ -1,15 +1,15 @@
-import { test, expect } from '../../packages/playwright-smoothness/src/index.js';
+import { test, expect } from '../../packages/playwright-butter/src/index.js';
 import type { Page } from '@playwright/test';
 
 test.use({
   viewport: { width: 600, height: 600 },
-  smoothnessOptions: { cpuThrottling: 1, runs: 2, mode: 'quick' },
+  butterOptions: { cpuThrottling: 1, runs: 2, mode: 'quick' },
 });
 test.setTimeout(120_000);
 
 const list = (page: Page) => page.locator('#list');
 
-test('a page that moves the list after it was put back is noted', async ({ page, smoothness }) => {
+test('a page that moves the list after it was put back is noted', async ({ page, butter }) => {
   await page.addInitScript(() => {
     addEventListener('load', () => {
       const el = document.querySelector<HTMLElement>('#list')!;
@@ -25,26 +25,26 @@ test('a page that moves the list after it was put back is noted', async ({ page,
     });
   });
   await page.goto('/list.html?cost=0&overscan=2');
-  const r = await smoothness.scroll(list(page), { distance: 1000 });
+  const r = await butter.scroll(list(page), { distance: 1000 });
   expect(r.notes.join(' ')).toMatch(/Runs didn't all start where the first did/);
 });
 
-test('a list already at its end scrolls nothing, and says so', async ({ page, smoothness }) => {
+test('a list already at its end scrolls nothing, and says so', async ({ page, butter }) => {
   await page.goto('/list.html?cost=0&overscan=2');
   await list(page).evaluate((el) => (el.scrollTop = el.scrollHeight));
-  const r = await smoothness.scroll(list(page), { distance: 'end', reset: 'none' });
+  const r = await butter.scroll(list(page), { distance: 'end', reset: 'none' });
   expect(r.scroll!.requestedPx).toBe(0);
   expect(r.notes.join(' ')).toMatch(/already at its end/);
 });
 
-test('arrow keys stop at the press limit', async ({ page, smoothness }) => {
+test('arrow keys stop at the press limit', async ({ page, butter }) => {
   await page.goto('/list.html?cost=0&overscan=2');
-  const r = await smoothness.scroll(list(page), { input: 'keys', distance: 6000, runs: 1 });
+  const r = await butter.scroll(list(page), { input: 'keys', distance: 6000, runs: 1 });
   expect(r.scroll!.keyPresses).toBe(100);
   expect(r.notes.join(' ')).toMatch(/Arrow keys were pressed at most 100 times/);
 });
 
-test("a list that won't take focus is clicked, so the arrow keys scroll it", async ({ page, smoothness }) => {
+test("a list that won't take focus is clicked, so the arrow keys scroll it", async ({ page, butter }) => {
   await page.addInitScript(() => {
     addEventListener('DOMContentLoaded', () => {
       const list = document.querySelector<HTMLElement>('#list')!;
@@ -53,14 +53,14 @@ test("a list that won't take focus is clicked, so the arrow keys scroll it", asy
     });
   });
   await page.goto('/list.html?cost=0&overscan=2');
-  const r = await smoothness.scroll(list(page), { input: 'keys', distance: 400, runs: 1 });
+  const r = await butter.scroll(list(page), { input: 'keys', distance: 400, runs: 1 });
   expect(await page.evaluate(() => (window as unknown as { clicked?: boolean }).clicked)).toBe(true);
   expect(r.scroll!.scrolledPx).toBeGreaterThan(0);
 });
 
-test('list.virtualized: false is noted', async ({ page, smoothness }) => {
+test('list.virtualized: false is noted', async ({ page, butter }) => {
   await page.goto('/list.html?cost=0&overscan=2');
-  const r = await smoothness.scroll(list(page), {
+  const r = await butter.scroll(list(page), {
     distance: 2000,
     speed: 'fast',
     mode: 'full',
@@ -70,7 +70,7 @@ test('list.virtualized: false is noted', async ({ page, smoothness }) => {
   expect(r.notes.join(' ')).toMatch(/list\.virtualized is false/);
 });
 
-test('a document whose scroll restoration cannot be set is still measured', async ({ page, smoothness }) => {
+test('a document whose scroll restoration cannot be set is still measured', async ({ page, butter }) => {
   await page.addInitScript(() => {
     Object.defineProperty(History.prototype, 'scrollRestoration', {
       get: () => 'auto',
@@ -80,11 +80,11 @@ test('a document whose scroll restoration cannot be set is still measured', asyn
     });
   });
   await page.goto('/list.html?cost=0&overscan=2');
-  const r = await smoothness.scroll(list(page), { distance: 1000, runs: 1 });
+  const r = await butter.scroll(list(page), { distance: 1000, runs: 1 });
   expect(r.scroll!.scrolledPx).toBeGreaterThan(0);
 });
 
-test('a list that is blank at rest is not judged for blank frames', async ({ page, smoothness }) => {
+test('a list that is blank at rest is not judged for blank frames', async ({ page, butter }) => {
   await page.addInitScript(() => {
     addEventListener('DOMContentLoaded', () => {
       const style = document.createElement('style');
@@ -93,16 +93,16 @@ test('a list that is blank at rest is not judged for blank frames', async ({ pag
     });
   });
   await page.goto('/list.html?cost=0&overscan=2');
-  const r = await smoothness.scroll(list(page), { distance: 2000, speed: 'fast', mode: 'full', runs: 1 });
+  const r = await butter.scroll(list(page), { distance: 2000, speed: 'fast', mode: 'full', runs: 1 });
   expect(r.unavailable).toContainEqual({
     measurement: 'list',
     reason: expect.stringMatching(/too little to judge blank frames/),
   });
 });
 
-test('list colours that cannot be resolved are noted, not guessed', async ({ page, smoothness }) => {
+test('list colours that cannot be resolved are noted, not guessed', async ({ page, butter }) => {
   await page.goto('/list.html?cost=0&overscan=2');
-  const r = await smoothness.scroll(list(page), {
+  const r = await butter.scroll(list(page), {
     distance: 2000,
     speed: 'fast',
     mode: 'full',

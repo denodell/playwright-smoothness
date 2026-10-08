@@ -13,7 +13,7 @@ function* files(dir) {
 }
 
 /**
- * Mirrors detectHeadlessMode in packages/smoothness-core/src/environment.ts, and must be kept in sync with it. Reads CDP
+ * Mirrors detectHeadlessMode in packages/butter-core/src/environment.ts, and must be kept in sync with it. Reads CDP
  * Browser.getVersion only, which page userAgent overrides don't affect.
  */
 function detect(r) {

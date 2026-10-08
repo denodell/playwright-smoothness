@@ -1,10 +1,6 @@
 import { test, expect } from '@playwright/test';
-import {
-  calibrate,
-  stepAbove,
-  formatCalibration,
-} from '../../packages/smoothness-core/src/calibrate/analyze.js';
-import type { SmoothnessResult } from '../../packages/smoothness-core/src/types.js';
+import { calibrate, stepAbove, formatCalibration } from '../../packages/butter-core/src/calibrate/analyze.js';
+import type { SmoothnessResult } from '../../packages/butter-core/src/types.js';
 import { makeResult } from './result-factory.js';
 
 const run = (p95: number, count: number, extra: Parameters<typeof makeResult>[0] = {}) =>

@@ -1,10 +1,10 @@
-import { test, expect } from '../../../packages/playwright-smoothness/src/index.js';
+import { test, expect } from '../../../packages/playwright-butter/src/index.js';
 
-test('catalogue fast scroll', async ({ page, smoothness }) => {
+test('catalogue fast scroll', async ({ page, butter }) => {
   await page.goto(
     `/list.html?cost=${process.env.ROW_COST ?? '0'}&overscan=${process.env.ROW_COST ? '0' : '2'}`,
   );
-  const result = await smoothness.scroll(page.locator('#list'), {
+  const result = await butter.scroll(page.locator('#list'), {
     mode: 'full',
     speed: 'fast',
     distance: 20_000,

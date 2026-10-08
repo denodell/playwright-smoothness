@@ -77,7 +77,7 @@ Minified names are mapped back through the page's source maps. V8 gives each fun
 
 Source maps are fetched the way the page would fetch them, through Playwright's request context, so cookies and HTTP credentials apply. `//# sourceMappingURL` comments, `data:` URLs and the `SourceMap` header all work. A page that doesn't publish maps keeps the names V8 reports, without a note, because those are the names the code really has. A map that's referenced but can't be loaded or parsed gets a note.
 
-The decoder is written in-house (`packages/smoothness-core/src/sourcemap/`) with no dependencies. Index maps (maps with `sections`) aren't supported, and are reported as unsupported.
+The decoder is written in-house (`packages/butter-core/src/sourcemap/`) with no dependencies. Index maps (maps with `sections`) aren't supported, and are reported as unsupported.
 
 ### Profile limits
 

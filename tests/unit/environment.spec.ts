@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { detectHeadlessMode } from '../../packages/smoothness-core/src/environment.js';
-import { githubWarning } from '../../packages/smoothness-core/src/ci.js';
+import { detectHeadlessMode } from '../../packages/butter-core/src/environment.js';
+import { githubWarning } from '../../packages/butter-core/src/ci.js';
 
 // Values recorded by the headless-matrix workflow (docs/measurements.md).
 test('headless mode from CDP Browser.getVersion', () => {

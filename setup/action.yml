@@ -1,4 +1,4 @@
-name: playwright-smoothness setup
+name: playwright-butter setup
 description: Goes before your Playwright step. Fetches main's smoothness baselines and sets the run up to compare with them, and on main to record new ones.
 author: Den Odell
 

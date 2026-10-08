@@ -13,7 +13,7 @@ Checks only run where you add them, and you decide how long each one takes.
 | `measure()` on a click, `runs: 1`                      | 0.7s                                 |
 | `measure()` in full mode (tracing, CPU profile)        | 4.2s                                 |
 | `scroll()` 20,000px at `'fast'`, 5 runs                | 26s                                  |
-| Automatic mode (`withSmoothness`), per test            | about 0.1s: no reruns, no throttling |
+| Automatic mode (`withButter`), per test                | about 0.1s: no reruns, no throttling |
 
 Each run reloads the page and waits for it to settle, so a check takes roughly `runs + 1` times as long as the action plus a reload. `runs`, `speed` and `distance` all change that. A common setup is automatic mode on every test, plus a handful of explicit `measure()` and `scroll()` checks for the interactions you care about most.
 
@@ -24,7 +24,7 @@ A noisy runner is unlikely to fail your build, for four reasons:
 - Checks only warn until you set `enforce: 'fail'` ([warn first, then fail](../README.md#warn-first-then-fail)). A check can move to `'fail'` once `calibrate` shows it's steady on your runner.
 - A check has to get worse by more than `maxIncrease` _and_ by more than a small floor, so one Event Timing rounding step or one extra frame can't fail it ([results](../README.md#results)).
 - Results are only compared on the same CPU model. On a model with no baseline, the check reports "not compared" instead of guessing ([CI guide](ci.md#use-a-dedicated-runner-if-you-can)).
-- `npx playwright-smoothness calibrate` runs your suite several times on unchanged code and tells you the `maxIncrease` each check needs.
+- `npx playwright-butter calibrate` runs your suite several times on unchanged code and tells you the `maxIncrease` each check needs.
 
 Within one CI job, results on GitHub's runners varied by about ±2% from run to run ([measurements.md](measurements.md)).
 
@@ -33,7 +33,7 @@ Within one CI job, results on GitHub's runners varied by about ±2% from run to 
 - Node 20 or later, and `@playwright/test` 1.49 or later. CI runs the suite on 1.49 and on the current version.
 - Playwright Test (the `@playwright/test` runner). The bare `playwright` library isn't enough.
 - Chromium, which a Playwright project already has. New headless (`channel: 'chromium'`) is the one to run.
-- No third-party runtime dependencies. `playwright-smoothness` and the `smoothness-core` package it depends on are about 300KB together.
+- No third-party runtime dependencies. `playwright-butter` and the `butter-core` package it depends on are about 300KB together.
 - Memory: 30–50MB in the test worker for a full-mode `scroll()` with a replay. The same check still passes with the worker's heap capped at 90MB. Full mode briefly opens a second page in the browser while it analyzes screenshots.
 - Disk: a result file of about 3KB per check, baselines and histories of a few KB each, and a replay video (a few hundred KB) only when a full-mode check gets worse. Traces are never written to disk.
 
@@ -55,8 +55,8 @@ There's no telemetry, and the library makes no network requests of its own. The 
 
 ## Lighthouse, Web Vitals and RUM
 
-- Lighthouse measures a page load in a lab. `playwright-smoothness` measures the interactions your tests perform: clicks, typing, and scrolling a list.
-- RUM and INP in the field tell you about real users on real devices, after the change has shipped. `playwright-smoothness` catches the regression in the pull request that causes it, and names the element and the code responsible.
+- Lighthouse measures a page load in a lab. `playwright-butter` measures the interactions your tests perform: clicks, typing, and scrolling a list.
+- RUM and INP in the field tell you about real users on real devices, after the change has shipped. `playwright-butter` catches the regression in the pull request that causes it, and names the element and the code responsible.
 - Blank rows in a virtualized list don't show up as dropped frames or as slow INP. `scroll()` measures them from screenshots.
 
 Field data still tells you what real users see after a release, while this check runs before the merge.

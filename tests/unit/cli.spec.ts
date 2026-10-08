@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { main } from '../../packages/playwright-smoothness/src/cli.js';
+import { main } from '../../packages/playwright-butter/src/cli.js';
 import { makeResult } from './result-factory.js';
 
 let dir: string;
@@ -48,7 +48,7 @@ test('each command has its own help', () => {
   ]) {
     const r = cli(command!, '--help');
     expect(r.code).toBe(0);
-    expect(r.out).toContain(`Usage: npx playwright-smoothness ${usage}`);
+    expect(r.out).toContain(`Usage: npx playwright-butter ${usage}`);
   }
 });
 
@@ -78,8 +78,8 @@ test('brief: nothing to fix, and writing the briefs to a file', () => {
 test('init-agents adds the skill where asked', () => {
   const r = cli('init-agents', '--dir', '.agents/skills', '--no-agents-md');
   expect(r.code).toBe(0);
-  expect(r.out).toContain('.agents/skills/playwright-smoothness/');
-  expect(existsSync(join(dir, '.agents', 'skills', 'playwright-smoothness', 'SKILL.md'))).toBe(true);
+  expect(r.out).toContain('.agents/skills/playwright-butter/');
+  expect(existsSync(join(dir, '.agents', 'skills', 'playwright-butter', 'SKILL.md'))).toBe(true);
   expect(existsSync(join(dir, 'AGENTS.md'))).toBe(false);
 });
 

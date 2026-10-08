@@ -4,7 +4,7 @@
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
 | [faq.md](faq.md)                           | Before you adopt it: suite time, flakiness, requirements, privacy, and how it differs from Lighthouse and RUM       |
 | [ci.md](ci.md)                             | Baselines in CI: the GitHub Action, the steps it takes by hand, dedicated runners, full mode on a schedule          |
-| [automatic-mode.md](automatic-mode.md)     | `withSmoothness()`: measuring every test, the rolling history, and its limits                                       |
+| [automatic-mode.md](automatic-mode.md)     | `withButter()`: measuring every test, the rolling history, and its limits                                           |
 | [list-detection.md](list-detection.md)     | How blank rows are detected, the thresholds, and measured results                                                   |
 | [frameworks.md](frameworks.md)             | Attribution with React and Angular, and how the CPU profile names your handler                                      |
 | [how-it-works.md](how-it-works.md)         | The signals used and their limits, how frames are classified, and how baselines are compared                        |

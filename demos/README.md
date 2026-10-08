@@ -1,6 +1,6 @@
 # Demo apps
 
-Seven small apps, each with a fast version (`?v=good`) and a slow one (`?v=bad`), for checking that playwright-smoothness catches the kinds of problem real apps have. The README's replay GIFs come from two of them.
+Seven small apps, each with a fast version (`?v=good`) and a slow one (`?v=bad`), for checking that playwright-butter catches the kinds of problem real apps have. The README's replay GIFs come from two of them.
 
 | App        | What it is                    | What the slow version does                                                         |
 | ---------- | ----------------------------- | ---------------------------------------------------------------------------------- |

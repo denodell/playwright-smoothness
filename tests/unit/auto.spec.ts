@@ -9,13 +9,13 @@ import {
   outsideRecentRange,
   readHistory,
   specHash,
-} from '../../packages/smoothness-core/src/auto/history.js';
+} from '../../packages/butter-core/src/auto/history.js';
 import {
   analyzeDocs,
   defaultHistoryDir,
   type DocData,
-} from '../../packages/playwright-smoothness/src/withSmoothness.js';
-import { onMainBranch } from '../../packages/smoothness-core/src/ci.js';
+} from '../../packages/playwright-butter/src/withButter.js';
+import { onMainBranch } from '../../packages/butter-core/src/ci.js';
 import { makeResult } from './result-factory.js';
 
 test('medianMetrics skips unmeasured runs', () => {
@@ -231,4 +231,9 @@ test("analyzeDocs: inputs that aren't reported", () => {
     [1_000_960, doc({ timeOrigin: 1_000_960, page: 1 })],
   ]);
   expect(analyzeDocs(otherTab).unmeasured).toEqual([]);
+});
+
+test('withSmoothness() still works under its old name', async () => {
+  const lib = await import('../../packages/playwright-butter/src/index.js');
+  expect(lib.withSmoothness).toBe(lib.withButter);
 });

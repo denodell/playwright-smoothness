@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { COLLECTOR_KEY, installCollector } from '../../packages/smoothness-core/src/collector/collector.js';
-import { COLLECTOR_CONFIG } from '../../packages/smoothness-core/src/runner.js';
+import { COLLECTOR_KEY, installCollector } from '../../packages/butter-core/src/collector/collector.js';
+import { COLLECTOR_CONFIG } from '../../packages/butter-core/src/runner.js';
 
 interface Snapshot {
   supported: { loaf: boolean; event: boolean };

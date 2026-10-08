@@ -1,8 +1,8 @@
-import { test, expect } from 'playwright-smoothness';
+import { test, expect } from 'playwright-butter';
 
-test('the catalogue stays drawn during a fast scroll', async ({ page, smoothness }) => {
+test('the catalogue stays drawn during a fast scroll', async ({ page, butter }) => {
   await page.goto('/');
-  const result = await smoothness.scroll(page.getByRole('list', { name: 'Catalogue' }), {
+  const result = await butter.scroll(page.getByRole('list', { name: 'Catalogue' }), {
     mode: 'full',
     input: 'touch',
     speed: 'fast',
@@ -19,9 +19,9 @@ test('the catalogue stays drawn during a fast scroll', async ({ page, smoothness
 // the main thread is busy rendering rows, so the list goes blank. (With touch on this page the
 // list only moves as fast as rows render, so it stays drawn but scrolls slowly.) The CPU profile
 // names the slow code through the source map, although the bundle is minified.
-test('expensive rows go blank, and the profile names them', async ({ page, smoothness }) => {
+test('expensive rows go blank, and the profile names them', async ({ page, butter }) => {
   await page.goto('/?slowRows=1');
-  const result = await smoothness.scroll(page.getByRole('list', { name: 'Catalogue' }), {
+  const result = await butter.scroll(page.getByRole('list', { name: 'Catalogue' }), {
     mode: 'full',
     input: 'wheel',
     speed: 'fast',

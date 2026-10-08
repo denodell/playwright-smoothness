@@ -4,18 +4,18 @@ import type {
   CollectorSnapshot,
   EventRecord,
   LoafRecord,
-} from '../../packages/smoothness-core/src/collector/collector.js';
+} from '../../packages/butter-core/src/collector/collector.js';
 import {
   elementFromInvoker,
   groupInteractions,
   stableInvoker,
-} from '../../packages/smoothness-core/src/analysis/interactions.js';
-import { GENERATED_ID } from '../../packages/smoothness-core/src/collector/collector.js';
+} from '../../packages/butter-core/src/analysis/interactions.js';
+import { GENERATED_ID } from '../../packages/butter-core/src/collector/collector.js';
 import {
   classifyFrame,
   classifyFrames,
   LOAD_GRACE_MS,
-} from '../../packages/smoothness-core/src/analysis/classify.js';
+} from '../../packages/butter-core/src/analysis/classify.js';
 import {
   attributeFrames,
   combineInput,
@@ -23,8 +23,8 @@ import {
   scriptBlocking,
   summarizeInput,
   summarizeLongFrames,
-} from '../../packages/smoothness-core/src/analysis/aggregate.js';
-import { median, percentile, spread } from '../../packages/smoothness-core/src/analysis/stats.js';
+} from '../../packages/butter-core/src/analysis/aggregate.js';
+import { median, percentile, spread } from '../../packages/butter-core/src/analysis/stats.js';
 
 const ev = (p: Partial<EventRecord>): EventRecord => ({
   name: 'click',

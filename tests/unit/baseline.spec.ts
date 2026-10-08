@@ -8,17 +8,17 @@ import {
   machineSlug,
   slug,
   baselineFileName,
-} from '../../packages/smoothness-core/src/baseline/key.js';
+} from '../../packages/butter-core/src/baseline/key.js';
 import {
   compareMetrics,
   metricsOf,
   INPUT_FLOOR_MS,
-} from '../../packages/smoothness-core/src/baseline/compare.js';
-import { evaluate } from '../../packages/smoothness-core/src/baseline/evaluate.js';
-import { formatChange } from '../../packages/smoothness-core/src/baseline/message.js';
-import { recordingBaselines } from '../../packages/smoothness-core/src/constants.js';
-import type { BaselineTarget, UpdateMode } from '../../packages/smoothness-core/src/baseline/store.js';
-import { writeBaseline } from '../../packages/smoothness-core/src/baseline/store.js';
+} from '../../packages/butter-core/src/baseline/compare.js';
+import { evaluate } from '../../packages/butter-core/src/baseline/evaluate.js';
+import { formatChange } from '../../packages/butter-core/src/baseline/message.js';
+import { recordingBaselines } from '../../packages/butter-core/src/constants.js';
+import type { BaselineTarget, UpdateMode } from '../../packages/butter-core/src/baseline/store.js';
+import { writeBaseline } from '../../packages/butter-core/src/baseline/store.js';
 import { makeResult } from './result-factory.js';
 
 // ---- keys ----
@@ -193,7 +193,7 @@ test('a spread wider than maxIncrease marks the check noisy', () => {
 
 // ---- evaluate (files, update modes, enforce) ----
 
-// Like playwright-smoothness's target: a folder per test, with the project and platform added to
+// Like playwright-butter's target: a folder per test, with the project and platform added to
 // each file name as Playwright's default snapshot template does.
 function fakeInfo(
   dir: string,

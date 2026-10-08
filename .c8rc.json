@@ -4,5 +4,5 @@
   "exclude-after-remap": true,
   "reporter": ["text-summary", "html", "json-summary"],
   "report-dir": "coverage",
-  "exclude": ["packages/smoothness-core/src/types.ts", "packages/smoothness-core/src/driver.ts"]
+  "exclude": ["packages/butter-core/src/types.ts", "packages/butter-core/src/driver.ts"]
 }

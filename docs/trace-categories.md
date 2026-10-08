@@ -23,7 +23,7 @@ The events the library uses come from these categories:
 - `performance.mark()` calls are in `blink.user_timing`. Each mark's `args.data.startTime` is its `performance.now()` value, so the marks line the trace up exactly with the page's clock.
 - `EventLatency` is in `cc,benchmark,input,input.scrolling`. The detection suite used it to find when input started, but the library doesn't need it, because it places its own marks.
 
-The library's sets are defined in `packages/smoothness-core/src/trace/categories.ts`:
+The library's sets are defined in `packages/butter-core/src/trace/categories.ts`:
 
 | Use                                                           | Categories                                                         | Size for this interaction                         |
 | ------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------- |

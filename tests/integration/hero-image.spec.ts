@@ -1,21 +1,18 @@
 // Generates docs/hero.png for the README: a frame from a cheap list's fast scroll next to the
 // least-drawn frame from a costly list's, with the real numbers from the same runs.
 // Opt-in: HERO_IMAGE=1 npx playwright test --project=integration hero-image
-import { test, expect } from '../../packages/playwright-smoothness/src/index.js';
+import { test, expect } from '../../packages/playwright-butter/src/index.js';
 import type { Page } from '@playwright/test';
 import { writeFileSync } from 'node:fs';
-import { traceRun } from '../../packages/smoothness-core/src/trace/tracer.js';
-import {
-  FRAME_CATEGORIES,
-  SCREENSHOT_CATEGORIES,
-} from '../../packages/smoothness-core/src/trace/categories.js';
-import { analyzeFrames } from '../../packages/smoothness-core/src/list/analyze.js';
-import { locatorTarget, playwrightDriver } from '../../packages/playwright-smoothness/src/driver.js';
-import { blankColors, listGeometry, referenceShot } from '../../packages/smoothness-core/src/list/probe.js';
+import { traceRun } from '../../packages/butter-core/src/trace/tracer.js';
+import { FRAME_CATEGORIES, SCREENSHOT_CATEGORIES } from '../../packages/butter-core/src/trace/categories.js';
+import { analyzeFrames } from '../../packages/butter-core/src/list/analyze.js';
+import { locatorTarget, playwrightDriver } from '../../packages/playwright-butter/src/driver.js';
+import { blankColors, listGeometry, referenceShot } from '../../packages/butter-core/src/list/probe.js';
 
 test.use({
   viewport: { width: 600, height: 600 },
-  smoothnessOptions: { mode: 'full', cpuThrottling: 1, runs: 3 },
+  butterOptions: { mode: 'full', cpuThrottling: 1, runs: 3 },
 });
 
 async function fastScrollFrames(page: Page, url: string) {
@@ -58,18 +55,18 @@ async function fastScrollFrames(page: Page, url: string) {
   return { jpegs: trace.screenshots, coverage: a.frames };
 }
 
-test('hero image', async ({ page, smoothness }) => {
+test('hero image', async ({ page, butter }) => {
   test.skip(!process.env.HERO_IMAGE, 'set HERO_IMAGE=1 to regenerate docs/hero.png');
   test.setTimeout(180_000);
   // The numbers, measured the way a user would.
   await page.goto('/list.html?cost=0&overscan=2');
-  const cheap = await smoothness.scroll(page.locator('#list'), {
+  const cheap = await butter.scroll(page.locator('#list'), {
     speed: 'fast',
     distance: 20000,
     label: 'cheap',
   });
   await page.goto('/list.html?cost=15&overscan=0');
-  const costly = await smoothness.scroll(page.locator('#list'), {
+  const costly = await butter.scroll(page.locator('#list'), {
     speed: 'fast',
     distance: 20000,
     label: 'costly',

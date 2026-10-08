@@ -1,5 +1,5 @@
 {
-  "name": "playwright-smoothness-example-plain-site",
+  "name": "playwright-butter-example-plain-site",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,7 +7,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "playwright-smoothness": "file:../../packages/playwright-smoothness",
-    "smoothness-core": "file:../../packages/smoothness-core"
+    "playwright-butter": "file:../../packages/playwright-butter",
+    "butter-core": "file:../../packages/butter-core"
   }
 }

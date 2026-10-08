@@ -5,7 +5,7 @@ summary="$RESULTS_DIR/smoothness/summary.md"
 if [ -f "$summary" ] && [ -n "${STARTED:-}" ] && [ "$summary" -nt "$STARTED" ]; then
   echo "Using the reporter's summary."
 else
-  npx playwright-smoothness summary --results "$RESULTS_DIR" --out "$summary" --github-summary
+  npx playwright-butter summary --results "$RESULTS_DIR" --out "$summary" --github-summary
 fi
 echo "summary=$summary" >> "$GITHUB_OUTPUT"
 
@@ -14,18 +14,18 @@ echo "summary=$summary" >> "$GITHUB_OUTPUT"
 marker='<!-- playwright-smoothness -->'
 body="$(printf '%s\n%s' "$marker" "$(cat "$summary")")"
 
-briefs="$(npx playwright-smoothness brief --results "$RESULTS_DIR" 2> /dev/null)"
+briefs="$(npx playwright-butter brief --results "$RESULTS_DIR" 2> /dev/null)"
 if [ -n "$briefs" ]; then
   if [ "${#briefs}" -gt 50000 ]; then
     briefs="${briefs:0:50000}
-…cut to fit in a comment. Run npx playwright-smoothness brief on the results artifact for all of it."
+…cut to fit in a comment. Run npx playwright-butter brief on the results artifact for all of it."
   fi
   body="$body
 
 <details>
 <summary>Fix briefs for a coding agent</summary>
 
-Paste this into your agent, or run \`npx playwright-smoothness brief\` locally after reproducing the run.
+Paste this into your agent, or run \`npx playwright-butter brief\` locally after reproducing the run.
 
 \`\`\`\`markdown
 $briefs

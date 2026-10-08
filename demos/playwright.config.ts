@@ -1,10 +1,10 @@
 import { defineConfig } from '@playwright/test';
-import type { SmoothnessTestOptions } from 'playwright-smoothness';
+import type { ButterTestOptions } from 'playwright-butter';
 
 // Run from the repository root after `npm run build`:
 //   APP_VARIANT=good npx playwright test -c demos   (records baselines)
 //   APP_VARIANT=bad npx playwright test -c demos    (compares the slow versions with them)
-export default defineConfig<SmoothnessTestOptions>({
+export default defineConfig<ButterTestOptions>({
   testDir: 'tests',
   outputDir: 'results',
   timeout: 600_000,

@@ -12,9 +12,9 @@ A baseline only means something on the machine that gates, so in CI the baseline
 Most projects already have a workflow that runs Playwright. Two steps go around the step that runs it, and that step stays as it is:
 
 ```yaml
-- uses: denodell/playwright-smoothness/setup@v1
+- uses: denodell/playwright-butter/setup@v1
 - run: npx playwright test # your step, unchanged
-- uses: denodell/playwright-smoothness/report@v1
+- uses: denodell/playwright-butter/report@v1
   if: always()
 ```
 
@@ -53,7 +53,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: npm }
       - run: npm ci
-      - uses: denodell/playwright-smoothness@v1
+      - uses: denodell/playwright-butter@v1
 ```
 
 - **Pull requests** compare with the newest baselines published from your default branch, and get the summary as a comment.
@@ -61,7 +61,7 @@ jobs:
 - **Scheduled runs** use full mode, and compare and record the same way.
 - **Every run** installs Chromium, adds the summary to the job summary, and uploads results and replays as an artifact. The job fails when the Playwright run fails.
 
-Automatic mode's history is kept in the same artifact, so tests wrapped with `withSmoothness()` need nothing extra either way.
+Automatic mode's history is kept in the same artifact, so tests wrapped with `withButter()` need nothing extra either way.
 
 | Input                   | Default                  | Description                                                                                |
 | ----------------------- | ------------------------ | ------------------------------------------------------------------------------------------ |
@@ -134,7 +134,7 @@ jobs:
 
 ### Post the summary on the pull request
 
-With the reporter in your config (`reporter: [['list'], ['playwright-smoothness/reporter']]`), each run adds the smoothness summary to the GitHub Actions job summary. Without it, `npx playwright-smoothness summary --github-summary` writes the same summary from the run's result files. This step also posts it as a comment on the pull request:
+With the reporter in your config (`reporter: [['list'], ['playwright-butter/reporter']]`), each run adds the smoothness summary to the GitHub Actions job summary. Without it, `npx playwright-butter summary --github-summary` writes the same summary from the run's result files. This step also posts it as a comment on the pull request:
 
 ```yaml
 - name: 'Pull request: comment with the summary'

@@ -1,4 +1,4 @@
-name: playwright-smoothness
+name: playwright-butter
 description: Visual smoothness checks for Playwright in CI. Flags PRs that make scrolling or interacting less smooth than previous runs.
 author: Den Odell
 branding:

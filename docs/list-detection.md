@@ -1,6 +1,6 @@
 # Blank rows in lists
 
-A virtualized list that can't build its rows in time leaves the user scrolling through empty space, and the frame rate doesn't show it. In the costly test list below, 97% of frames were on time while 91% were blank. In full mode, `smoothness.scroll()` finds these blank frames in the trace's screenshots. The [README](../README.md#scroll-a-list) covers the options, and this page explains how the measurement works.
+A virtualized list that can't build its rows in time leaves the user scrolling through empty space, and the frame rate doesn't show it. In the costly test list below, 97% of frames were on time while 91% were blank. In full mode, `butter.scroll()` finds these blank frames in the trace's screenshots. The [README](../README.md#scroll-a-list) covers the options, and this page explains how the measurement works.
 
 ![A drawn list frame next to a blank one](hero.png)
 
@@ -38,7 +38,7 @@ Trace screenshots are JPEGs. They could be decoded in Node with a dependency suc
 - Chrome's native decoder is fast. 200 frames decode and measure in about 0.5s locally and 1.2s on a 4-vCPU GitHub Actions runner, inside a 2-second budget that `tests/integration/list.spec.ts` asserts.
 - The throwaway page has its own browser context, so it can't affect the page being measured.
 
-The line-counting function (`packages/smoothness-core/src/list/coverage.ts`) is plain code with no dependencies. It runs in that page, and unit tests call it directly in Node.
+The line-counting function (`packages/butter-core/src/list/coverage.ts`) is plain code with no dependencies. It runs in that page, and unit tests call it directly in Node.
 
 ## Replays
 
@@ -50,7 +50,7 @@ Each frame of the video shows the list with an outline. On a blank frame, the ou
 
 Recording frames takes compositor time, so the replay's run is kept apart from the measured runs and never counted. Its frames come from Chrome's screencast (`Page.startScreencast`) at the page's own size, up to 1280px on the longer side. A trace's screenshots would be too small for a desktop-sized page: Chrome fits them in 250px or 500px, depending on its version. The panel is laid out for a 500px recording and scales up with a wider one. With `replay: 'off'` there's no extra run, and when no replay is wanted, nothing is encoded.
 
-Encoding uses WebCodecs (`VideoEncoder`, VP8) in a throwaway page of the same Chromium. That page is served from `http://localhost`, because WebCodecs needs a secure context. The library writes the WebM container itself (`packages/smoothness-core/src/replay/webm.ts`), including cues so the report's player can seek, and has no dependencies for it. A 3.3-second fast scroll becomes a 15-second replay of about 500KB, encoded in under a second locally.
+Encoding uses WebCodecs (`VideoEncoder`, VP8) in a throwaway page of the same Chromium. That page is served from `http://localhost`, because WebCodecs needs a secure context. The library writes the WebM container itself (`packages/butter-core/src/replay/webm.ts`), including cues so the report's player can seek, and has no dependencies for it. A 3.3-second fast scroll becomes a 15-second replay of about 500KB, encoded in under a second locally.
 
 ## Results
 

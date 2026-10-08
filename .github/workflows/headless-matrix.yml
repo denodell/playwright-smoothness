@@ -8,7 +8,7 @@ on:
     paths:
       - tests/detection/headless-mode.spec.ts
       - scripts/headless-summary.mjs
-      - packages/smoothness-core/src/environment.ts
+      - packages/butter-core/src/environment.ts
       - .github/workflows/headless-matrix.yml
   schedule:
     - cron: '0 6 * * 1'

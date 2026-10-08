@@ -56,9 +56,9 @@ export default tseslint.config(
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly' } },
   },
   {
-    // smoothness-core talks to the browser only through its driver interfaces, so any automation
-    // library can drive it. Playwright belongs in playwright-smoothness.
-    files: ['packages/smoothness-core/src/**/*.ts'],
+    // butter-core talks to the browser only through its driver interfaces, so any automation
+    // library can drive it. Playwright belongs in playwright-butter.
+    files: ['packages/butter-core/src/**/*.ts'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -66,7 +66,7 @@ export default tseslint.config(
           patterns: [
             {
               group: ['@playwright/*', 'playwright', 'playwright-core', 'playwright-core/*'],
-              message: 'smoothness-core must not depend on Playwright; use the interfaces in its driver.ts.',
+              message: 'butter-core must not depend on Playwright; use the interfaces in its driver.ts.',
             },
           ],
         },

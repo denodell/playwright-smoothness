@@ -6,7 +6,7 @@ import {
   MARK_START,
   parseTrace,
   type TraceEvent,
-} from '../../packages/smoothness-core/src/trace/parse.js';
+} from '../../packages/butter-core/src/trace/parse.js';
 
 const load = (name: string) =>
   JSON.parse(readFileSync(`tests/fixtures/traces/${name}.json`, 'utf8')) as {

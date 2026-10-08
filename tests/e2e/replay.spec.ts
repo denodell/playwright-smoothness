@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { files, PLAYWRIGHT_CLI } from './helpers.js';
 
 const CONFIG = 'tests/e2e/replay-project/playwright.config.ts';
-const REPORTER = join(process.cwd(), 'packages/playwright-smoothness/dist', 'reporter.js');
+const REPORTER = join(process.cwd(), 'packages/playwright-butter/dist', 'reporter.js');
 
 let work: string;
 test.beforeAll(() => {

@@ -5,13 +5,13 @@ Automatic mode measures every test you already have, with one change to your fix
 ```ts
 // tests/fixtures.ts
 import { test as base } from '@playwright/test';
-import { withSmoothness } from 'playwright-smoothness';
+import { withButter } from 'playwright-butter';
 
-export const test = withSmoothness(base, { auto: true });
+export const test = withButter(base, { auto: true });
 export { expect } from '@playwright/test';
 ```
 
-Tests that import `test` from this file get `smoothness` and `smoothnessOptions` too, for explicit `measure()` and `scroll()` calls.
+Tests that import `test` from this file get `butter` and `butterOptions` too, for explicit `measure()` and `scroll()` calls.
 
 ## What's measured
 
@@ -23,7 +23,7 @@ Each test that opens a page is measured once, for its whole run, with no warm-up
 
 Tests that never open a page, such as API tests, produce no result.
 
-CPU throttling is off by default in automatic mode (`cpuThrottling: 1`), because slowing every test 4x would slow the whole suite and could break its timeouts. If the suite can take it, `withSmoothness(base, { auto: true, cpuThrottling: 4 })` turns it on.
+CPU throttling is off by default in automatic mode (`cpuThrottling: 1`), because slowing every test 4x would slow the whole suite and could break its timeouts. If the suite can take it, `withButter(base, { auto: true, cpuThrottling: 4 })` turns it on.
 
 ## Rolling history from main
 

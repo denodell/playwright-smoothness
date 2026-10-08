@@ -180,4 +180,4 @@ The matrix on GitHub Actions `ubuntu-latest` (headed under `xvfb-run`, run 35940
 | 1.57.0     | 143.0.7499.4  | `HeadlessChrome/143…`  | `Chrome/143…` / `HeadlessChrome/143.0.0.0` | `Chrome/143…` / `Chrome/143.0.0.0` |
 | 1.63.0     | 153.0.8010.12 | `HeadlessChrome/153…`  | `Chrome/153…` / `HeadlessChrome/153.0.0.0` | `Chrome/153…` / `Chrome/153.0.0.0` |
 
-The Chrome for Testing switch in 1.57 didn't change any of these signals. `executablePath()` was wrong on every version (it always names `chrome`). `packages/smoothness-core/src/environment.ts` uses the CDP rule above. If `Browser.getVersion` fails, or returns something that matches none of the patterns, the result reports `headlessMode: 'unknown'`.
+The Chrome for Testing switch in 1.57 didn't change any of these signals. `executablePath()` was wrong on every version (it always names `chrome`). `packages/butter-core/src/environment.ts` uses the CDP rule above. If `Browser.getVersion` fails, or returns something that matches none of the patterns, the result reports `headlessMode: 'unknown'`.

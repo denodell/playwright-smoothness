@@ -2,7 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "paths": {
-      "smoothness-core": ["./packages/smoothness-core/src/index.ts"]
+      "butter-core": ["./packages/butter-core/src/index.ts"]
     }
   },
   "include": ["packages/*/src", "packages/*/tsup.config.ts", "tests", "playwright.config.ts"],

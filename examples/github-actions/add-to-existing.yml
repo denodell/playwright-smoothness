@@ -26,9 +26,9 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
 
-      - uses: denodell/playwright-smoothness/setup@v1
+      - uses: denodell/playwright-butter/setup@v1
       - run: npx playwright test
-      - uses: denodell/playwright-smoothness/report@v1
+      - uses: denodell/playwright-butter/report@v1
         if: always()
 
       - uses: actions/upload-artifact@v4

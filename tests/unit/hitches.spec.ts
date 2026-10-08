@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { findHitches } from '../../packages/smoothness-core/src/replay/encode.js';
+import { findHitches } from '../../packages/butter-core/src/replay/encode.js';
 
 const F = 1000 / 60;
 const at = (frame: number, dropped = false) => ({ tMs: frame * F, dropped });

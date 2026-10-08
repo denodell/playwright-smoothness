@@ -2,23 +2,23 @@
 // through the library (12ms blocking: no dropped frames; 25ms: some). Unthrottled, as the table
 // was measured.
 // With RECORD_FIXTURES=1, trimmed traces are saved for the parser's unit tests.
-import { test, expect } from '../../packages/playwright-smoothness/src/index.js';
+import { test, expect } from '../../packages/playwright-butter/src/index.js';
 import { writeFileSync } from 'node:fs';
 import {
   FRAME_CATEGORIES,
   ANIMATION_FRAME_CATEGORIES,
   PROFILE_CATEGORIES,
-} from '../../packages/smoothness-core/src/trace/categories.js';
-import { MARK_END, MARK_START } from '../../packages/smoothness-core/src/trace/parse.js';
+} from '../../packages/butter-core/src/trace/categories.js';
+import { MARK_END, MARK_START } from '../../packages/butter-core/src/trace/parse.js';
 import { attach, tenWheelScrolls } from '../detection/helpers.js';
 
-test.use({ smoothnessOptions: { mode: 'full', cpuThrottling: 1, runs: 5 } });
+test.use({ butterOptions: { mode: 'full', cpuThrottling: 1, runs: 5 } });
 
 for (const wait of [12, 25]) {
-  test(`scroll handler blocking ${wait}ms`, async ({ page, smoothness }) => {
+  test(`scroll handler blocking ${wait}ms`, async ({ page, butter }) => {
     test.setTimeout(120_000);
     await page.goto(`/scroll.html?wait=${wait}`);
-    const result = await smoothness.measure(`scroll ${wait}ms`, () => tenWheelScrolls(page));
+    const result = await butter.measure(`scroll ${wait}ms`, () => tenWheelScrolls(page));
     await attach(result);
     expect(result.mode).toBe('full');
     expect(result.unavailable).toEqual([]);
@@ -32,9 +32,9 @@ for (const wait of [12, 25]) {
   });
 }
 
-test('refreshRate 120 adds a reported-only prediction', async ({ page, smoothness }) => {
+test('refreshRate 120 adds a reported-only prediction', async ({ page, butter }) => {
   await page.goto('/scroll.html?wait=12');
-  const result = await smoothness.measure('scroll 120', () => tenWheelScrolls(page), {
+  const result = await butter.measure('scroll 120', () => tenWheelScrolls(page), {
     refreshRate: 120,
     runs: 2,
   });
@@ -45,9 +45,9 @@ test('refreshRate 120 adds a reported-only prediction', async ({ page, smoothnes
   expect(result.budget120!.framesOverBudget).toBeGreaterThanOrEqual(8);
 });
 
-test('quick mode has no frames or 120Hz prediction', async ({ page, smoothness }) => {
+test('quick mode has no frames or 120Hz prediction', async ({ page, butter }) => {
   await page.goto('/scroll.html?wait=12');
-  const result = await smoothness.measure('quick 120', () => tenWheelScrolls(page), {
+  const result = await butter.measure('quick 120', () => tenWheelScrolls(page), {
     mode: 'quick',
     refreshRate: 120,
     runs: 1,
@@ -57,9 +57,9 @@ test('quick mode has no frames or 120Hz prediction', async ({ page, smoothness }
   expect(result.notes).toContain('refreshRate 120 adds a prediction in full mode only; this was quick mode.');
 });
 
-test('full mode gates on-time frames against the baseline', async ({ page, smoothness }) => {
+test('full mode gates on-time frames against the baseline', async ({ page, butter }) => {
   await page.goto('/scroll.html?wait=12');
-  const result = await smoothness.measure('gated', () => tenWheelScrolls(page), { runs: 2 });
+  const result = await butter.measure('gated', () => tenWheelScrolls(page), { runs: 2 });
   expect(result).toBeSmooth();
   expect(result.comparison!.status).toBe('baseline-created');
 });

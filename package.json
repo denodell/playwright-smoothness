@@ -1,16 +1,16 @@
 {
-  "name": "playwright-smoothness-monorepo",
+  "name": "playwright-butter-monorepo",
   "private": true,
   "type": "module",
   "workspaces": [
-    "packages/smoothness-core",
-    "packages/playwright-smoothness"
+    "packages/butter-core",
+    "packages/playwright-butter"
   ],
   "engines": {
     "node": ">=20"
   },
   "scripts": {
-    "build": "npm run build --workspace smoothness-core --workspace playwright-smoothness",
+    "build": "npm run build --workspace butter-core --workspace playwright-butter",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
@@ -21,7 +21,7 @@
     "test:headless-modes": "playwright test --project=mode-headless-shell --project=mode-new-headless --project=mode-headed",
     "docs:images": "npm run build && node demos/make-images.mjs",
     "changeset": "changeset",
-    "release:check": "npm run build && npm publish --dry-run --workspace smoothness-core --workspace playwright-smoothness",
+    "release:check": "npm run build && npm publish --dry-run --workspace butter-core --workspace playwright-butter",
     "coverage": "npm run build && node scripts/coverage/run.mjs"
   },
   "devDependencies": {

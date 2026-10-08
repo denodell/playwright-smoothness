@@ -4,8 +4,8 @@
 # - Pushes to main: compared with the previous baselines, then re-recorded and published as an artifact.
 # - Nightly: full mode (dropped frames, blank rows, CPU profile), compared, then re-recorded.
 #
-# Needs the reporter in playwright.config.ts: reporter: [['list'], ['playwright-smoothness/reporter']]
-# and smoothnessOptions: { baselineDir: process.env.SMOOTHNESS_BASELINE_DIR }.
+# Needs the reporter in playwright.config.ts: reporter: [['list'], ['playwright-butter/reporter']]
+# and butterOptions: { baselineDir: process.env.SMOOTHNESS_BASELINE_DIR }.
 name: Smoothness
 on:
   push:

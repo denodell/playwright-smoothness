@@ -1,0 +1,58 @@
+{
+  "name": "butter-core",
+  "version": "1.0.0",
+  "description": "The measuring engine behind playwright-butter: frame, input and long-list smoothness checks in Chromium, driven through a small adapter interface.",
+  "license": "MIT",
+  "author": "Den Odell",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/denodell/playwright-butter.git",
+    "directory": "packages/butter-core"
+  },
+  "homepage": "https://github.com/denodell/playwright-butter#readme",
+  "bugs": {
+    "url": "https://github.com/denodell/playwright-butter/issues"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "performance",
+    "jank",
+    "smoothness",
+    "chromium",
+    "long-animation-frames",
+    "event-timing"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "ARCHIVO-OFL.txt"
+  ],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepack": "node ../../scripts/copy-package-docs.mjs butter-core"
+  }
+}

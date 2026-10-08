@@ -5,22 +5,22 @@ import { test, expect } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
 import { appendFileSync, cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
-import type { SmoothnessResult } from '../../packages/smoothness-core/src/types.js';
-import type { HistoryFile } from '../../packages/smoothness-core/src/auto/history.js';
+import type { SmoothnessResult } from '../../packages/butter-core/src/types.js';
+import type { HistoryFile } from '../../packages/butter-core/src/auto/history.js';
 import { files, PLAYWRIGHT_CLI } from './helpers.js';
 
 const repo = process.cwd();
 const project = join(repo, '.tmp-e2e', `auto-${process.pid}`);
 const PLAIN = `import { test as base } from '@playwright/test';\nexport const test = base;\nexport { expect } from '@playwright/test';\n`;
-const withSmoothness = () => {
-  const lib = relative(project, join(repo, 'packages', 'playwright-smoothness', 'src', 'index.js')).replace(
+const withButter = () => {
+  const lib = relative(project, join(repo, 'packages', 'playwright-butter', 'src', 'index.js')).replace(
     /\\/g,
     '/',
   );
   return [
     `import { test as base } from '@playwright/test';`,
-    `import { withSmoothness } from '${lib.startsWith('.') ? lib : './' + lib}';`,
-    `export const test = withSmoothness(base, {`,
+    `import { withButter } from '${lib.startsWith('.') ? lib : './' + lib}';`,
+    `export const test = withButter(base, {`,
     `  auto: true,`,
     `  minHistory: 2,`,
     `  enforce: process.env.SMOOTHNESS_ENFORCE === 'fail' ? 'fail' : 'warn',`,
@@ -80,8 +80,8 @@ test('the plain project runs, and nothing is measured', () => {
   expect(r.results).toEqual([]);
 });
 
-test('switching the fixtures file to withSmoothness', () => {
-  writeFileSync(join(project, 'fixtures.ts'), withSmoothness());
+test('switching the fixtures file to withButter', () => {
+  writeFileSync(join(project, 'fixtures.ts'), withButter());
   const r = run({ SMOOTHNESS_RECORD: '1' });
   expect(r.code, r.output).toBe(0);
   expect(r.results).toHaveLength(3); // 'no page at all' opens no page, so it isn't measured

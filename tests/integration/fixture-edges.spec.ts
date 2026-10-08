@@ -3,8 +3,8 @@ import type { BrowserContext, Page } from '@playwright/test';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { test, expect, withSmoothness } from '../../packages/playwright-smoothness/src/index.js';
-import type { SmoothnessResult } from '../../packages/smoothness-core/src/types.js';
+import { test, expect, withButter } from '../../packages/playwright-butter/src/index.js';
+import type { SmoothnessResult } from '../../packages/butter-core/src/types.js';
 
 test.describe.configure({ mode: 'serial' });
 test.setTimeout(120_000);
@@ -36,9 +36,9 @@ const shell = test.extend<{ page: Page }>({
   },
 });
 
-shell("Chromium's headless shell gets a warning", async ({ page, smoothness }) => {
+shell("Chromium's headless shell gets a warning", async ({ page, butter }) => {
   await page.goto('/click.html?ms=20');
-  await smoothness.measure('click', () => page.click('#heavy'), { runs: 1, cpuThrottling: 1 });
+  await butter.measure('click', () => page.click('#heavy'), { runs: 1, cpuThrottling: 1 });
   expect(test.info().annotations).toContainEqual({
     type: 'smoothness-warning',
     description: expect.stringContaining("Running in Chromium's headless shell"),
@@ -56,8 +56,8 @@ const noCdp = test.extend<{ page: Page }>({
   },
 });
 
-noCdp("a browser that won't say which headless mode it is gets no warning", async ({ smoothness }) => {
-  void smoothness;
+noCdp("a browser that won't say which headless mode it is gets no warning", async ({ butter }) => {
+  void butter;
   expect(test.info().annotations.map((a) => a.type)).not.toContain('smoothness-warning');
 });
 
@@ -70,9 +70,9 @@ const noBrowser = test.extend<{ page: Page }>({
   },
 });
 
-noBrowser('a context with no Browser is not measured or compared', async ({ page, smoothness }) => {
+noBrowser('a context with no Browser is not measured or compared', async ({ page, butter }) => {
   await page.goto('/click.html?ms=20');
-  const r = await smoothness.measure('click', () => page.click('#heavy'));
+  const r = await butter.measure('click', () => page.click('#heavy'));
   expect(r.runs).toBe(0);
   expect(r.unavailable[0]!.reason).toBe('smoothness is measured in Chromium only; this is unknown');
   expect(r).toBeSmooth();
@@ -81,22 +81,22 @@ noBrowser('a context with no Browser is not measured or compared', async ({ page
   );
 });
 
-test('a label used twice in one test throws', async ({ page, smoothness }) => {
+test('a label used twice in one test throws', async ({ page, butter }) => {
   await page.goto('/click.html?ms=0');
-  await smoothness.measure('click', () => page.click('#heavy'), { runs: 1, cpuThrottling: 1 });
-  await expect(smoothness.measure('click', () => page.click('#heavy'))).rejects.toThrow(
+  await butter.measure('click', () => page.click('#heavy'), { runs: 1, cpuThrottling: 1 });
+  await expect(butter.measure('click', () => page.click('#heavy'))).rejects.toThrow(
     'the label "click" is already used in this test',
   );
 });
 
 test('toBeSmooth() needs a result, and has no .not', () => {
-  expect(() => expect({} as SmoothnessResult).toBeSmooth()).toThrow(/expects a result from smoothness/);
+  expect(() => expect({} as SmoothnessResult).toBeSmooth()).toThrow(/expects a result from butter/);
   expect(() => expect({} as SmoothnessResult).not.toBeSmooth()).toThrow(
     /not\.toBeSmooth\(\) is not supported/,
   );
 });
 
-const preexposed = withSmoothness(
+const preexposed = withButter(
   base.extend<{ context: BrowserContext }>({
     context: async ({ context }, use) => {
       await context.exposeBinding('__playwrightSmoothnessStream', () => undefined);
@@ -114,7 +114,7 @@ preexposed("automatic mode that can't start says so", async ({ page }) => {
   await page.goto('/click.html?ms=0');
 });
 
-const autoWithoutBrowser = withSmoothness(
+const autoWithoutBrowser = withButter(
   base.extend<{ context: BrowserContext }>({
     context: async ({ context }, use) => {
       context.browser = () => null;
@@ -132,7 +132,7 @@ autoWithoutBrowser('automatic mode skips a context with no Browser', async ({ pa
   await page.goto('/click.html?ms=0');
 });
 
-const auto = withSmoothness(base, { auto: true, record: false, historyDir: history });
+const auto = withButter(base, { auto: true, record: false, historyDir: history });
 const BROKEN = 'a page that breaks the collector, with a missing source map';
 
 auto(BROKEN, async ({ page }) => {
@@ -178,9 +178,9 @@ test.afterAll(({ browser }) => {
   if (newContext) browser.newContext = newContext as typeof browser.newContext;
 });
 
-test('a replay that has no page to render in', async ({ page, smoothness, browser }) => {
+test('a replay that has no page to render in', async ({ page, butter, browser }) => {
   await page.goto('/list.html?cost=15&overscan=0');
-  await smoothness.scroll(page.locator('#list'), {
+  await butter.scroll(page.locator('#list'), {
     label: 'replay without a page',
     distance: 2000,
     speed: 'fast',
@@ -205,4 +205,18 @@ test('says why there is no replay', ({ browser }) => {
   newContext = undefined;
   const [r] = resultsLabelled('replay without a page');
   expect(r!.notes.join(' ')).toMatch(/No replay: .*blocked/);
+});
+
+test('the smoothness fixture still works under its old name', ({ smoothness, butter }) => {
+  expect(smoothness).toBe(butter);
+});
+
+test.describe('smoothnessOptions under its old name', () => {
+  test.use({ smoothnessOptions: { runs: 1, cpuThrottling: 1 } });
+
+  test('still sets the options', async ({ page, butter }) => {
+    await page.goto('/click.html?ms=0');
+    const r = await butter.measure('click', () => page.click('#heavy'));
+    expect(r.runs).toBe(1);
+  });
 });

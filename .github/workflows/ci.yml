@@ -25,10 +25,10 @@ jobs:
       - run: npm run build
       - name: Built packages load as CommonJS and ESM
         run: |
-          node -e "const m=require('playwright-smoothness'); if (typeof m.test !== 'function') process.exit(1)"
-          node --input-type=module -e "const m=await import('playwright-smoothness'); if (typeof m.test !== 'function') process.exit(1)"
-          node -e "const m=require('smoothness-core'); if (typeof m.measure !== 'function') process.exit(1)"
-          node --input-type=module -e "const m=await import('smoothness-core'); if (typeof m.measure !== 'function') process.exit(1)"
+          node -e "const m=require('playwright-butter'); if (typeof m.test !== 'function') process.exit(1)"
+          node --input-type=module -e "const m=await import('playwright-butter'); if (typeof m.test !== 'function') process.exit(1)"
+          node -e "const m=require('butter-core'); if (typeof m.measure !== 'function') process.exit(1)"
+          node --input-type=module -e "const m=await import('butter-core'); if (typeof m.measure !== 'function') process.exit(1)"
       - run: npm run test:unit
 
   integration:

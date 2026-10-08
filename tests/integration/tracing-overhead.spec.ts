@@ -1,6 +1,6 @@
 // Does tracing change what's measured? The same interactions in quick and full mode, at the
 // default 4x throttling. Numbers are saved for docs/trace-categories.md.
-import { test, expect } from '../../packages/playwright-smoothness/src/index.js';
+import { test, expect } from '../../packages/playwright-butter/src/index.js';
 import type { Page } from '@playwright/test';
 import { save } from '../detection/helpers.js';
 
@@ -28,13 +28,13 @@ const CASES: { name: string; url: string; action: (page: Page) => Promise<void> 
 ];
 
 for (const c of CASES) {
-  test(`quick and full mode agree: ${c.name}`, async ({ page, smoothness }) => {
+  test(`quick and full mode agree: ${c.name}`, async ({ page, butter }) => {
     test.setTimeout(120_000);
     await page.goto(c.url);
     const t0 = Date.now();
-    const quick = await smoothness.measure(`${c.name} quick`, () => c.action(page), { mode: 'quick' });
+    const quick = await butter.measure(`${c.name} quick`, () => c.action(page), { mode: 'quick' });
     const t1 = Date.now();
-    const full = await smoothness.measure(`${c.name} full`, () => c.action(page), { mode: 'full' });
+    const full = await butter.measure(`${c.name} full`, () => c.action(page), { mode: 'full' });
     const t2 = Date.now();
     const pick = (r: typeof quick) => ({
       longFrames: r.longFrames!.count,

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { muxWebM, vint } from '../../packages/smoothness-core/src/replay/webm.js';
+import { muxWebM, vint } from '../../packages/butter-core/src/replay/webm.js';
 
 test('vint: EBML sizes', () => {
   expect(vint(0)).toEqual([0x80]);
